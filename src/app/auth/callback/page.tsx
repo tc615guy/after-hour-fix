@@ -68,17 +68,25 @@ export default function AuthCallbackPage() {
           let redirectTo = url.searchParams.get('redirect')
           if (!redirectTo) {
             try {
+              // Wait a bit for cookies to be set
+              await new Promise(resolve => setTimeout(resolve, 100))
+
               const res = await fetch('/api/projects', {
-                headers: {
-                  'Cookie': `sb-access-token=${session.access_token}`
-                }
+                credentials: 'include'
               })
-              const data = await res.json()
-              // If user has no projects, send them to onboarding
-              redirectTo = (data.projects && data.projects.length > 0) ? '/dashboard' : '/onboarding'
-            } catch {
-              // On error, default to dashboard
-              redirectTo = '/dashboard'
+
+              if (res.ok) {
+                const data = await res.json()
+                // If user has no projects, send them to onboarding
+                redirectTo = (data.projects && data.projects.length > 0) ? '/dashboard' : '/onboarding'
+              } else {
+                // If API fails, assume new user and send to onboarding
+                redirectTo = '/onboarding'
+              }
+            } catch (e) {
+              console.error('Project check error:', e)
+              // On error, assume new user and send to onboarding
+              redirectTo = '/onboarding'
             }
           }
 
