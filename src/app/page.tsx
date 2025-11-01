@@ -119,7 +119,6 @@ export default function HomePage() {
           <div className="text-2xl font-bold text-blue-600">AfterHourFix</div>
           <nav className="hidden md:flex gap-6">
             <Link href="#features" className="text-sm hover:text-blue-600 transition">Features</Link>
-            <Link href="/demos" className="text-sm hover:text-blue-600 transition font-semibold">🎧 Hear It Live</Link>
             <Link href="/pricing" className="text-sm hover:text-blue-600 transition">Pricing</Link>
             <Link href="/faq" className="text-sm hover:text-blue-600 transition">FAQ</Link>
           </nav>
@@ -147,7 +146,7 @@ export default function HomePage() {
         </p>
         <div className="flex gap-4 justify-center">
           <Link href="/auth/signup">
-            <Button size="lg" className="text-lg px-8">Start Free Trial</Button>
+            <Button size="lg" className="text-lg px-8">Get Started</Button>
           </Link>
           <Link href="/pricing">
             <Button size="lg" variant="outline" className="text-lg px-8">View Pricing</Button>
@@ -440,72 +439,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* What’s New + Signup */}
-      <section className="container mx-auto px-4 py-20" id="signup">
-        <div className="grid md:grid-cols-2 gap-10">
-          <div>
-            <h2 className="text-3xl font-bold mb-4">What’s New</h2>
-            <ul className="list-disc pl-6 space-y-2 text-gray-700">
-              <li>Phone Porting Wizard with bill upload (PDF/image) and in‑app LOA signature</li>
-              <li>Conditional Forwarding and Business Hours routing (forward during hours, AI after hours)</li>
-              <li>Minutes usage bar + “Allow extra usage” toggle with automatic overage billing</li>
-              <li>Admin Porting Docs viewer with secure downloads (LOA + bills)</li>
-              <li>CSV import preview + column mapping with row‑level errors</li>
-              <li>Emergency detection and on‑call technician SMS routing</li>
-            </ul>
-          </div>
-          <div>
-            <h2 className="text-3xl font-bold mb-4">Get on the list</h2>
-            <form action="/api/lead" method="post" className="space-y-3 bg-white border rounded-lg p-4">
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Business Name*</label>
-                <input name="businessName" required className="w-full border rounded px-3 py-2" placeholder="Acme Plumbing" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Contact Name*</label>
-                <input name="contactName" required className="w-full border rounded px-3 py-2" placeholder="Jane Smith" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Trade</label>
-                <select name="trade" className="w-full border rounded px-3 py-2">
-                  <option value="">Select one</option>
-                  <option>Plumbing</option>
-                  <option>Electrical</option>
-                  <option>HVAC</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Phone</label>
-                <input name="phone" className="w-full border rounded px-3 py-2" placeholder="(555) 123-4567" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Contact Email*</label>
-                <input type="email" name="email" required className="w-full border rounded px-3 py-2" placeholder="you@company.com" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Which platform do you use for booking/calendar?</label>
-                <select name="platform" className="w-full border rounded px-3 py-2">
-                  <option value="">Select one</option>
-                  <option>ServiceTitan</option>
-                  <option>Housecall Pro</option>
-                  <option>Jobber</option>
-                  <option>FieldEdge</option>
-                  <option>BuildOps</option>
-                  <option>Google Calendar</option>
-                  <option>Outlook</option>
-                  <option>Other</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">If Other, please specify</label>
-                <input name="platformOther" className="w-full border rounded px-3 py-2" placeholder="Platform name" />
-              </div>
-              <button type="submit" className="w-full bg-blue-600 text-white rounded px-4 py-2 font-semibold">Notify Me</button>
-              <p className="text-xs text-gray-500">We’ll reach out from support@afterhourfix.com.</p>
-            </form>
-          </div>
-        </div>
-      </section>
 
       {/* CTA */}
       <section className="bg-blue-600 text-white py-20">
@@ -513,9 +446,9 @@ export default function HomePage() {
           <h2 className="text-4xl font-bold mb-6">Ready to Stop Missing $1000+ Emergency Jobs?</h2>
           <p className="text-xl mb-8 opacity-90">Join hundreds of trade professionals using AfterHourFix AI receptionist for 24/7 call answering</p>
           <Link href="/auth/signup">
-            <Button size="lg" variant="secondary" className="text-lg px-8">Start Your Free Trial</Button>
+            <Button size="lg" variant="secondary" className="text-lg px-8">Get Started</Button>
           </Link>
-          <p className="text-sm mt-4 opacity-75">No credit card required • Voice AI for trade business setup in 10 minutes</p>
+          <p className="text-sm mt-4 opacity-75">No credit card required • Setup in 10 minutes</p>
         </div>
       </section>
 
