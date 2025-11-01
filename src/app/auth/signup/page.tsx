@@ -43,7 +43,7 @@ export default function SignupPage() {
             AfterHourFix
           </Link>
           <CardTitle>Create Account</CardTitle>
-          <CardDescription>Start your 14-day free trial today</CardDescription>
+          <CardDescription>Get your AI receptionist up and running in minutes</CardDescription>
         </CardHeader>
 
         <form onSubmit={handleSubmit}>
@@ -75,7 +75,7 @@ export default function SignupPage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? <Loader2 className="animate-spin" /> : 'Start Free Trial'}
+              {loading ? <Loader2 className="animate-spin" /> : 'Get Started'}
             </Button>
             <p className="text-xs text-gray-500 text-center">
               By signing up, you agree to our{' '}
