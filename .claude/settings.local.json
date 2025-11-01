@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\Program Files\\Stripe\" -Recurse -Filter \"stripe.exe\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -First 1 -ExpandProperty FullName)",
+      "Read(//c/Program Files/**)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(tasklist:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npm run dev:*)",
+      "Bash(Select-Object -Last 100)",
+      "Bash(set:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(dir:*)",
+      "Bash(move:*)",
+      "Bash(ren:*)",
+      "Bash(timeout 3 bash:*)",
+      "Bash(npx prisma db push)",
+      "Bash(npx prisma db push:*)",
+      "Bash(timeout 5 bash -c \"while ! curl -s http://localhost:4040/api/tunnels > /dev/null 2>&1; do sleep 0.5; done; curl -s http://localhost:4040/api/tunnels | grep -o ''https://[^\"\"]*\\.ngrok[^\"\"]*'' | head -1\")",
+      "Bash(powershell -Command:*)",
+      "Bash(timeout 5 bash -c \"curl -s http://localhost:4040/api/tunnels 2>/dev/null | grep -o ''https://[^\"\"]*\\.ngrok[^\"\"]*'' | head -1\")",
+      "Bash(curl:*)",
+      "Bash(where:*)",
+      "Bash(ngrok http:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

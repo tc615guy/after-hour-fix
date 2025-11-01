@@ -1,0 +1,343 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
+import { CheckCircle, Loader2 } from 'lucide-react'
+
+const TRADES = ['plumbing', 'hvac', 'electrical']
+
+export default function OnboardingPage() {
+  const router = useRouter()
+  const [step, setStep] = useState(1)
+  const [loading, setLoading] = useState(false)
+
+  // Step 1: Business info
+  const [businessName, setBusinessName] = useState('')
+  const [trade, setTrade] = useState('')
+  const [timezone, setTimezone] = useState('America/Chicago')
+
+  // Step 2: Cal.com
+  const [calcomApiKey, setCalcomApiKey] = useState('')
+  const [calcomUsername, setCalcomUsername] = useState('')
+  const [calcomVerified, setCalcomVerified] = useState(false)
+  const [availability, setAvailability] = useState<any[]>([])
+
+  // Step 3: Vapi assistant
+  const [projectId, setProjectId] = useState('')
+  const [agentId, setAgentId] = useState('')
+
+  // Step 4: Phone number
+  const [selectedNumber, setSelectedNumber] = useState('')
+  const [availableNumbers, setAvailableNumbers] = useState<any[]>([])
+
+  const handleStep1Next = () => {
+    if (!businessName || !trade) {
+      alert('Please fill all fields')
+      return
+    }
+    setStep(2)
+  }
+
+  const handleStep2Verify = async () => {
+    if (!calcomApiKey) {
+      alert('Please enter your Cal.com API key')
+      return
+    }
+
+    setLoading(true)
+    try {
+      // Verify Cal.com key by fetching availability
+      const response = await fetch('/api/calcom/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: calcomApiKey, username: calcomUsername }),
+      })
+
+      if (!response.ok) throw new Error('Failed to verify Cal.com key')
+
+      const data = await response.json()
+      setAvailability(data.availability?.slice(0, 5) || [])
+      setCalcomVerified(true)
+    } catch (error: any) {
+      alert(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleStep2Next = async () => {
+    if (!calcomVerified) {
+      alert('Please verify your Cal.com connection first')
+      return
+    }
+
+    setLoading(true)
+    try {
+      // Create project
+      const projectRes = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: businessName,
+          trade,
+          timezone,
+          calcomApiKey,
+          calcomUser: calcomUsername,
+        }),
+      })
+
+      if (!projectRes.ok) throw new Error('Failed to create project')
+
+      const { project } = await projectRes.json()
+
+      // Create Vapi assistant
+      const agentRes = await fetch('/api/agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: project.id,
+          name: `${businessName} AI`,
+          voice: 'adam',
+        }),
+      })
+
+      if (!agentRes.ok) throw new Error('Failed to create assistant')
+
+      const { agent } = await agentRes.json()
+      setProjectId(project.id)
+      setAgentId(agent.id)
+      setStep(3)
+    } catch (error: any) {
+      alert(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleStep3Next = async () => {
+    setLoading(true)
+    try {
+      // Search available numbers
+      const res = await fetch('/api/numbers')
+      if (!res.ok) throw new Error('Failed to search numbers')
+
+      const { numbers } = await res.json()
+      setAvailableNumbers(numbers)
+      setStep(4)
+    } catch (error: any) {
+      alert(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleStep4Finish = async () => {
+    if (!selectedNumber) {
+      alert('Please select a phone number')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const res = await fetch('/api/numbers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId,
+          agentId,
+          number: selectedNumber,
+        }),
+      })
+
+      if (!res.ok) throw new Error('Failed to purchase number')
+
+      router.push('/dashboard')
+    } catch (error: any) {
+      alert(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
+      <Card className="w-full max-w-2xl">
+        <CardHeader>
+          <div className="flex items-center gap-2 mb-4">
+            {[1, 2, 3, 4].map((s) => (
+              <div
+                key={s}
+                className={`flex-1 h-2 rounded ${
+                  s <= step ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
+              />
+            ))}
+          </div>
+          <CardTitle>Setup Your AI Receptionist</CardTitle>
+          <CardDescription>Step {step} of 4</CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          {step === 1 && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="businessName">Business Name</Label>
+                <Input
+                  id="businessName"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder="Mike's Plumbing"
+                />
+              </div>
+              <div>
+                <Label htmlFor="trade">Trade</Label>
+                <select
+                  id="trade"
+                  value={trade}
+                  onChange={(e) => setTrade(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                >
+                  <option value="">Select trade...</option>
+                  {TRADES.map((t) => (
+                    <option key={t} value={t}>
+                      {t.charAt(0).toUpperCase() + t.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="timezone">Timezone</Label>
+                <select
+                  id="timezone"
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                >
+                  <option value="America/New_York">Eastern Time</option>
+                  <option value="America/Chicago">Central Time</option>
+                  <option value="America/Denver">Mountain Time</option>
+                  <option value="America/Los_Angeles">Pacific Time</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="calcomApiKey">Cal.com API Key</Label>
+                <Input
+                  id="calcomApiKey"
+                  type="password"
+                  value={calcomApiKey}
+                  onChange={(e) => setCalcomApiKey(e.target.value)}
+                  placeholder="cal_live_xxxxx"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Get your API key from{' '}
+                  <a
+                    href="https://app.cal.com/settings/developer/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Cal.com Settings
+                  </a>
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="calcomUsername">Cal.com Username (optional)</Label>
+                <Input
+                  id="calcomUsername"
+                  value={calcomUsername}
+                  onChange={(e) => setCalcomUsername(e.target.value)}
+                  placeholder="yourusername"
+                />
+              </div>
+              {!calcomVerified && (
+                <Button onClick={handleStep2Verify} disabled={loading}>
+                  {loading ? <Loader2 className="animate-spin" /> : 'Verify Connection'}
+                </Button>
+              )}
+              {calcomVerified && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="text-green-600" />
+                    <span className="font-semibold text-green-800">Connected!</span>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Found {availability.length}+ available slots in your calendar
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                <CheckCircle className="text-blue-600 mb-2" />
+                <h3 className="font-semibold mb-1">AI Assistant Created!</h3>
+                <p className="text-sm text-gray-600">
+                  Your AI receptionist is ready. Now let's get you a phone number.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="space-y-4">
+              <Label>Select a Phone Number</Label>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {availableNumbers.map((num) => (
+                  <div
+                    key={num.id}
+                    onClick={() => setSelectedNumber(num.number)}
+                    className={`p-3 border rounded-md cursor-pointer hover:bg-blue-50 ${
+                      selectedNumber === num.number ? 'border-blue-600 bg-blue-50' : ''
+                    }`}
+                  >
+                    <span className="font-mono font-semibold">{num.number}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex justify-between">
+          {step > 1 && (
+            <Button variant="outline" onClick={() => setStep(step - 1)} disabled={loading}>
+              Back
+            </Button>
+          )}
+          <div className="flex-1" />
+          {step === 1 && (
+            <Button onClick={handleStep1Next}>Next</Button>
+          )}
+          {step === 2 && (
+            <Button onClick={handleStep2Next} disabled={!calcomVerified || loading}>
+              {loading ? <Loader2 className="animate-spin" /> : 'Next'}
+            </Button>
+          )}
+          {step === 3 && (
+            <Button onClick={handleStep3Next} disabled={loading}>
+              {loading ? <Loader2 className="animate-spin" /> : 'Next'}
+            </Button>
+          )}
+          {step === 4 && (
+            <Button onClick={handleStep4Finish} disabled={!selectedNumber || loading}>
+              {loading ? <Loader2 className="animate-spin" /> : 'Finish'}
+            </Button>
+          )}
+        </CardFooter>
+      </Card>
+    </div>
+  )
+}

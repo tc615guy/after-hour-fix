@@ -1,0 +1,315 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Plus, Trash2, DollarSign, Send } from 'lucide-react'
+
+interface PricingItem {
+  id: string
+  service: string
+  description?: string
+  basePrice: number
+  unit?: string // 'flat' | 'hourly' | 'per_unit'
+}
+
+interface PricingSheetEditorProps {
+  projectId: string
+}
+
+export default function PricingSheetEditor({ projectId }: PricingSheetEditorProps) {
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [items, setItems] = useState<PricingItem[]>([])
+  const [emergencyMultiplier, setEmergencyMultiplier] = useState(1.5)
+  const [additionalNotes, setAdditionalNotes] = useState('')
+
+  useEffect(() => {
+    loadPricing()
+  }, [projectId])
+
+  const loadPricing = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch(`/api/projects/${projectId}`)
+      if (res.ok) {
+        const { project } = await res.json()
+        if (project.pricingSheet) {
+          setItems(project.pricingSheet.items || [])
+          setAdditionalNotes(project.pricingSheet.notes || '')
+        }
+        if (project.emergencyMultiplier) {
+          setEmergencyMultiplier(project.emergencyMultiplier)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load pricing:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const addItem = () => {
+    setItems([
+      ...items,
+      {
+        id: Math.random().toString(36).substr(2, 9),
+        service: '',
+        description: '',
+        basePrice: 0,
+        unit: 'flat',
+      },
+    ])
+  }
+
+  const updateItem = (id: string, field: keyof PricingItem, value: any) => {
+    setItems(items.map((item) => (item.id === id ? { ...item, [field]: value } : item)))
+  }
+
+  const removeItem = (id: string) => {
+    setItems(items.filter((item) => item.id !== id))
+  }
+
+  const savePricing = async () => {
+    try {
+      setSaving(true)
+      const res = await fetch(`/api/projects/${projectId}/pricing`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pricingSheet: {
+            items,
+            notes: additionalNotes,
+            lastUpdated: new Date().toISOString(),
+          },
+          emergencyMultiplier,
+        }),
+      })
+
+      if (!res.ok) throw new Error('Failed to save pricing')
+
+      alert('Pricing sheet saved successfully!')
+    } catch (error: any) {
+      alert(error.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const generateTextVersion = () => {
+    let text = '📋 PRICING & SERVICES\n\n'
+
+    items.forEach((item) => {
+      text += `${item.service}\n`
+      if (item.description) text += `  ${item.description}\n`
+      text += `  $${item.basePrice.toFixed(2)}`
+      if (item.unit === 'hourly') text += ' /hour'
+      if (item.unit === 'per_unit') text += ' each'
+      text += '\n\n'
+    })
+
+    if (emergencyMultiplier > 1) {
+      text += `⚠️ After-hours/Emergency service: ${emergencyMultiplier}x standard rates\n\n`
+    }
+
+    if (additionalNotes) {
+      text += `📌 ${additionalNotes}\n`
+    }
+
+    return text
+  }
+
+  const testSMS = () => {
+    const text = generateTextVersion()
+    console.log('SMS Preview:', text)
+    alert('Check console for SMS preview')
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="py-12">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="w-5 h-5" />
+            Pricing & Cost Sheet
+          </CardTitle>
+          <CardDescription>
+            Create your pricing sheet that customers can request via AI or SMS
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Service Items */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <Label className="text-base font-semibold">Services & Pricing</Label>
+              <Button onClick={addItem} size="sm" variant="outline">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Service
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {items.length === 0 && (
+                <div className="text-center py-8 text-gray-500 border-2 border-dashed rounded-lg">
+                  No services added yet. Click "Add Service" to get started.
+                </div>
+              )}
+
+              {items.map((item) => (
+                <div key={item.id} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <Label htmlFor={`service-${item.id}`} className="text-sm">
+                        Service Name *
+                      </Label>
+                      <Input
+                        id={`service-${item.id}`}
+                        value={item.service}
+                        onChange={(e) => updateItem(item.id, 'service', e.target.value)}
+                        placeholder="e.g., Drain Cleaning, Water Heater Repair"
+                      />
+                    </div>
+                    <div className="w-32">
+                      <Label htmlFor={`price-${item.id}`} className="text-sm">
+                        Price *
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-gray-500">$</span>
+                        <Input
+                          id={`price-${item.id}`}
+                          type="number"
+                          value={item.basePrice}
+                          onChange={(e) => updateItem(item.id, 'basePrice', parseFloat(e.target.value))}
+                          className="pl-7"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    <div className="w-28">
+                      <Label htmlFor={`unit-${item.id}`} className="text-sm">
+                        Unit
+                      </Label>
+                      <select
+                        id={`unit-${item.id}`}
+                        value={item.unit}
+                        onChange={(e) => updateItem(item.id, 'unit', e.target.value)}
+                        className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                      >
+                        <option value="flat">Flat Rate</option>
+                        <option value="hourly">Per Hour</option>
+                        <option value="per_unit">Per Unit</option>
+                      </select>
+                    </div>
+                    <div className="pt-6">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeItem(item.id)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor={`desc-${item.id}`} className="text-sm">
+                      Description (optional)
+                    </Label>
+                    <Input
+                      id={`desc-${item.id}`}
+                      value={item.description}
+                      onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                      placeholder="Brief description of what's included"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Emergency Multiplier */}
+          <div className="border-t pt-6">
+            <Label htmlFor="emergency" className="text-base font-semibold">
+              After-Hours / Emergency Pricing
+            </Label>
+            <p className="text-sm text-gray-500 mb-3">
+              Multiply standard rates for after-hours or emergency calls
+            </p>
+            <div className="flex items-center gap-4">
+              <div className="flex-1 max-w-xs">
+                <Input
+                  id="emergency"
+                  type="number"
+                  step="0.1"
+                  value={emergencyMultiplier}
+                  onChange={(e) => setEmergencyMultiplier(parseFloat(e.target.value))}
+                />
+              </div>
+              <span className="text-sm text-gray-600">
+                = {(emergencyMultiplier * 100).toFixed(0)}% of standard rate
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Example: If drain cleaning is $150, after-hours it becomes ${(150 * emergencyMultiplier).toFixed(2)}
+            </p>
+          </div>
+
+          {/* Additional Notes */}
+          <div className="border-t pt-6">
+            <Label htmlFor="notes" className="text-base font-semibold">
+              Additional Notes
+            </Label>
+            <p className="text-sm text-gray-500 mb-3">
+              Payment terms, warranties, disclaimers, etc.
+            </p>
+            <Textarea
+              id="notes"
+              value={additionalNotes}
+              onChange={(e) => setAdditionalNotes(e.target.value)}
+              placeholder="e.g., All prices include parts & labor. Payment due upon completion. 90-day warranty on all work."
+              rows={4}
+            />
+          </div>
+
+          {/* Preview */}
+          {items.length > 0 && (
+            <div className="border-t pt-6">
+              <Label className="text-base font-semibold mb-3 block">SMS Preview</Label>
+              <div className="bg-gray-50 border rounded-lg p-4 font-mono text-sm whitespace-pre-wrap">
+                {generateTextVersion()}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="flex gap-3">
+        <Button onClick={savePricing} disabled={saving || items.length === 0}>
+          {saving ? 'Saving...' : 'Save Pricing Sheet'}
+        </Button>
+        {items.length > 0 && (
+          <Button onClick={testSMS} variant="outline">
+            <Send className="w-4 h-4 mr-2" />
+            Test SMS
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}

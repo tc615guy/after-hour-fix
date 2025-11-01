@@ -1,0 +1,12 @@
+import { JobProgress } from '@/components/JobProgress'
+
+export default async function JobPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-xl font-semibold mb-4">Job Status</h1>
+      <JobProgress jobId={id} />
+    </div>
+  )
+}
+
