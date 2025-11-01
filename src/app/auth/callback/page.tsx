@@ -24,14 +24,20 @@ export default function AuthCallbackPage() {
         const type = (url.searchParams.get('type') || 'magiclink') as any
         const email = url.searchParams.get('email') || ''
 
+        console.log('Auth callback - code:', code ? 'present' : 'missing')
+        console.log('Auth callback - hash:', url.hash)
+
         let session = null as any
         let err: any = null
 
         if (code) {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(url.toString())
+          console.log('Exchanging code for session...')
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code)
           session = data?.session
           err = error
+          console.log('Exchange result - session:', session ? 'success' : 'failed', 'error:', err?.message || 'none')
         } else if (tokenHash && email) {
+          console.log('Verifying OTP...')
           const { data, error } = await (supabase.auth as any).verifyOtp({ type, token_hash: tokenHash, email })
           session = data?.session
           err = error
@@ -45,10 +51,12 @@ export default function AuthCallbackPage() {
           const access_token = allParams.get('access_token')
           const refresh_token = allParams.get('refresh_token')
           if (access_token && refresh_token) {
+            console.log('Setting session from tokens...')
             const { data, error } = await supabase.auth.setSession({ access_token, refresh_token })
             session = data?.session
             err = error
           } else {
+            console.error('No valid auth params found - code:', !!code, 'tokenHash:', !!tokenHash, 'tokens:', !!access_token)
             throw new Error('Missing auth parameters in callback URL')
           }
         }
