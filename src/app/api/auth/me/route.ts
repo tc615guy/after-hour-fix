@@ -12,7 +12,10 @@ export async function GET() {
     const cookieStore = await cookies()
     const accessToken = cookieStore.get('sb-access-token')?.value
 
+    console.log('[/api/auth/me] Access token present:', !!accessToken)
+
     if (!accessToken) {
+      console.log('[/api/auth/me] No access token found in cookies')
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
@@ -20,7 +23,10 @@ export async function GET() {
     const supabase = createClient(supabaseUrl, supabaseAnonKey)
     const { data: { user: supabaseUser }, error } = await supabase.auth.getUser(accessToken)
 
+    console.log('[/api/auth/me] Supabase user:', supabaseUser ? supabaseUser.email : 'none', 'error:', error?.message || 'none')
+
     if (error || !supabaseUser) {
+      console.log('[/api/auth/me] Invalid Supabase session')
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
     }
 
@@ -29,7 +35,10 @@ export async function GET() {
       where: { id: supabaseUser.id }
     })
 
+    console.log('[/api/auth/me] User in Prisma:', user ? 'found' : 'not found')
+
     if (!user) {
+      console.log('[/api/auth/me] Creating new user in Prisma:', supabaseUser.email)
       // Create user in Prisma if doesn't exist
       user = await prisma.user.create({
         data: {
@@ -39,6 +48,7 @@ export async function GET() {
           role: 'user'
         }
       })
+      console.log('[/api/auth/me] User created successfully:', user.id)
     }
 
     return NextResponse.json({
@@ -50,7 +60,7 @@ export async function GET() {
       }
     })
   } catch (e: any) {
-    console.error('Auth /me error:', e)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+    console.error('[/api/auth/me] Error:', e)
+    return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 })
   }
 }
