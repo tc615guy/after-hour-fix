@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Phone, Calendar, MessageSquare, TrendingUp, CheckCircle } from 'lucide-react'
+import AuthRedirect from '@/components/AuthRedirect'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -103,6 +104,9 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      {/* Auth Redirect - handles magic link tokens on homepage */}
+      <AuthRedirect />
+
       {/* Structured Data */}
       <script
         type="application/ld+json"
