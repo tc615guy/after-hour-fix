@@ -50,6 +50,8 @@ export interface VapiAssistant {
   systemPrompt: string
   voice?: any
   model?: any
+  firstMessage?: string
+  recordingEnabled?: boolean
 }
 
 export interface VapiPhoneNumber {
