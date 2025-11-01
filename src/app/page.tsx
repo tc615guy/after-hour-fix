@@ -155,110 +155,94 @@ export default function HomePage() {
         <p className="text-sm text-gray-500 mt-4">No credit card required • Setup in 10 minutes</p>
       </section>
 
-      {/* Real AI Calls */}
+      {/* Security & Privacy */}
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center mb-10">
-            <div className="text-4xl mb-3">🎧</div>
-            <h2 className="text-3xl font-bold">Real AI Calls</h2>
-            <p className="text-gray-600 mt-2 text-lg">Hear Your AI Receptionist in Action</p>
-            <p className="text-gray-500 mt-3">These are 100% real calls handled by AfterHourFix AI. Listen to how naturally it books jobs, handles emergencies, and closes sales — even at 2am.</p>
-            <div className="flex items-center justify-center gap-4 text-sm text-gray-500 mt-3">
-              <span>No actors</span>
-              <span>•</span>
-              <span>No scripts</span>
-              <span>•</span>
-              <span>100% real customers</span>
+          <div className="max-w-4xl mx-auto text-center mb-12">
+            <div className="text-5xl mb-4">🔒</div>
+            <h2 className="text-4xl font-bold mb-4">Your Business Data is Safe & Secure</h2>
+            <p className="text-xl text-gray-600">Why AfterHourFix is Safe for Your Business</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <Card className="border-2 border-blue-100">
+              <CardHeader>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                  <CheckCircle className="w-6 h-6 text-blue-600" />
+                </div>
+                <CardTitle className="text-lg">Enterprise-Grade Security</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">Bank-level encryption for all call data and customer information. Your data is protected 24/7.</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-blue-100">
+              <CardHeader>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                  <CheckCircle className="w-6 h-6 text-blue-600" />
+                </div>
+                <CardTitle className="text-lg">HIPAA Compliant Infrastructure</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">Your customer data is protected by industry-leading security standards and compliance frameworks.</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-blue-100">
+              <CardHeader>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                  <CheckCircle className="w-6 h-6 text-blue-600" />
+                </div>
+                <CardTitle className="text-lg">No Data Sharing</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">We never sell or share your customer data with third parties. Your information stays private.</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-blue-100">
+              <CardHeader>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                  <CheckCircle className="w-6 h-6 text-blue-600" />
+                </div>
+                <CardTitle className="text-lg">Secure Payment Processing</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">PCI-DSS compliant payment handling through Stripe. Your financial data is always secure.</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-blue-100">
+              <CardHeader>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                  <CheckCircle className="w-6 h-6 text-blue-600" />
+                </div>
+                <CardTitle className="text-lg">Regular Security Audits</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">Continuous monitoring and security testing to keep your business data safe from threats.</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-blue-100">
+              <CardHeader>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                  <CheckCircle className="w-6 h-6 text-blue-600" />
+                </div>
+                <CardTitle className="text-lg">Encrypted Backups</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">Automatic daily backups with military-grade encryption. Your data is never lost.</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="text-center mt-12">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-6 max-w-2xl mx-auto">
+              <p className="text-green-900 font-semibold mb-2">Trusted by Trade Professionals Nationwide</p>
+              <p className="text-green-800">Your customer information is protected by the same security standards used by major banks and healthcare providers.</p>
             </div>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Plumbing */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-start justify-between mb-1">
-                  <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">Plumbing</span>
-                  <span className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded">emergency</span>
-                </div>
-                <CardTitle className="text-lg">Emergency Pipe Burst - 2am Call</CardTitle>
-                <CardDescription className="flex items-center gap-4 mt-2">
-                  <span>2:07</span>
-                  <span>98% confidence</span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <audio controls className="w-full">
-                  <source src="/demos/plumbing-emergency.mp3" type="audio/mpeg" />
-                  Your browser does not support the audio element.
-                </audio>
-                <Link href="/demos" className="block mt-2">
-                  <Button variant="outline" className="w-full">Open Full Demo</Button>
-                </Link>
-                <p className="text-sm text-gray-600 mt-3">
-                  <strong>Result:</strong> Booked immediately, priority upsell accepted, customer calmed
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* HVAC */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-start justify-between mb-1">
-                  <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">HVAC</span>
-                  <span className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded">emergency</span>
-                </div>
-                <CardTitle className="text-lg">No Heat in Winter - Evening Call</CardTitle>
-                <CardDescription className="flex items-center gap-4 mt-2">
-                  <span>2:32</span>
-                  <span>97% confidence</span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <audio controls className="w-full">
-                  <source src="/demos/hvac-noheat.mp3" type="audio/mpeg" />
-                  Your browser does not support the audio element.
-                </audio>
-                <Link href="/demos" className="block mt-2">
-                  <Button variant="outline" className="w-full">Open Full Demo</Button>
-                </Link>
-                <p className="text-sm text-gray-600 mt-3">
-                  <strong>Result:</strong> Emergency booking, priority upsell successful, family helped
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Electrical */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-start justify-between mb-1">
-                  <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">Electrical</span>
-                  <span className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded">emergency</span>
-                </div>
-                <CardTitle className="text-lg">Power Outage - Emergency Service Call</CardTitle>
-                <CardDescription className="flex items-center gap-4 mt-2">
-                  <span>1:45</span>
-                  <span>97% confidence</span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <audio controls className="w-full">
-                  <source src="/demos/electrical-outage.mp3" type="audio/mpeg" />
-                  Your browser does not support the audio element.
-                </audio>
-                <Link href="/demos" className="block mt-2">
-                  <Button variant="outline" className="w-full">Open Full Demo</Button>
-                </Link>
-                <p className="text-sm text-gray-600 mt-3">
-                  <strong>Result:</strong> Emergency electrical call booked, safety check completed, customer informed of pricing
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="text-center mt-8">
-            <Link href="/demos">
-              <Button>See All Demos</Button>
-            </Link>
           </div>
         </div>
       </section>

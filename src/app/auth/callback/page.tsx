@@ -63,7 +63,25 @@ export default function AuthCallbackPage() {
         }
         if (!aborted) {
           setStatus('ok')
-          const redirectTo = url.searchParams.get('redirect') || '/dashboard'
+
+          // Check if user has any projects - if not, send to onboarding
+          let redirectTo = url.searchParams.get('redirect')
+          if (!redirectTo) {
+            try {
+              const res = await fetch('/api/projects', {
+                headers: {
+                  'Cookie': `sb-access-token=${session.access_token}`
+                }
+              })
+              const data = await res.json()
+              // If user has no projects, send them to onboarding
+              redirectTo = (data.projects && data.projects.length > 0) ? '/dashboard' : '/onboarding'
+            } catch {
+              // On error, default to dashboard
+              redirectTo = '/dashboard'
+            }
+          }
+
           window.location.replace(redirectTo)
         }
       } catch (e: any) {
