@@ -110,61 +110,73 @@ export async function POST(req: NextRequest) {
       console.warn('[Cal.com] clone event type skipped:', (e as any)?.message)
     }
 
-    // Create VAPI assistant automatically
+    // Create VAPI assistant by cloning from demo assistant based on trade
     try {
       const vapiClient = createVapiClient()
       const systemPrompt = buildAssistantPrompt(project.name, project.trade)
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://afterhourfix.com'
       const tools = buildAssistantTools(appUrl, project.id)
 
-      console.log('[VAPI] Creating assistant for project:', project.name)
+      // Map trade to demo assistant ID
+      const DEMO_ASSISTANTS: Record<string, string> = {
+        'Electrical': 'fc94b4f6-0a58-4478-8ba1-a81dd81bbaf5',
+        'HVAC': 'ee143a79-7d18-451f-ae8e-c1e78c83fa0f',
+        'Plumbing': '6d0cbda1-0b1d-4d24-bcc9-dfab156b5fbb',
+      }
 
-      const vapiAssistant = await vapiClient.createAssistant({
-        name: `${project.name} AI Assistant`,
-        firstMessage: "Hey there, thanks for calling! I can help you right away. What's going on?",
-        voice: {
-          provider: 'cartesia',
-          voiceId: 'ec1e269e-9ca0-402f-8a18-58e0e022355a', // Ariana
-          model: 'sonic-3',
-          language: 'en',
-        },
-        model: {
-          provider: 'openai',
-          model: 'gpt-4o-mini',
-          temperature: 0.7,
-          messages: [
-            {
-              role: 'system',
-              content: systemPrompt,
-            },
-          ],
-          tools,
-        },
-        recordingEnabled: true,
-      })
+      const trade = input.trade || 'Plumbing'
+      const demoAssistantId = DEMO_ASSISTANTS[trade]
 
-      console.log('[VAPI] Assistant created:', vapiAssistant.id)
+      console.log('[VAPI] Creating assistant for project:', project.name, 'trade:', trade)
 
-      // Create agent record in database
-      const agent = await prisma.agent.create({
-        data: {
-          projectId: project.id,
-          vapiAssistantId: vapiAssistant.id,
+      if (demoAssistantId) {
+        // Fetch the demo assistant to get its configuration
+        console.log('[VAPI] Fetching demo assistant config:', demoAssistantId)
+        const demoAssistant = await vapiClient.getAssistant(demoAssistantId)
+
+        // Create new assistant with demo's settings but custom prompt/tools
+        const vapiAssistant = await vapiClient.createAssistant({
           name: `${project.name} AI Assistant`,
-          voice: 'ariana',
-          basePrompt: systemPrompt,
-        },
-      })
+          firstMessage: demoAssistant.firstMessage || "Hey there, thanks for calling! I can help you right away. What's going on?",
+          voice: demoAssistant.voice,
+          model: {
+            ...demoAssistant.model,
+            messages: [
+              {
+                role: 'system',
+                content: systemPrompt,
+              },
+            ],
+            tools,
+          },
+          recordingEnabled: demoAssistant.recordingEnabled ?? true,
+        })
 
-      console.log('[VAPI] Agent record created in database:', agent.id)
+        console.log('[VAPI] Assistant created from demo template:', vapiAssistant.id)
 
-      await prisma.eventLog.create({
-        data: {
-          projectId: project.id,
-          type: 'agent.created',
-          payload: { agentId: agent.id, vapiAssistantId: vapiAssistant.id },
-        },
-      })
+        // Create agent record in database
+        const agent = await prisma.agent.create({
+          data: {
+            projectId: project.id,
+            vapiAssistantId: vapiAssistant.id,
+            name: `${project.name} AI Assistant`,
+            voice: demoAssistant.voice?.voiceId || 'ariana',
+            basePrompt: systemPrompt,
+          },
+        })
+
+        console.log('[VAPI] Agent record created in database:', agent.id)
+
+        await prisma.eventLog.create({
+          data: {
+            projectId: project.id,
+            type: 'agent.created',
+            payload: { agentId: agent.id, vapiAssistantId: vapiAssistant.id, clonedFrom: demoAssistantId },
+          },
+        })
+      } else {
+        console.warn('[VAPI] No demo assistant found for trade:', trade)
+      }
     } catch (e) {
       console.error('[VAPI] Failed to create assistant:', (e as any)?.message)
       // Don't fail the whole request if VAPI creation fails
