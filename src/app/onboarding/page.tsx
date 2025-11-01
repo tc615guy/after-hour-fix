@@ -49,14 +49,19 @@ export default function OnboardingPage() {
     // Check if user is authenticated
     const checkAuth = async () => {
       try {
-        const res = await fetch('/api/auth/me')
+        const res = await fetch('/api/auth/me', {
+          credentials: 'include'
+        })
         if (!res.ok) {
+          console.error('Auth check failed:', res.status, await res.text())
           router.push('/auth/login')
           return
         }
         const data = await res.json()
+        console.log('Auth check success:', data.user?.email)
         setUserId(data.user?.id)
-      } catch {
+      } catch (e) {
+        console.error('Auth check error:', e)
         router.push('/auth/login')
       }
     }
