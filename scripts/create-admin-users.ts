@@ -44,7 +44,7 @@ async function createAdminUsers() {
     console.log('\n🎉 Admin users ready!')
     console.log('   - joshlanius@yahoo.com')
     console.log('   - josh.lanius@gmail.com')
-    console.log('\n📝 Note: These accounts will be fully activated when they sign in via NextAuth')
+    console.log('\n📝 Note: These accounts will be fully activated when they sign in via Supabase magic link')
   } catch (error: any) {
     console.error(`❌ Error: ${error.message}`)
     process.exit(1)
