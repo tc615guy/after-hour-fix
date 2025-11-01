@@ -2,9 +2,26 @@ import Stripe from 'stripe'
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || ''
 
-export const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: '2025-02-24.acacia',
-  typescript: true,
+// Lazy initialization to avoid errors during build when Stripe is not configured
+let _stripe: Stripe | null = null
+function getStripe(): Stripe {
+  if (!_stripe) {
+    if (!STRIPE_SECRET_KEY) {
+      throw new Error('STRIPE_SECRET_KEY is not configured')
+    }
+    _stripe = new Stripe(STRIPE_SECRET_KEY, {
+      apiVersion: '2025-02-24.acacia',
+      typescript: true,
+    })
+  }
+  return _stripe
+}
+
+// Export for backward compatibility, but will throw if Stripe is not configured
+export const stripe = new Proxy({} as Stripe, {
+  get(_target, prop) {
+    return getStripe()[prop as keyof Stripe]
+  }
 })
 
 export const STARTER_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 'price_starter'
