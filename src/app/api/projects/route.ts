@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { z } from 'zod'
 import { requireSession, rateLimit, captureException, getOrCreatePrismaUserByEmail } from '@/lib/api-guard'
 import { createCalComClient, createCalComClientWithToken } from '@/lib/calcom'
+import { createVapiClient, buildAssistantPrompt, buildAssistantTools } from '@/lib/vapi'
 
 const CreateProjectSchema = z.object({
   name: z.string(),
@@ -107,6 +108,66 @@ export async function POST(req: NextRequest) {
       }
     } catch (e) {
       console.warn('[Cal.com] clone event type skipped:', (e as any)?.message)
+    }
+
+    // Create VAPI assistant automatically
+    try {
+      const vapiClient = createVapiClient()
+      const systemPrompt = buildAssistantPrompt(project.name, project.trade)
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://afterhourfix.com'
+      const tools = buildAssistantTools(appUrl, project.id)
+
+      console.log('[VAPI] Creating assistant for project:', project.name)
+
+      const vapiAssistant = await vapiClient.createAssistant({
+        name: `${project.name} AI Assistant`,
+        firstMessage: "Hey there, thanks for calling! I can help you right away. What's going on?",
+        voice: {
+          provider: 'cartesia',
+          voiceId: 'ec1e269e-9ca0-402f-8a18-58e0e022355a', // Ariana
+          model: 'sonic-3',
+          language: 'en',
+        },
+        model: {
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+          temperature: 0.7,
+          messages: [
+            {
+              role: 'system',
+              content: systemPrompt,
+            },
+          ],
+          tools,
+        },
+        recordingEnabled: true,
+      })
+
+      console.log('[VAPI] Assistant created:', vapiAssistant.id)
+
+      // Create agent record in database
+      const agent = await prisma.agent.create({
+        data: {
+          projectId: project.id,
+          vapiAssistantId: vapiAssistant.id,
+          name: `${project.name} AI Assistant`,
+          voice: 'ariana',
+          basePrompt: systemPrompt,
+        },
+      })
+
+      console.log('[VAPI] Agent record created in database:', agent.id)
+
+      await prisma.eventLog.create({
+        data: {
+          projectId: project.id,
+          type: 'agent.created',
+          payload: { agentId: agent.id, vapiAssistantId: vapiAssistant.id },
+        },
+      })
+    } catch (e) {
+      console.error('[VAPI] Failed to create assistant:', (e as any)?.message)
+      // Don't fail the whole request if VAPI creation fails
     }
 
     return NextResponse.json({ success: true, project })
