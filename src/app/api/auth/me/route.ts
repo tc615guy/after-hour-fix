@@ -31,24 +31,41 @@ export async function GET() {
     }
 
     // Get or create user in Prisma
+    // First try to find by Supabase ID
     let user = await prisma.user.findUnique({
       where: { id: supabaseUser.id }
     })
 
-    console.log('[/api/auth/me] User in Prisma:', user ? 'found' : 'not found')
+    console.log('[/api/auth/me] User lookup by ID:', user ? 'found' : 'not found')
 
+    // If not found by ID, try to find by email
     if (!user) {
-      console.log('[/api/auth/me] Creating new user in Prisma:', supabaseUser.email)
-      // Create user in Prisma if doesn't exist
-      user = await prisma.user.create({
-        data: {
-          id: supabaseUser.id,
-          email: supabaseUser.email!,
-          name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
-          role: 'user'
-        }
+      user = await prisma.user.findUnique({
+        where: { email: supabaseUser.email! }
       })
-      console.log('[/api/auth/me] User created successfully:', user.id)
+      console.log('[/api/auth/me] User lookup by email:', user ? 'found' : 'not found')
+
+      if (user) {
+        // User exists with different ID - update the ID to match Supabase
+        console.log('[/api/auth/me] Updating user ID from', user.id, 'to', supabaseUser.id)
+        user = await prisma.user.update({
+          where: { email: supabaseUser.email! },
+          data: { id: supabaseUser.id }
+        })
+        console.log('[/api/auth/me] User ID updated successfully')
+      } else {
+        // User doesn't exist at all - create new
+        console.log('[/api/auth/me] Creating new user in Prisma:', supabaseUser.email)
+        user = await prisma.user.create({
+          data: {
+            id: supabaseUser.id,
+            email: supabaseUser.email!,
+            name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
+            role: 'user'
+          }
+        })
+        console.log('[/api/auth/me] User created successfully:', user.id)
+      }
     }
 
     return NextResponse.json({
