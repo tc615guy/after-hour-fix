@@ -38,8 +38,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Prisma
-prisma/migrations/
+# Prisma (keep migrations tracked)
 
 # Local logs & scratch
 .logs/
