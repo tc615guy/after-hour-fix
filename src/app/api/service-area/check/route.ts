@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 /**
  * Check if a service address is within the configured service area
- * This uses basic geographic distance calculation and zipcode/city matching
+ * Uses zipcode/city matching or Google Maps Geocoding for radius-based validation
  */
 export async function POST(req: NextRequest) {
   try {
@@ -69,15 +69,59 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // For radius-based service area, we'd need geocoding
-    // For now, we accept all addresses if radius is configured but warn the AI
+    // For radius-based service area, use Google Maps Geocoding API
     if (serviceRadius && businessAddress) {
-      // TODO: Implement actual distance calculation using geocoding API
-      // For now, accept the booking but log for manual review
-      return NextResponse.json({
-        inServiceArea: true,
-        message: `Address accepted. Please note the service radius is ${serviceRadius} miles from our business.`,
-      })
+      const googleApiKey = process.env.GOOGLE_MAPS_API_KEY
+      
+      if (!googleApiKey) {
+        // No API key configured - accept with warning
+        console.warn(`[Service Area Check] No Google Maps API key configured for project ${projectId}`)
+        return NextResponse.json({
+          inServiceArea: true,
+          message: `Address accepted. Please note the service radius is ${serviceRadius} miles from our business.`,
+        })
+      }
+
+      try {
+        // Geocode both addresses
+        const [businessCoords, customerCoords] = await Promise.all([
+          geocodeAddress(businessAddress, googleApiKey),
+          geocodeAddress(address, googleApiKey),
+        ])
+
+        if (!businessCoords || !customerCoords) {
+          // Geocoding failed - accept with warning
+          console.warn(`[Service Area Check] Geocoding failed for project ${projectId}`)
+          return NextResponse.json({
+            inServiceArea: true,
+            message: `Address accepted. Please note the service radius is ${serviceRadius} miles from our business.`,
+          })
+        }
+
+        // Calculate distance using Haversine formula
+        const distanceMiles = calculateDistance(businessCoords, customerCoords)
+
+        if (distanceMiles <= serviceRadius) {
+          return NextResponse.json({
+            inServiceArea: true,
+            message: `Perfect! You're within our ${serviceRadius}-mile service area (${distanceMiles.toFixed(1)} miles away). I can help you book!`,
+            distanceMiles: Math.round(distanceMiles * 10) / 10,
+          })
+        } else {
+          return NextResponse.json({
+            inServiceArea: false,
+            message: `I'm sorry, but you're ${distanceMiles.toFixed(1)} miles away, which is outside our ${serviceRadius}-mile service area. Is there another location closer to us where we could meet?`,
+            distanceMiles: Math.round(distanceMiles * 10) / 10,
+          })
+        }
+      } catch (geocodeError: any) {
+        console.error('[Service Area Check] Geocoding error:', geocodeError.message)
+        // On error, accept the booking but note it needs verification
+        return NextResponse.json({
+          inServiceArea: true,
+          message: `Address accepted. Please note the service radius is ${serviceRadius} miles from our business.`,
+        })
+      }
     }
 
     // Default: accept if we can't determine
@@ -92,5 +136,50 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+/**
+ * Geocode an address using Google Maps Geocoding API
+ */
+async function geocodeAddress(address: string, apiKey: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const encoded = encodeURIComponent(address)
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encoded}&key=${apiKey}`
+    
+    const response = await fetch(url)
+    const data = await response.json()
+
+    if (data.status === 'OK' && data.results && data.results.length > 0) {
+      const location = data.results[0].geometry.location
+      return { lat: location.lat, lng: location.lng }
+    }
+
+    console.warn('[Geocoding] No results for address:', address, data.status)
+    return null
+  } catch (error: any) {
+    console.error('[Geocoding] Error:', error.message)
+    return null
+  }
+}
+
+/**
+ * Calculate distance between two coordinates using Haversine formula
+ * Returns distance in miles
+ */
+function calculateDistance(
+  coord1: { lat: number; lng: number },
+  coord2: { lat: number; lng: number }
+): number {
+  const R = 3959 // Earth's radius in miles
+  const dLat = ((coord2.lat - coord1.lat) * Math.PI) / 180
+  const dLon = ((coord2.lng - coord1.lng) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((coord1.lat * Math.PI) / 180) *
+      Math.cos((coord2.lat * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
 }
 
