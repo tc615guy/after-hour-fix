@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { createVapiClient } from '@/lib/vapi'
+import { searchAvailableNumbers, purchaseTwilioNumber } from '@/lib/sms'
 import { z } from 'zod'
 
 const PurchaseNumberSchema = z.object({
@@ -15,8 +16,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const areaCode = searchParams.get('areaCode') || undefined
 
-    const vapiClient = createVapiClient()
-    const numbers = await vapiClient.searchPhoneNumbers(areaCode)
+    // Search via Twilio instead of Vapi
+    const numbers = await searchAvailableNumbers(areaCode || '205')
 
     return NextResponse.json({ numbers })
   } catch (error: any) {
@@ -35,30 +36,33 @@ export async function POST(req: NextRequest) {
       where: { id: input.agentId },
     })
 
-    console.log('Agent lookup result:', agent)
-    console.log('Agent projectId:', agent?.projectId, 'Expected projectId:', input.projectId)
-
     if (!agent || agent.projectId !== input.projectId) {
-      console.log('Agent not found or projectId mismatch')
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 })
     }
 
-    const vapiClient = createVapiClient()
-
-    // Fetch project to get forwarding number for fallback
     const project = await prisma.project.findUnique({
       where: { id: input.projectId },
     })
 
-    // Require a specific number - Vapi no longer supports searching available numbers
-    const numberToPurchase = input.number
+    let numberToPurchase = input.number
     if (!numberToPurchase) {
-      return NextResponse.json({ 
-        error: 'Please provide a specific phone number to purchase. Vapi no longer supports searching available numbers.' 
-      }, { status: 400 })
+      // Auto-purchase: Search for and buy first available number
+      const availableNumbers = await searchAvailableNumbers(input.areaCode || '205')
+      if (availableNumbers.length === 0) {
+        return NextResponse.json({ 
+          error: `No numbers available in area code ${input.areaCode || '205'}. Try a different area code.` 
+        }, { status: 404 })
+      }
+      numberToPurchase = availableNumbers[0].phoneNumber
     }
 
-    // Configure server URL and fallback destination
+    // Step 1: Purchase from Twilio
+    console.log(`[B2B Provision] Purchasing number from Twilio: ${numberToPurchase}`)
+    const twilioSid = await purchaseTwilioNumber(numberToPurchase)
+    console.log(`[B2B Provision] Twilio purchase complete: ${twilioSid}`)
+
+    // Step 2: Add to Vapi (BYO)
+    const vapiClient = createVapiClient()
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const serverUrl = `${appUrl}/api/vapi/webhook`
     const serverUrlSecret = process.env.VAPI_WEBHOOK_SECRET
@@ -68,6 +72,7 @@ export async function POST(req: NextRequest) {
       serverUrlSecret,
       fallbackDestination: project?.forwardingNumber || undefined,
     })
+    console.log(`[B2B Provision] Vapi integration complete: ${vapiNumber.id}`)
 
     // Check if number already exists
     const existingNumber = await prisma.phoneNumber.findUnique({

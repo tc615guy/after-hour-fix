@@ -380,20 +380,33 @@ export default function SettingsPage() {
                     <Phone className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                     <p className="font-medium">No phone number configured</p>
                     <p className="text-sm mt-2 mb-4">
-                      To purchase a number, you need to get one from Vapi or another provider and purchase it.
+                      Get a dedicated business number powered by AI
                     </p>
-                    <p className="text-xs text-gray-600 mb-4">
-                      To purchase through Vapi dashboard:
-                    </p>
-                    <div className="space-y-2">
-                      <ol className="text-xs text-left text-gray-700 max-w-md mx-auto space-y-1 list-decimal list-inside">
-                        <li>Go to <a href="https://dashboard.vapi.ai" target="_blank" className="text-blue-600 underline">dashboard.vapi.ai</a></li>
-                        <li>Navigate to Phone Numbers</li>
-                        <li>Purchase a number there</li>
-                        <li>Click "Sync from Vapi" below to import it here</li>
-                      </ol>
-                    </div>
                     <div className="mt-4 flex items-center justify-center gap-2">
+                      <Button
+                        onClick={async () => {
+                          try {
+                            const activeAgent = (project.agents || []).sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]
+                            if (!activeAgent) {
+                              alert('No assistant found to attach number to.')
+                              return
+                            }
+                            const res = await fetch('/api/numbers', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ projectId, agentId: activeAgent.id }),
+                            })
+                            const data = await res.json()
+                            if (!res.ok) throw new Error(data.error || 'Failed to purchase number')
+                            alert(`Number purchased: ${data?.phoneNumber?.e164 || 'success'}`)
+                            await loadProject()
+                          } catch (e: any) {
+                            alert(`Error: ${e.message}`)
+                          }
+                        }}
+                      >
+                        Purchase Number
+                      </Button>
                       <Button
                         variant="outline"
                         onClick={async () => {

@@ -7,8 +7,8 @@ const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER
 let twilioClient: ReturnType<typeof twilio> | null = null
 
 function getTwilioClient() {
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
-    console.warn('[SMS] Twilio credentials not configured - SMS disabled')
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+    console.warn('[Twilio] Credentials not configured')
     return null
   }
 
@@ -58,6 +58,62 @@ export async function sendSMS({ to, message }: SendSMSParams): Promise<boolean> 
   } catch (error: any) {
     console.error('[SMS] Failed to send:', error.message)
     return false
+  }
+}
+
+export interface TwilioAvailableNumber {
+  phoneNumber: string
+  friendlyName: string
+  isoCountry: string
+  capabilities: {
+    voice: boolean
+    sms: boolean
+    mms: boolean
+  }
+}
+
+/**
+ * Search for available Twilio phone numbers
+ */
+export async function searchAvailableNumbers(areaCode?: string, country: string = 'US'): Promise<TwilioAvailableNumber[]> {
+  const client = getTwilioClient()
+  if (!client) {
+    throw new Error('Twilio credentials not configured')
+  }
+
+  try {
+    const numbers = await client.availablePhoneNumbers(country)
+      .local
+      .list({ areaCode, limit: 20 })
+
+    return numbers.map((num: any) => ({
+      phoneNumber: num.phoneNumber,
+      friendlyName: num.friendlyName,
+      isoCountry: num.isoCountry,
+      capabilities: num.capabilities,
+    }))
+  } catch (error: any) {
+    console.error('[Twilio] Search error:', error.message)
+    throw new Error(`Failed to search numbers: ${error.message}`)
+  }
+}
+
+/**
+ * Purchase a Twilio phone number
+ */
+export async function purchaseTwilioNumber(phoneNumber: string): Promise<string> {
+  const client = getTwilioClient()
+  if (!client) {
+    throw new Error('Twilio credentials not configured')
+  }
+
+  try {
+    const purchased = await client.incomingPhoneNumbers.create({ phoneNumber })
+    console.log(`[Twilio] Purchased number: ${phoneNumber}, SID: ${purchased.sid}`)
+    return purchased.sid // Return the SID for reference
+  } catch (error: any) {
+    console.error('[Twilio] Purchase error:', error.message)
+    throw new Error(`Failed to purchase number: ${error.message}`)
   }
 }
 
