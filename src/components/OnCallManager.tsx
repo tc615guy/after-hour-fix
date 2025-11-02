@@ -8,7 +8,7 @@ import PhoneInput from '@/components/PhoneInput'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Trash2, Phone, AlertCircle, CheckCircle2, Clock } from 'lucide-react'
+import { Plus, Trash2, Phone, AlertCircle, CheckCircle2, Clock, Download } from 'lucide-react'
 
 interface Technician {
   id: string
@@ -108,6 +108,40 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
     } catch (error: any) {
       alert(error.message)
     }
+  }
+
+  const exportTechnicians = () => {
+    if (technicians.length === 0) {
+      alert('No technicians to export')
+      return
+    }
+
+    // Create CSV content
+    const headers = ['Name', 'Phone', 'Email', 'Status', 'On-Call', 'Priority']
+    const rows = technicians.map(tech => [
+      tech.name,
+      tech.phone,
+      tech.email || '',
+      tech.isActive ? 'Active' : 'Inactive',
+      tech.isOnCall ? 'Yes' : 'No',
+      tech.priority.toString()
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n')
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `technicians_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   const onCallTechs = technicians.filter((t) => t.isOnCall && t.isActive)
@@ -233,10 +267,21 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
               </CardTitle>
               <CardDescription>Manage your team and on-call status</CardDescription>
             </div>
-            <Button onClick={() => setShowAddForm(!showAddForm)} size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Technician
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={exportTechnicians}
+                size="sm"
+                variant="outline"
+                disabled={technicians.length === 0}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </Button>
+              <Button onClick={() => setShowAddForm(!showAddForm)} size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Technician
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
