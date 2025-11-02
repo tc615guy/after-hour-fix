@@ -92,7 +92,7 @@ This document summarizes required .env settings and app behavior changes to revi
 The following demo assistants are pre-configured for testing:
 - **Demo Plumbing**: ID `66ac9a80-cee3-4084-95fa-c51ede8ccf5c`, Number `+19168664042`
 - **Demo HVAC**: ID `ee143a79-7d18-451f-ae8e-c1e78c83fa0f`, Number `+14702936031`
-- **Demo Electrical**: ID `fc94b4f6-0a58-4478-8ba1-a81dd81bbaf5` (no number assigned)
+- **Demo Electrical**: ID `fc94b4f6-0a58-4478-8ba1-a81dd81bbaf5`, Number `+13414419066`
 
 ### Phone Number Setup
 When purchasing or syncing phone numbers:
