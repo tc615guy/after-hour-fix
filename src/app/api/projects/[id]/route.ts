@@ -49,3 +49,40 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const session = await requireSession(req)
+    await ensureProjectAccess(session!.user.email || '', id)
+
+    const body = await req.json()
+    const updateData: any = {}
+
+    if (typeof body.businessAddress === 'string') {
+      updateData.businessAddress = body.businessAddress
+    }
+    
+    if (body.warrantyInfo !== undefined) {
+      updateData.warrantyInfo = body.warrantyInfo
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+    }
+
+    const project = await prisma.project.update({
+      where: { id },
+      data: updateData,
+    })
+
+    return NextResponse.json({ success: true, project })
+  } catch (error: any) {
+    captureException(error)
+    console.error('Update project error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}

@@ -233,6 +233,65 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Warranty & Business Info</CardTitle>
+                <CardDescription>Information the AI uses when talking to customers</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Business Address</Label>
+                  <Input
+                    value={project.businessAddress || ''}
+                    onChange={(e) => setProject({ ...project, businessAddress: e.target.value })}
+                    placeholder="123 Main St, City, State ZIP"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Used for service area validation and distance calculations</p>
+                </div>
+                <div>
+                  <Label>Warranty Information</Label>
+                  <Textarea
+                    value={
+                      typeof project.warrantyInfo === 'object' && project.warrantyInfo?.coverage
+                        ? project.warrantyInfo.coverage
+                        : typeof project.warrantyInfo === 'string'
+                        ? project.warrantyInfo
+                        : ''
+                    }
+                    onChange={(e) => {
+                      const warranty = typeof project.warrantyInfo === 'object' 
+                        ? { ...project.warrantyInfo, coverage: e.target.value }
+                        : e.target.value
+                      setProject({ ...project, warrantyInfo: warranty })
+                    }}
+                    placeholder="e.g., 90-day warranty on all workmanship. Parts warranty per manufacturer. Labor not included in parts warranty."
+                    rows={4}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Payment terms, warranties, disclaimers, etc.</p>
+                </div>
+                <Button
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`/api/projects/${projectId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          businessAddress: project.businessAddress,
+                          warrantyInfo: project.warrantyInfo,
+                        }),
+                      })
+                      if (!res.ok) throw new Error('Failed to save')
+                      alert('Saved!')
+                    } catch (e: any) {
+                      alert(e.message)
+                    }
+                  }}
+                >
+                  Save
+                </Button>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="pricing" className="mt-6">

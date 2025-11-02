@@ -77,7 +77,6 @@ export default function PricingSheetEditor({ projectId, trade = 'plumbing' }: Pr
   const [saving, setSaving] = useState(false)
   const [items, setItems] = useState<PricingItem[]>([])
   const [emergencyMultiplier, setEmergencyMultiplier] = useState(1.5)
-  const [additionalNotes, setAdditionalNotes] = useState('')
   const [tripFee, setTripFee] = useState(0)
   const [enableCostSheet, setEnableCostSheet] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -99,7 +98,6 @@ export default function PricingSheetEditor({ projectId, trade = 'plumbing' }: Pr
             selected: false,
           }))
           setItems(loadedItems)
-          setAdditionalNotes(project.pricingSheet.notes || '')
           setTripFee(project.pricingSheet.tripFee || 0)
           setEnableCostSheet(project.pricingSheet.enabled !== false)
         }
@@ -176,7 +174,6 @@ export default function PricingSheetEditor({ projectId, trade = 'plumbing' }: Pr
         body: JSON.stringify({
           pricingSheet: {
             items: items.map(({ selected, ...item }) => item), // Remove 'selected' field
-            notes: additionalNotes,
             tripFee,
             enabled: enableCostSheet,
             lastUpdated: new Date().toISOString(),
@@ -217,10 +214,6 @@ export default function PricingSheetEditor({ projectId, trade = 'plumbing' }: Pr
 
     if (emergencyMultiplier > 1) {
       text += `⚠️ After-hours/Emergency: ${emergencyMultiplier}x standard rates\n\n`
-    }
-
-    if (additionalNotes) {
-      text += `📌 ${additionalNotes}\n`
     }
 
     return text
@@ -529,23 +522,6 @@ export default function PricingSheetEditor({ projectId, trade = 'plumbing' }: Pr
             <p className="text-xs text-gray-500 mt-2">
               Example: ${tripFee} trip fee becomes ${(tripFee * emergencyMultiplier).toFixed(2)} after hours
             </p>
-          </div>
-
-          {/* Additional Notes */}
-          <div className="border-t pt-6">
-            <Label htmlFor="notes" className="text-base font-semibold">
-              Additional Notes
-            </Label>
-            <p className="text-sm text-gray-500 mb-3">
-              Payment terms, warranties, disclaimers, etc.
-            </p>
-            <Textarea
-              id="notes"
-              value={additionalNotes}
-              onChange={(e) => setAdditionalNotes(e.target.value)}
-              placeholder="e.g., Payment due upon completion. All prices include parts & labor unless noted. 90-day warranty on all work."
-              rows={4}
-            />
           </div>
 
           {/* Preview */}
