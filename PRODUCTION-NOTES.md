@@ -49,6 +49,7 @@ This document summarizes required .env settings and app behavior changes to revi
 
 - Numbers
   - Settings → Numbers and Dashboard now surface a “Purchase Number” action if the project has no number. The purchase attaches the number to the latest assistant and persists it to the project.
+  - Phone number purchase automatically includes: `serverUrl` (webhook endpoint), `serverUrlSecret` (auth), and `fallbackDestination` (project's forwarding number if set).
 
 - Pricing → “Push to Assistant” (fast path)
   - A concise pricing summary (trip fee, up to 25 services, emergency multiplier, and notes) is appended to the assistant’s system prompt and synced to Vapi.
@@ -85,13 +86,35 @@ This document summarizes required .env settings and app behavior changes to revi
   - Job status tracking: `ImportJob` table records `queued|processing|completed|failed` with progress. Poll via `GET /api/jobs/:id` (auth enforced by project ownership).
   - Worker process: use PM2 with `ecosystem.config.js` or a Procfile (`worker: npm run worker`).
 
+## Phone Number Configuration
+
+### Demo Assistants
+The following demo assistants are pre-configured for testing:
+- **Demo Plumbing**: ID `66ac9a80-cee3-4084-95fa-c51ede8ccf5c`, Number `+19168664042`
+- **Demo HVAC**: ID `ee143a79-7d18-451f-ae8e-c1e78c83fa0f`, Number `+14702936031`
+- **Demo Electrical**: ID `fc94b4f6-0a58-4478-8ba1-a81dd81bbaf5` (no number assigned)
+
+### Phone Number Setup
+When purchasing or syncing phone numbers:
+1. Numbers are automatically attached to their project's assistant
+2. Webhook configuration is set: `https://afterhourfix.com/api/vapi/webhook`
+3. Fallback forwarding is set to the project's `forwardingNumber` if configured
+4. Use Settings → Phone Numbers → "Sync from Vapi" to update database
+
+### Fixing Orphaned Numbers
+If phone numbers become attached to deleted assistants (e.g., after assistant recreation):
+```bash
+npx tsx scripts/fix-demo-phone-numbers.ts
+```
+
 ## Production Validation Steps
 
 1) Confirm HTTPS for `NEXT_PUBLIC_APP_URL` and that assistant tools are attached (inspect the assistant config or logs).
 2) Verify Vapi credentials and webhook URL use HTTPS.
-3) Attempt “Push to Assistant” from Pricing and confirm the prompt updates and tools are present.
+3) Attempt "Push to Assistant" from Pricing and confirm the prompt updates and tools are present.
 4) Purchase a number (on a test project) and place a test call.
-5) Try CSV “Import (Preview)”: map columns, import, and confirm row‑level error reporting and partial success behavior.
+5) Try CSV "Import (Preview)": map columns, import, and confirm row‑level error reporting and partial success behavior.
 6) Trigger an email (booking confirmation) and verify it is enqueued and processed by the worker (BullMQ), or sent directly if queue disabled.
 7) Verify Sentry receives a test error and traces.
 8) For large imports, visit `/jobs/:id` to see live progress.
+9) Test demo assistants: verify all three demo numbers can receive calls and book appointments.
