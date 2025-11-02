@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Phone, Calendar as CalendarIcon, DollarSign, Clock, Settings, LogOut, List, Download, Upload } from 'lucide-react'
+import { Phone, Calendar as CalendarIcon, DollarSign, Clock, Settings, LogOut, List, Download, Upload, Shield } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import MobileNav from '@/components/MobileNav'
 import { formatCurrency, formatDuration, formatPhoneNumber } from '@/lib/utils'
@@ -581,6 +581,12 @@ export default function DashboardPage() {
               <div className="md:hidden">
                 <MobileNav projectId={selectedProject?.id} />
               </div>
+              <Link href="/admin">
+                <Button variant="ghost" size="sm" className="hidden md:inline-flex">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Admin
+                </Button>
+              </Link>
               <Link href={`/projects/${selectedProject.id}/settings`}>
                 <Button variant="ghost" size="sm" className="hidden md:inline-flex">
                   <Settings className="w-4 h-4 mr-2" />
