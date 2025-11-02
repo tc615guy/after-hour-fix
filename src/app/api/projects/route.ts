@@ -58,27 +58,29 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // If base eventType id exists for trade, clone it.
+    // Cal.com integration: Only create event type if customer has already connected their account
+    // No fallback to service key - customers must provide their own Cal.com API key
     try {
-      const trade = (project.trade || '').toLowerCase()
-      const baseIdMap: Record<string, number | undefined> = {
-        plumbing: process.env.CALCOM_EVENT_TYPE_ID_PLUMBING ? Number(process.env.CALCOM_EVENT_TYPE_ID_PLUMBING) : undefined,
-        hvac: process.env.CALCOM_EVENT_TYPE_ID_HVAC ? Number(process.env.CALCOM_EVENT_TYPE_ID_HVAC) : undefined,
-        electrical: process.env.CALCOM_EVENT_TYPE_ID_ELECTRICAL ? Number(process.env.CALCOM_EVENT_TYPE_ID_ELECTRICAL) : undefined,
-      }
-      const baseId = baseIdMap[trade]
-      if (baseId) {
-        // Prefer customer's OAuth token if already connected
-        if ((project as any).calcomAccessToken) {
+      if ((project as any).calcomAccessToken) {
+        const trade = (project.trade || '').toLowerCase()
+        const baseIdMap: Record<string, number | undefined> = {
+          plumbing: process.env.CALCOM_EVENT_TYPE_ID_PLUMBING ? Number(process.env.CALCOM_EVENT_TYPE_ID_PLUMBING) : undefined,
+          hvac: process.env.CALCOM_EVENT_TYPE_ID_HVAC ? Number(process.env.CALCOM_EVENT_TYPE_ID_HVAC) : undefined,
+          electrical: process.env.CALCOM_EVENT_TYPE_ID_ELECTRICAL ? Number(process.env.CALCOM_EVENT_TYPE_ID_ELECTRICAL) : undefined,
+        }
+        const baseId = baseIdMap[trade]
+
+        if (baseId) {
           const tokenClient = createCalComClientWithToken((project as any).calcomAccessToken)
-          // Fetch base settings with service key, then create under customer's token
           const serviceKey = process.env.CALCOM_API_KEY
+
           if (serviceKey) {
             const service = createCalComClient(serviceKey)
             const base = await service.getEventType(baseId)
             const me = await tokenClient.getMe()
             const schedules = await tokenClient.listSchedules()
             const schedule = schedules.find((s: any) => s.isDefault) || schedules[0]
+
             const payload: any = {
               title: `${project.name} - ${String(project.trade || '').toUpperCase()} Service`,
               slug: `${String(project.trade || 'service').toLowerCase()}-service-${Date.now()}`,
@@ -92,22 +94,19 @@ export async function POST(req: NextRequest) {
                 ? [{ userId: typeof me.id === 'string' ? parseInt(me.id as any, 10) : me.id, scheduleId: schedule.id, isFixed: true }]
                 : undefined,
             }
+
             const created = await (tokenClient as any).client.post('/event-types', payload, { headers: { Authorization: `Bearer ${(project as any).calcomAccessToken}` } })
             const evtId = created.data?.event_type?.id || created.data?.id
             await prisma.project.update({ where: { id: project.id }, data: { calcomEventTypeId: evtId, calcomConnectedAt: new Date() } })
-          }
-        } else {
-          // Fallback to service key clone under our account
-          const apiKey = process.env.CALCOM_API_KEY
-          if (apiKey) {
-            const cal = createCalComClient(apiKey)
-            const evt = await cal.createEventTypeFromBase({ baseEventTypeId: baseId, projectName: project.name, trade })
-            await prisma.project.update({ where: { id: project.id }, data: { calcomEventTypeId: evt.id, calcomConnectedAt: new Date(), calcomApiKey: apiKey } })
+
+            console.log('[Cal.com] Event type created for customer account:', evtId)
           }
         }
+      } else {
+        console.log('[Cal.com] Skipping event type creation - customer has not connected Cal.com account yet')
       }
     } catch (e) {
-      console.warn('[Cal.com] clone event type skipped:', (e as any)?.message)
+      console.warn('[Cal.com] Event type creation failed:', (e as any)?.message)
     }
 
     // Create VAPI assistant by cloning from demo assistant based on trade
