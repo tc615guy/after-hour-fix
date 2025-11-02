@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { createVapiClient } from '@/lib/vapi'
 
 export async function PUT(
   req: NextRequest,
@@ -31,6 +32,27 @@ export async function PUT(
         forwardingNumber,
       },
     })
+
+    // Update Vapi phone numbers with new fallback destination
+    if (forwardingEnabled && forwardingNumber) {
+      try {
+        const phoneNumbers = await prisma.phoneNumber.findMany({
+          where: { projectId },
+        })
+        
+        const vapiClient = createVapiClient()
+        for (const phoneNumber of phoneNumbers) {
+          if (phoneNumber.vapiNumberId) {
+            await vapiClient.updatePhoneNumber(phoneNumber.vapiNumberId, {
+              fallbackDestination: forwardingNumber,
+            })
+          }
+        }
+      } catch (vapiError: any) {
+        console.error('[Vapi Update] Failed to update fallback destination:', vapiError?.message)
+        // Don't fail the request if Vapi update fails - database was already updated
+      }
+    }
 
     return NextResponse.json({ success: true, project })
   } catch (error: any) {

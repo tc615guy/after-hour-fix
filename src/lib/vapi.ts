@@ -206,6 +206,26 @@ export class VapiClient {
     }
   }
 
+  async updatePhoneNumber(numberId: string, updates: { assistantId?: string; fallbackDestination?: string }): Promise<VapiPhoneNumber> {
+    try {
+      const payload: any = {}
+      if (updates.assistantId) {
+        payload.assistantId = updates.assistantId
+      }
+      if (updates.fallbackDestination) {
+        payload.fallbackDestination = {
+          type: 'number',
+          number: updates.fallbackDestination,
+        }
+      }
+      const response = await this.client.patch(`/phone-number/${numberId}`, payload)
+      return response.data
+    } catch (error: any) {
+      console.error('Vapi updatePhoneNumber error:', error.response?.data || error.message)
+      throw new Error('Failed to update phone number')
+    }
+  }
+
   async transferCall(callId: string, phoneNumber: string): Promise<any> {
     try {
       const response = await this.client.post(`/call/${callId}/transfer`, {
