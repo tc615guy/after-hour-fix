@@ -36,20 +36,27 @@ export async function PUT(
     // Update Vapi phone numbers with new fallback destination
     if (forwardingEnabled && forwardingNumber) {
       try {
+        console.log(`[Vapi Update] Updating fallback destination for project ${projectId} to ${forwardingNumber}`)
         const phoneNumbers = await prisma.phoneNumber.findMany({
           where: { projectId },
         })
+        console.log(`[Vapi Update] Found ${phoneNumbers.length} phone numbers to update`)
         
         const vapiClient = createVapiClient()
         for (const phoneNumber of phoneNumbers) {
           if (phoneNumber.vapiNumberId) {
+            console.log(`[Vapi Update] Updating number ${phoneNumber.e164} (Vapi ID: ${phoneNumber.vapiNumberId})`)
             await vapiClient.updatePhoneNumber(phoneNumber.vapiNumberId, {
               fallbackDestination: forwardingNumber,
             })
+            console.log(`[Vapi Update] Successfully updated ${phoneNumber.e164}`)
+          } else {
+            console.log(`[Vapi Update] Skipping ${phoneNumber.e164} - no Vapi ID`)
           }
         }
       } catch (vapiError: any) {
         console.error('[Vapi Update] Failed to update fallback destination:', vapiError?.message)
+        console.error('[Vapi Update] Error details:', vapiError?.response?.data || vapiError)
         // Don't fail the request if Vapi update fails - database was already updated
       }
     }

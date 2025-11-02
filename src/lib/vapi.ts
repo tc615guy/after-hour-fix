@@ -218,7 +218,9 @@ export class VapiClient {
           number: updates.fallbackDestination,
         }
       }
+      console.log(`[Vapi] PATCH /phone-number/${numberId}`, JSON.stringify(payload, null, 2))
       const response = await this.client.patch(`/phone-number/${numberId}`, payload)
+      console.log(`[Vapi] Response:`, JSON.stringify(response.data, null, 2))
       return response.data
     } catch (error: any) {
       console.error('Vapi updatePhoneNumber error:', error.response?.data || error.message)
