@@ -56,6 +56,7 @@ export async function POST(
           projectId: project.id,
           vapiNumberId: num.id,
           label: 'Main',
+          deletedAt: null, // Un-delete if it was soft-deleted
         },
         create: {
           projectId: project.id,
