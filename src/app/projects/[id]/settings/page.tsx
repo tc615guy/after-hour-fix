@@ -333,12 +333,12 @@ export default function SettingsPage() {
                 </p>
                 <div className="grid md:grid-cols-2 gap-4 mt-4">
                   <div className="bg-white p-4 rounded-lg border border-blue-200">
-                    <h4 className="font-semibold mb-2">Option 1: Port Your Number</h4>
-                    <p className="text-xs">Transfer your existing business number to Vapi. Customers keep calling the same number they know.</p>
+                    <h4 className="font-semibold mb-2">Option 1: Get a New Number</h4>
+                    <p className="text-xs">Purchase a dedicated business number through Vapi. Fully managed, no setup required!</p>
                   </div>
                   <div className="bg-white p-4 rounded-lg border border-blue-200">
-                    <h4 className="font-semibold mb-2">Option 2: Forward After-Hours</h4>
-                    <p className="text-xs">Keep your current carrier. Set up call forwarding to your Vapi number only after business hours.</p>
+                    <h4 className="font-semibold mb-2">Option 2: Forward Your Number</h4>
+                    <p className="text-xs">Keep your current carrier. Set up call forwarding to your AI number after business hours.</p>
                   </div>
                 </div>
               </CardContent>

@@ -120,14 +120,16 @@ model Agent {
 }
 
 model PhoneNumber {
-  id           String   @id @default(cuid())
-  projectId    String
-  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  e164         String   @unique
-  vapiNumberId String
-  label        String? // "Main", "Emergency"
-  createdAt    DateTime @default(now())
-  deletedAt    DateTime?
+  id               String   @id @default(cuid())
+  projectId        String
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  e164             String   @unique
+  vapiNumberId     String
+  label            String? // "Main", "Emergency"
+  serverUrl        String? // Webhook URL for this specific number
+  serverUrlSecret  String? // Auth secret for webhook
+  createdAt        DateTime @default(now())
+  deletedAt        DateTime?
 
   @@index([projectId])
 }

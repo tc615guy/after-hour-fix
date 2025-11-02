@@ -45,6 +45,11 @@ export async function POST(req: NextRequest) {
 
     const vapiClient = createVapiClient()
 
+    // Fetch project to get forwarding number for fallback
+    const project = await prisma.project.findUnique({
+      where: { id: input.projectId },
+    })
+
     // If no specific number, search and pick first available
     let numberToPurchase = input.number
     if (!numberToPurchase) {
@@ -55,7 +60,16 @@ export async function POST(req: NextRequest) {
       numberToPurchase = availableNumbers[0].number
     }
 
-    const vapiNumber = await vapiClient.purchasePhoneNumber(numberToPurchase, agent.vapiAssistantId)
+    // Configure server URL and fallback destination
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const serverUrl = `${appUrl}/api/vapi/webhook`
+    const serverUrlSecret = process.env.VAPI_WEBHOOK_SECRET
+
+    const vapiNumber = await vapiClient.purchasePhoneNumber(numberToPurchase, agent.vapiAssistantId, {
+      serverUrl,
+      serverUrlSecret,
+      fallbackDestination: project?.forwardingNumber || undefined,
+    })
 
     // Check if number already exists
     const existingNumber = await prisma.phoneNumber.findUnique({
@@ -78,6 +92,8 @@ export async function POST(req: NextRequest) {
         e164: vapiNumber.number,
         vapiNumberId: vapiNumber.id,
         label: 'Main',
+        serverUrl,
+        serverUrlSecret,
       },
     })
 

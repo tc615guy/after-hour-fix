@@ -14,7 +14,7 @@ export default function FAQPage() {
     },
     {
       q: 'Can I use my existing phone number?',
-      a: 'Yes! You can port your existing number or get a new local number through our platform.',
+      a: 'Yes! You can set up call forwarding from your existing number or get a new dedicated business number through our platform.',
     },
     {
       q: 'How accurate is the AI at booking jobs?',

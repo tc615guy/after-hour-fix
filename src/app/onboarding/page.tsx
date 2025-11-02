@@ -195,7 +195,7 @@ export default function OnboardingPage() {
                 <ul className="text-sm text-blue-800 space-y-1">
                   <li>• Your AI assistant will be created automatically</li>
                   <li>• You can configure pricing, hours, and calendar integration</li>
-                  <li>• Get a phone number or port your existing one</li>
+                  <li>• Get a new number or forward your existing one</li>
                   <li>• Start receiving calls immediately</li>
                 </ul>
               </div>
@@ -237,7 +237,7 @@ export default function OnboardingPage() {
                     <li>✓ Set your pricing and service rates</li>
                     <li>✓ Configure business hours</li>
                     <li>✓ Add emergency on-call technicians</li>
-                    <li>✓ Get or port a phone number</li>
+                    <li>✓ Get a new number or set up forwarding</li>
                     <li>✓ Connect your calendar (optional)</li>
                   </ul>
                 </div>

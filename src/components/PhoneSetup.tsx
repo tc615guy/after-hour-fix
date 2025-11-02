@@ -42,30 +42,23 @@ export default function PhoneSetup({ projectId, aiNumber }: Props) {
       <div className="grid md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle>Port Phone To AfterHourFix</CardTitle>
-            <CardDescription>One place to manage hours, forwarding, and your AI — no carrier juggling.</CardDescription>
+            <CardTitle>Get a New Phone Number</CardTitle>
+            <CardDescription>Get a dedicated business number powered by AI.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-gray-700">Moves your public business number to AfterHourFix. During Business Hours we forward to your phone; outside hours the AI answers automatically.</p>
-            {portStatus && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded text-sm">
-                <div className="font-semibold mb-1">Port Status</div>
-                <div>Status: {portStatus.status}</div>
-                {portStatus.focDate && <div>FOC Date: {new Date(portStatus.focDate).toLocaleString()}</div>}
-              </div>
-            )}
-            <Button asChild>
-              <Link href={`/projects/${projectId}/porting`} target="_blank" rel="noopener noreferrer">
-                {portStatus ? 'View Porting' : 'Start Port'}
-              </Link>
-            </Button>
+            <p className="text-sm text-gray-700">
+              Purchase a local business number through Vapi. Your AI will answer 24/7, booking jobs and handling calls automatically.
+            </p>
+            <p className="text-sm text-blue-700 font-medium">
+              This number is fully managed — no carrier configuration needed!
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Conditional Forwarding</CardTitle>
-            <CardDescription>Keep your current number; forward to your AI after hours or only if you don’t answer.</CardDescription>
+            <CardTitle>Use Call Forwarding</CardTitle>
+            <CardDescription>Forward your existing business number to your AI.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="text-sm text-gray-700">
@@ -86,16 +79,16 @@ export default function PhoneSetup({ projectId, aiNumber }: Props) {
             ) : (
               <div className="space-y-3">
                 <div className="p-3 bg-gray-50 border rounded">
-                  <div className="font-semibold mb-1">Option A — After Hours Only</div>
+                  <div className="font-semibold mb-1">After Hours Forwarding</div>
                   <p className="text-sm text-gray-700">
                     In your carrier portal, set a schedule so that <strong>outside Business Hours</strong> calls forward to your AI number {aiNumberPretty}.
                   </p>
                   <p className="text-xs text-gray-600 mt-1">During Business Hours your phone rings normally. After hours, nights, and weekends the AI answers.</p>
                 </div>
                 <div className="p-3 bg-gray-50 border rounded">
-                  <div className="font-semibold mb-1">Option B — All Hours (No Answer → AI)</div>
+                  <div className="font-semibold mb-1">All Hours (No Answer → AI)</div>
                   <p className="text-sm text-gray-700">
-                    Keep your phone ringing first. If you <strong>don’t answer</strong> after 2–5 rings or you decline, automatically forward to your AI number {aiNumberPretty}.
+                    Keep your phone ringing first. If you <strong>don't answer</strong> after 2–5 rings or you decline, automatically forward to your AI number {aiNumberPretty}.
                   </p>
                   <p className="text-xs text-gray-600 mt-1">This keeps personal calls intact — pick up the ones you want; let the AI handle the rest.</p>
                 </div>
@@ -104,11 +97,11 @@ export default function PhoneSetup({ projectId, aiNumber }: Props) {
                   <ul className="text-sm text-gray-700 list-disc pl-6 space-y-1">
                     <li>VoIP/PBX (RingCentral/Nextiva/Zoom/Teams): Call Handling → Schedules → After Hours → Forward to {aiNumberPretty}.</li>
                     <li>
-                      Mobile (AT&amp;T/Verizon/T‑Mobile): Many support unconditional <code>*72</code>/<code>*73</code> only. For schedules, use your carrier’s app/portal or a VoIP number.
+                      Mobile (AT&amp;T/Verizon/T‑Mobile): Many support unconditional <code>*72</code>/<code>*73</code> only. For schedules, use your carrier's app/portal or a VoIP number.
                     </li>
                   </ul>
                 </div>
-                <div className="text-xs text-gray-600">Need help? Click “Send me these steps” and we’ll email the instructions.</div>
+                <div className="text-xs text-gray-600">Need help? Click "Learn more" for detailed instructions.</div>
               </div>
             )}
           </CardContent>

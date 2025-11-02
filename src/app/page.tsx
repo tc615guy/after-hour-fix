@@ -340,7 +340,7 @@ export default function HomePage() {
             <div className="text-center">
               <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">2</div>
               <h3 className="font-semibold mb-2">Get Your Phone Number</h3>
-              <p className="text-gray-600 text-sm">Choose a local number or port your existing one</p>
+              <p className="text-gray-600 text-sm">Get a new number or forward your existing one</p>
             </div>
             <div className="text-center">
               <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">3</div>

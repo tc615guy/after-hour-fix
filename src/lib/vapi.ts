@@ -136,12 +136,36 @@ export class VapiClient {
     }
   }
 
-  async purchasePhoneNumber(number: string, assistantId: string): Promise<VapiPhoneNumber> {
+  async purchasePhoneNumber(
+    number: string, 
+    assistantId: string, 
+    options?: { serverUrl?: string; serverUrlSecret?: string; fallbackDestination?: string }
+  ): Promise<VapiPhoneNumber> {
     try {
-      const response = await this.client.post('/phone-number', {
+      const payload: any = {
         number,
         assistantId,
-      })
+      }
+      
+      // Add server URL configuration if provided
+      if (options?.serverUrl) {
+        payload.serverUrl = options.serverUrl
+      }
+      
+      // Add server URL secret if provided
+      if (options?.serverUrlSecret) {
+        payload.serverUrlSecret = options.serverUrlSecret
+      }
+      
+      // Add fallback destination if provided
+      if (options?.fallbackDestination) {
+        payload.fallbackDestination = {
+          type: 'number',
+          number: options.fallbackDestination,
+        }
+      }
+      
+      const response = await this.client.post('/phone-number', payload)
       return response.data
     } catch (error: any) {
       const details = error.response?.data || error.message
