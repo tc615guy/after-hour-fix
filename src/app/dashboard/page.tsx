@@ -32,7 +32,6 @@ export default function DashboardPage() {
   })
   const [subscription, setSubscription] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [purchasingNumber, setPurchasingNumber] = useState(false)
   const [csvPreview, setCsvPreview] = useState<null | { headers: string[]; rows: string[][] }>(null)
   const [csvMapping, setCsvMapping] = useState({
     name: '',
@@ -126,34 +125,6 @@ export default function DashboardPage() {
       }
     } catch (e) {
       console.error('Failed to refresh project:', (e as any)?.message)
-    }
-  }
-
-  const handlePurchaseNumber = async () => {
-    try {
-      if (!selectedProject) return
-      const agents = selectedProject.agents || []
-      const activeAgent = agents.sort(
-        (a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      )[0]
-      if (!activeAgent) {
-        alert('No assistant found to attach number to.')
-        return
-      }
-      setPurchasingNumber(true)
-      const res = await fetch('/api/numbers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId: selectedProject.id, agentId: activeAgent.id }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to purchase number')
-      alert(`Number purchased: ${data?.phoneNumber?.e164 || 'success'}`)
-      await refreshSelectedProject(selectedProject.id)
-    } catch (e: any) {
-      alert(`Error: ${e.message}`)
-    } finally {
-      setPurchasingNumber(false)
     }
   }
 
@@ -669,9 +640,11 @@ export default function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={handlePurchaseNumber} disabled={purchasingNumber}>
-                {purchasingNumber ? 'Purchasing...' : 'Purchase Number'}
-              </Button>
+              <Link href={`/projects/${selectedProject.id}/settings`}>
+                <Button>
+                  Purchase Number in Settings
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         )}
