@@ -397,7 +397,21 @@ export default function SettingsPage() {
                               body: JSON.stringify({ projectId, agentId: activeAgent.id }),
                             })
                             const data = await res.json()
-                            if (!res.ok) throw new Error(data.error || 'Failed to purchase number')
+                            if (!res.ok) {
+                              // Handle subscription required
+                              if (data.requiresSubscription) {
+                                if (confirm(`${data.error}\n\nWould you like to view pricing plans?`)) {
+                                  window.location.href = '/pricing'
+                                }
+                                return
+                              }
+                              // Handle Twilio upgrade required
+                              if (data.requiresTwilioUpgrade) {
+                                alert(data.error)
+                                return
+                              }
+                              throw new Error(data.error || 'Failed to purchase number')
+                            }
                             alert(`Number purchased: ${data?.phoneNumber?.e164 || 'success'}`)
                             await loadProject()
                           } catch (e: any) {
@@ -583,42 +597,53 @@ export default function SettingsPage() {
                 <CardDescription>Manage your subscription and payment methods</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label>Current Plan</Label>
-                  <div className="mt-2">
-                    {(() => {
-                      const proId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
-                      const starterId = process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER
-                      let planName = project.plan || 'Starter'
-                      if (subscription?.priceId) {
-                        if (proId && subscription.priceId === proId) planName = 'Pro'
-                        else if (starterId && subscription.priceId === starterId) planName = 'Starter'
-                      }
-                      const price = planName === 'Pro' ? '299' : '149'
-                      return (
-                        <Badge variant="default" className="text-lg px-4 py-2">
-                          {planName} - ${price}/mo
-                        </Badge>
-                      )
-                    })()}
-                  </div>
-                </div>
-                <div>
-                  <Label>Billing Period</Label>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {subscription?.currentPeriodEnd
-                      ? `Current period ends on ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
-                      : `Current period ends on ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}`}
-                  </p>
-                </div>
-                <div className="pt-4 flex gap-3">
-                  <Button onClick={handleStripePortal}>
-                    Manage Subscription <ExternalLink className="w-4 h-4 ml-2" />
-                  </Button>
-                  <Button variant="outline" asChild>
-                    <Link href="/pricing">View Plans</Link>
-                  </Button>
-                </div>
+                {subscription ? (
+                  <>
+                    <div>
+                      <Label>Current Plan</Label>
+                      <div className="mt-2">
+                        {(() => {
+                          const proId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
+                          const starterId = process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER
+                          let planName = 'Starter'
+                          if (subscription.priceId) {
+                            if (proId && subscription.priceId === proId) planName = 'Pro'
+                            else if (starterId && subscription.priceId === starterId) planName = 'Starter'
+                          }
+                          const price = planName === 'Pro' ? '299' : '149'
+                          return (
+                            <Badge variant="default" className="text-lg px-4 py-2">
+                              {planName} - ${price}/mo
+                            </Badge>
+                          )
+                        })()}
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Billing Period</Label>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Current period ends on {subscription.currentPeriodEnd 
+                          ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
+                          : 'N/A'}
+                      </p>
+                    </div>
+                    <div className="pt-4 flex gap-3">
+                      <Button onClick={handleStripePortal}>
+                        Manage Subscription <ExternalLink className="w-4 h-4 ml-2" />
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-center py-6 border rounded-lg">
+                      <p className="font-medium text-lg mb-2">No Active Subscription</p>
+                      <p className="text-sm text-gray-600 mb-4">Subscribe to unlock AI receptionist features</p>
+                      <Button asChild>
+                        <Link href="/pricing">View Pricing Plans</Link>
+                      </Button>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

@@ -42,7 +42,20 @@ export async function POST(req: NextRequest) {
 
     const project = await prisma.project.findUnique({
       where: { id: input.projectId },
+      include: { owner: true },
     })
+
+    // Check for active subscription
+    const subscription = await prisma.subscription.findFirst({
+      where: { userId: project?.ownerId, status: { in: ['active', 'trialing'] } },
+    })
+
+    if (!subscription) {
+      return NextResponse.json({ 
+        error: 'Active subscription required. Please subscribe to a plan first.',
+        requiresSubscription: true
+      }, { status: 402 })
+    }
 
     let numberToPurchase = input.number
     if (!numberToPurchase) {
@@ -115,6 +128,15 @@ export async function POST(req: NextRequest) {
     })
   } catch (error: any) {
     console.error('Purchase number error:', error)
+    
+    // Handle Twilio trial limit error specifically
+    if (error.message?.includes('Trial accounts')) {
+      return NextResponse.json({ 
+        error: 'Your Twilio account is on a trial plan and limited to one number. Please upgrade your Twilio account to purchase additional numbers.',
+        requiresTwilioUpgrade: true
+      }, { status: 402 })
+    }
+    
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
