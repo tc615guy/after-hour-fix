@@ -52,6 +52,13 @@ interface Booking {
   createdAt: string
 }
 
+interface PhoneNumber {
+  id: string
+  e164: string
+  label: string | null
+  vapiNumberId: string
+}
+
 interface CustomerDetail {
   id: string
   projectId: string
@@ -71,6 +78,7 @@ interface CustomerDetail {
   adminNotes: string | null
   calls: Call[]
   bookings: Booking[]
+  numbers: PhoneNumber[]
 }
 
 export default function CustomerDetailPage() {
@@ -326,6 +334,7 @@ export default function CustomerDetailPage() {
             <TabsTrigger value="calls">Call Logs ({customer.calls.length})</TabsTrigger>
             <TabsTrigger value="bookings">Bookings ({customer.bookings.length})</TabsTrigger>
             <TabsTrigger value="successful">Successful Bookings ({successfulBookings.length})</TabsTrigger>
+            <TabsTrigger value="phone-numbers">Phone Numbers ({customer.numbers.length})</TabsTrigger>
             <TabsTrigger value="porting">Porting Docs ({portDocs.length})</TabsTrigger>
           </TabsList>
 
@@ -549,6 +558,68 @@ export default function CustomerDetailPage() {
                           </TableRow>
                         )
                       })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="phone-numbers">
+            <Card>
+              <CardHeader>
+                <CardTitle>Phone Numbers</CardTitle>
+                <CardDescription>Active phone numbers for this customer</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Number</TableHead>
+                      <TableHead>Label</TableHead>
+                      <TableHead>Vapi ID</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {customer.numbers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                          No phone numbers configured
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      customer.numbers.map((num) => (
+                        <TableRow key={num.id}>
+                          <TableCell className="font-mono">{num.e164}</TableCell>
+                          <TableCell>{num.label || 'Main'}</TableCell>
+                          <TableCell className="font-mono text-xs">{num.vapiNumberId}</TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={async () => {
+                                if (!window.confirm(`Delete ${num.e164}? This will hard-delete from database.`)) return
+                                try {
+                                  const res = await fetch('/api/admin/phone-numbers', {
+                                    method: 'DELETE',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ e164s: [num.e164] }),
+                                  })
+                                  const data = await res.json()
+                                  if (!res.ok) throw new Error(data.error || 'Failed to delete')
+                                  alert('Phone number deleted successfully')
+                                  await loadCustomerDetail(adminEmail)
+                                } catch (e: any) {
+                                  alert(`Error: ${e.message}`)
+                                }
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
                     )}
                   </TableBody>
                 </Table>

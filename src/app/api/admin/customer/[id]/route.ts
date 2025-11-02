@@ -39,6 +39,9 @@ export async function GET(
           take: 100, // Limit to recent 100 bookings
         },
         agents: true,
+        numbers: {
+          where: { deletedAt: null },
+        },
       },
     })
 
@@ -111,6 +114,13 @@ export async function GET(
         priceCents: booking.priceCents,
         isEmergency: booking.isEmergency,
         createdAt: booking.createdAt.toISOString(),
+      })),
+
+      numbers: project.numbers.map(num => ({
+        id: num.id,
+        e164: num.e164,
+        label: num.label,
+        vapiNumberId: num.vapiNumberId,
       })),
     }
 
