@@ -13,12 +13,6 @@ const TRADES = [
   'Plumbing',
   'HVAC',
   'Electrical',
-  'General Contractor',
-  'Roofing',
-  'Landscaping',
-  'Cleaning',
-  'Pest Control',
-  'Other',
 ]
 
 const TIMEZONES = [
