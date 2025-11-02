@@ -17,7 +17,9 @@ export async function GET(
       where: { id, deletedAt: null },
       include: {
         agents: true,
-        numbers: true,
+        numbers: {
+          where: { deletedAt: null },
+        },
       },
     })
 
