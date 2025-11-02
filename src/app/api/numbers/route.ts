@@ -45,17 +45,17 @@ export async function POST(req: NextRequest) {
       include: { owner: true },
     })
 
-    // Check for active subscription
-    const subscription = await prisma.subscription.findFirst({
-      where: { userId: project?.ownerId, status: { in: ['active', 'trialing'] } },
-    })
-
-    if (!subscription) {
-      return NextResponse.json({ 
-        error: 'Active subscription required. Please subscribe to a plan first.',
-        requiresSubscription: true
-      }, { status: 402 })
-    }
+    // TODO: Re-enable subscription check after testing
+    // For now, allow phone number purchase without subscription for onboarding/testing
+    // const subscription = await prisma.subscription.findFirst({
+    //   where: { userId: project?.ownerId, status: { in: ['active', 'trialing'] } },
+    // })
+    // if (!subscription) {
+    //   return NextResponse.json({ 
+    //     error: 'Active subscription required. Please subscribe to a plan first.',
+    //     requiresSubscription: true
+    //   }, { status: 402 })
+    // }
 
     let numberToPurchase = input.number
     if (!numberToPurchase) {
