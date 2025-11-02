@@ -36,6 +36,7 @@ export default function SettingsPage() {
   const [verifying, setVerifying] = useState(false)
   const [verifyInfo, setVerifyInfo] = useState<any>(null)
   const [connecting, setConnecting] = useState(false)
+  const [purchasingNumber, setPurchasingNumber] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('general')
 
   useEffect(() => {
@@ -384,8 +385,10 @@ export default function SettingsPage() {
                     </p>
                     <div className="mt-4 flex items-center justify-center gap-2">
                       <Button
+                        disabled={purchasingNumber}
                         onClick={async () => {
                           try {
+                            setPurchasingNumber(true)
                             const activeAgent = (project.agents || []).sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]
                             if (!activeAgent) {
                               alert('No assistant found to attach number to.')
@@ -416,10 +419,12 @@ export default function SettingsPage() {
                             await loadProject()
                           } catch (e: any) {
                             alert(`Error: ${e.message}`)
+                          } finally {
+                            setPurchasingNumber(false)
                           }
                         }}
                       >
-                        Purchase Number
+                        {purchasingNumber ? 'Purchasing...' : 'Purchase Number'}
                       </Button>
                       <Button
                         variant="outline"

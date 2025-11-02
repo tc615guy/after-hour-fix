@@ -57,6 +57,7 @@ export default function DashboardPage() {
   const [rangeFrom, setRangeFrom] = useState<string>('')
   const [rangeTo, setRangeTo] = useState<string>('')
   const [exportSource, setExportSource] = useState<'all' | 'ahf'>('all')
+  const [purchasingNumber, setPurchasingNumber] = useState(false)
 
   useEffect(() => {
     loadProjects()
@@ -641,8 +642,10 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <Button
+                disabled={purchasingNumber}
                 onClick={async () => {
                   try {
+                    setPurchasingNumber(true)
                     if (!selectedProject) return
                     const agents = selectedProject.agents || []
                     const activeAgent = agents.sort(
@@ -663,10 +666,12 @@ export default function DashboardPage() {
                     await refreshSelectedProject(selectedProject.id)
                   } catch (e: any) {
                     alert(`Error: ${e.message}`)
+                  } finally {
+                    setPurchasingNumber(false)
                   }
                 }}
               >
-                Purchase Number
+                {purchasingNumber ? 'Purchasing...' : 'Purchase Number'}
               </Button>
             </CardContent>
           </Card>
