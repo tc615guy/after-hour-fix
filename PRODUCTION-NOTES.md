@@ -39,6 +39,13 @@ This document summarizes required .env settings and app behavior changes to revi
 - CALCOM_* settings
   - Verify `CALCOM_EVENT_TYPE_ID` and OAuth redirect(s) are aligned to your production domain (see comments in `.env`).
 
+- GOOGLE_MAPS_API_KEY (optional but recommended)
+  - Set to enable service area validation for radius-based service areas.
+  - Without this key, zipcode/city-based validation still works, but radius checks will accept all addresses with a warning.
+  - Free tier: $200/month credit (40,000+ geocode requests).
+  - Required APIs: Geocoding API.
+  - See: https://console.cloud.google.com/google/maps-apis
+
 - Logging/Monitoring (optional)
   - Sentry DSN (`NEXT_PUBLIC_SENTRY_DSN`) to enable error tracking. Optionally set `SENTRY_TRACES_SAMPLE_RATE`.
 
@@ -107,6 +114,36 @@ When purchasing or syncing phone numbers:
 3. Fallback forwarding is set to the project's `forwardingNumber` if configured
 4. Use Settings → Phone Numbers → "Sync from Vapi" to update database
 
+## Knowledge Base & Service Area Configuration
+
+### Knowledge Base
+- **FAQs**: Stores in event log, accessible via `GET /api/projects/:id/knowledge`
+- **Knowledge Snippets**: Available for Pro plans, supports SOPs and policies
+- **Warranty Info**: Stored in `Project.warrantyInfo` as JSON (period, coverage, exclusions)
+- **Assistant Tool**: `get_knowledge` function queries all knowledge data at runtime
+
+### Service Area Validation
+Supports three types of service area validation:
+1. **Zipcode-based**: List specific zipcodes (`serviceArea.type: "zipcodes"`)
+2. **City-based**: List cities (`serviceArea.type: "cities"`)
+3. **Radius-based**: Distance from business address (requires `GOOGLE_MAPS_API_KEY`)
+
+For radius-based validation:
+- Set `businessAddress` (full street address)
+- Set `serviceRadius` (miles)
+- Assistant calls `check_service_area` function before booking
+- Returns exact distance and acceptance/rejection message
+
+**Google Maps Integration**:
+- Geocodes both business and customer addresses
+- Calculates straight-line distance using Haversine formula
+- Free tier: $200/month credit (40,000+ requests)
+- Falls back gracefully if API key not configured
+
+### Technician Routing
+- Technicians can have `address` field for home/start location
+- Useful for emergency dispatch routing (future enhancement)
+
 ## Production Validation Steps
 
 1) Confirm HTTPS for `NEXT_PUBLIC_APP_URL` and that assistant tools are attached (inspect the assistant config or logs).
@@ -118,3 +155,4 @@ When purchasing or syncing phone numbers:
 7) Verify Sentry receives a test error and traces.
 8) For large imports, visit `/jobs/:id` to see live progress.
 9) Test demo assistants: verify all three demo numbers can receive calls and book appointments.
+10) Test service area validation: set business address + radius, call demo number, provide out-of-area address, verify rejection message.
