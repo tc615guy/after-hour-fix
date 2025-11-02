@@ -217,6 +217,15 @@ export class VapiClient {
       throw new Error('Failed to transfer call')
     }
   }
+
+  async deletePhoneNumber(numberId: string): Promise<void> {
+    try {
+      await this.client.delete(`/phone-number/${numberId}`)
+    } catch (error: any) {
+      console.error('Vapi deletePhoneNumber error:', error.response?.data || error.message)
+      throw new Error('Failed to delete phone number from Vapi')
+    }
+  }
 }
 
 export function createVapiClient(): VapiClient {
