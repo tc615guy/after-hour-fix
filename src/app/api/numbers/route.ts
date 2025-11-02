@@ -50,24 +50,12 @@ export async function POST(req: NextRequest) {
       where: { id: input.projectId },
     })
 
-    // If no specific number, search and pick first available
-    let numberToPurchase = input.number
+    // Require a specific number - Vapi no longer supports searching available numbers
+    const numberToPurchase = input.number
     if (!numberToPurchase) {
-      try {
-        const areaCode = input.areaCode || '205' // Default to 205 (Birmingham, AL) if not specified
-        const availableNumbers = await vapiClient.searchPhoneNumbers(areaCode)
-        if (availableNumbers.length === 0) {
-          return NextResponse.json({ 
-            error: `No numbers available in area code ${areaCode}. Try a different area code.` 
-          }, { status: 404 })
-        }
-        numberToPurchase = availableNumbers[0].number
-      } catch (searchError: any) {
-        console.error('Error searching for available numbers:', searchError)
-        return NextResponse.json({ 
-          error: `Failed to search for numbers: ${searchError.message}. Please check your VAPI_API_KEY and that ENABLE_MOCK_MODE is false.` 
-        }, { status: 500 })
-      }
+      return NextResponse.json({ 
+        error: 'Please provide a specific phone number to purchase. Vapi no longer supports searching available numbers.' 
+      }, { status: 400 })
     }
 
     // Configure server URL and fallback destination

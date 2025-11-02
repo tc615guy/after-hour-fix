@@ -118,10 +118,18 @@ export class VapiClient {
 
   async searchPhoneNumbers(areaCode?: string): Promise<VapiPhoneNumber[]> {
     try {
-      const response = await this.client.get('/phone-number/available', {
-        params: { areaCode },
-      })
-      return response.data
+      // Vapi doesn't have a search endpoint anymore, return empty array
+      // Users should purchase specific numbers instead
+      console.warn('searchPhoneNumbers: Vapi no longer supports searching available numbers')
+      if (ENABLE_MOCK_MODE) {
+        return [
+          { id: 'mock-1', number: '+15551234567', provider: 'twilio' },
+          { id: 'mock-2', number: '+15551234568', provider: 'twilio' },
+          { id: 'mock-3', number: '+15551234569', provider: 'twilio' },
+        ]
+      }
+      // In production, return empty to force user to provide a specific number
+      return []
     } catch (error: any) {
       const details = error.response?.data || error.message
       console.error('Vapi searchPhoneNumbers error:', details)
