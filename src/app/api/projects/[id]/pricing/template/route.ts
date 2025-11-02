@@ -52,9 +52,10 @@ export async function GET(
   try {
     const { searchParams } = new URL(req.url)
     const trade = searchParams.get('trade') || 'plumbing'
+    const tradeKey = trade.toLowerCase() as keyof typeof PRICING_TEMPLATES
     
     // Get template for the trade
-    const template = PRICING_TEMPLATES[trade as keyof typeof PRICING_TEMPLATES] || PRICING_TEMPLATES.plumbing
+    const template = PRICING_TEMPLATES[tradeKey] || PRICING_TEMPLATES.plumbing
     
     // Convert to CSV format
     const csvRows = [['service', 'description', 'basePrice', 'unit']]

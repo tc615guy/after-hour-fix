@@ -115,7 +115,8 @@ export default function PricingSheetEditor({ projectId, trade = 'plumbing' }: Pr
   }
 
   const loadTemplate = () => {
-    const template = PRICING_TEMPLATES[trade as keyof typeof PRICING_TEMPLATES] || PRICING_TEMPLATES.plumbing
+    const tradeKey = (trade?.toLowerCase() || 'plumbing') as keyof typeof PRICING_TEMPLATES
+    const template = PRICING_TEMPLATES[tradeKey] || PRICING_TEMPLATES.plumbing
     const newItems = template.map((item) => ({
       ...item,
       id: Math.random().toString(36).substr(2, 9),
