@@ -16,13 +16,13 @@ const TRADES = [
 ]
 
 const TIMEZONES = [
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Los_Angeles',
-  'America/Phoenix',
-  'America/Anchorage',
-  'Pacific/Honolulu',
+  { label: 'Eastern Time (ET)', value: 'America/New_York' },
+  { label: 'Central Time (CT)', value: 'America/Chicago' },
+  { label: 'Mountain Time (MT)', value: 'America/Denver' },
+  { label: 'Pacific Time (PT)', value: 'America/Los_Angeles' },
+  { label: 'Arizona (No DST)', value: 'America/Phoenix' },
+  { label: 'Alaska Time (AKT)', value: 'America/Anchorage' },
+  { label: 'Hawaii Time (HT)', value: 'Pacific/Honolulu' },
 ]
 
 export default function OnboardingPage() {
@@ -181,8 +181,8 @@ export default function OnboardingPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {TIMEZONES.map((tz) => (
-                        <SelectItem key={tz} value={tz}>
-                          {tz.replace(/_/g, ' ')}
+                        <SelectItem key={tz.value} value={tz.value}>
+                          {tz.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
