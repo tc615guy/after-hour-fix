@@ -34,8 +34,12 @@ export async function POST(req: NextRequest) {
               include: { owner: true, agents: { select: { minutesThisPeriod: true } } },
             })
             if (project && project.owner) {
+              // Test account whitelist - bypass all paywall checks
+              const TEST_ACCOUNTS = ['joshlanius@yahoo.com']
+              const isTestAccount = TEST_ACCOUNTS.includes(project.owner.email)
+
               // Membership gating: if membership is OFF, transfer immediately and skip AI handling
-              if (project.membershipActive === false) {
+              if (!isTestAccount && project.membershipActive === false) {
                 const number = project.forwardingNumber
                 const existing = await prisma.eventLog.findFirst({ where: { type: 'membership.suspended', payload: { path: ['callId'], equals: call.id } as any } })
                 if (!existing) {
@@ -58,7 +62,7 @@ export async function POST(req: NextRequest) {
               const proId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
               const cap = subs && proId && subs.priceId === proId ? 1200 : 500
               const used = (project.agents || []).reduce((s, a) => s + (a.minutesThisPeriod || 0), 0)
-              if (used >= cap) {
+              if (!isTestAccount && used >= cap) {
                 // Attempt to forward regardless of business hours
                 const number = project.forwardingNumber
                 const existing = await prisma.eventLog.findFirst({ where: { type: 'minutes.cap_reached', payload: { path: ['callId'], equals: call.id } as any } })
