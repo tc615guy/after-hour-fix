@@ -94,8 +94,70 @@ export default function PricingPage() {
           ))}
         </div>
 
+        {/* One-Time Setup Fee */}
+        <div className="mt-16 mb-8">
+          <Card className="max-w-3xl mx-auto border-2 border-blue-200 bg-blue-50/50">
+            <CardHeader className="text-center">
+              <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-white" />
+              </div>
+              <CardTitle className="text-3xl mb-2">One-Time Setup Fee: $449</CardTitle>
+              <CardDescription className="text-base">
+                Professional setup by our team to ensure your AI receptionist is configured perfectly
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 gap-4 mt-6">
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-gray-900 mb-3">What's Included:</h4>
+                  <div className="space-y-2">
+                    {[
+                      'Custom AI voice training & optimization',
+                      'Business hours & scheduling configuration',
+                      'Cal.com calendar integration setup',
+                      'Pricing sheet upload & configuration',
+                      'On-call technician setup',
+                      'Phone number provisioning & testing'
+                    ].map((item, idx) => (
+                      <div key={idx} className="flex items-start gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <span className="text-sm text-gray-700">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-gray-900 mb-3">Additional Value:</h4>
+                  <div className="space-y-2">
+                    {[
+                      'Response templates & conversation scripts',
+                      'Knowledge base setup (FAQs & services)',
+                      'Emergency routing configuration',
+                      'SMS & email template customization',
+                      'Dedicated onboarding specialist',
+                      '1-hour training session & documentation'
+                    ].map((item, idx) => (
+                      <div key={idx} className="flex items-start gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <span className="text-sm text-gray-700">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 p-4 bg-white rounded-lg border border-blue-200">
+                <p className="text-sm text-center text-gray-700">
+                  <strong className="text-blue-600">Setup typically takes 2-3 business days</strong> after payment. 
+                  You'll receive a dedicated onboarding specialist to guide you through every step.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="mt-12 text-center">
           <p className="text-gray-600">All plans include a 14-day free trial. No credit card required to start.</p>
+          <p className="text-sm text-gray-500 mt-2">One-time setup fee applies to all new accounts.</p>
         </div>
       </section>
 
