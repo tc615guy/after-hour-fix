@@ -49,40 +49,40 @@ export default function FirstTimeSettingsChecklist({
   const tasks = [
     {
       id: 'phone',
-      title: 'Phone Setup',
-      description: 'Port number or set forwarding',
+      title: '1. Get a Phone Number',
+      description: 'Purchase a business number or forward your existing number to your AI assistant',
       completed: Boolean(phoneConfigured),
       icon: Phone,
       tab: 'numbers',
     },
     {
-      id: 'calendar',
-      title: 'Connect Cal.com',
-      description: 'Enable automated appointment booking',
-      completed: calendarConnected,
-      icon: Calendar,
-      tab: 'scheduling',
-    },
-    {
-      id: 'pricing',
-      title: 'Set Pricing',
-      description: 'Configure trip fee and service rates',
-      completed: pricingConfigured,
-      icon: DollarSign,
-      tab: 'pricing',
-    },
-    {
       id: 'hours',
-      title: 'AI Agent Hours',
-      description: 'Set when AI answers vs forwarding',
+      title: '2. Set Business Hours',
+      description: 'Configure your business hours and when the AI should answer (required)',
       completed: businessHoursConfigured,
       icon: Clock,
       tab: 'hours',
     },
     {
+      id: 'pricing',
+      title: '3. Upload Your Pricing',
+      description: 'Add your service pricing sheet so AI can quote customers accurately (required)',
+      completed: pricingConfigured,
+      icon: DollarSign,
+      tab: 'pricing',
+    },
+    {
+      id: 'calendar',
+      title: '4. Connect Cal.com',
+      description: 'Link your Cal.com account to enable automated appointment booking (optional but recommended)',
+      completed: calendarConnected,
+      icon: Calendar,
+      tab: 'scheduling',
+    },
+    {
       id: 'oncall',
-      title: 'Emergency On-Call',
-      description: 'Add technicians for urgent requests',
+      title: '5. Add On-Call Technicians',
+      description: 'Set up emergency dispatch for after-hours urgent requests (optional)',
       completed: onCallConfigured,
       icon: Users,
       tab: 'oncall',
@@ -108,10 +108,10 @@ export default function FirstTimeSettingsChecklist({
         <div className="flex items-center justify-between pr-8">
           <div>
             <CardTitle className="text-xl flex items-center gap-2">
-              ✅ First Time Setup Checklist
+              🚀 Setup Checklist - Get Live in 5 Steps
             </CardTitle>
             <CardDescription>
-              Complete these steps to get your AI receptionist ready (task autocompletes when finished)
+              Follow these steps in order to activate your AI receptionist. Tasks auto-complete as you configure them.
             </CardDescription>
           </div>
           <Badge variant={allComplete ? 'default' : 'secondary'} className="text-lg px-4 py-2">
