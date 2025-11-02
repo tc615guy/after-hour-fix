@@ -50,6 +50,14 @@ export async function POST(
 
     for (const num of numbers) {
       if (!num.assistantId || !assistantIds.has(num.assistantId)) continue
+      // Check if number was soft-deleted and should be skipped
+      const existingNumber = await prisma.phoneNumber.findUnique({
+        where: { e164: num.number },
+      })
+      if (existingNumber?.deletedAt) {
+        // Skip numbers that were intentionally soft-deleted
+        continue
+      }
       await prisma.phoneNumber.upsert({
         where: { e164: num.number },
         update: {
