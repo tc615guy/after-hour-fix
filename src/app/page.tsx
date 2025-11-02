@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Phone, Calendar, MessageSquare, TrendingUp, CheckCircle } from 'lucide-react'
+import { Phone, Calendar, MessageSquare, TrendingUp, CheckCircle, Shield } from 'lucide-react'
 import AuthRedirect from '@/components/AuthRedirect'
 import type { Metadata } from 'next'
 
@@ -238,6 +238,18 @@ export default function HomePage() {
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600">Automatic daily backups with military-grade encryption. Your data is never lost.</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-blue-100">
+              <CardHeader>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                  <Shield className="w-6 h-6 text-blue-600" />
+                </div>
+                <CardTitle className="text-lg">Verified Webhook Security</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">Every system integration is cryptographically verified. Only authentic events are processed—no tampering.</p>
               </CardContent>
             </Card>
           </div>
