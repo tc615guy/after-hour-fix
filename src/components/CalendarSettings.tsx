@@ -98,32 +98,48 @@ export default function CalendarSettings({ projectId }: Props) {
             </div>
 
             {!connected ? (
-              <div className="mt-4 space-y-3">
-                <Label htmlFor="calkey">Cal.com API Key</Label>
-                <Input
-                  id="calkey"
-                  type="password"
-                  placeholder="cal_live_xxxxx"
-                  value={calApiKey}
-                  onChange={(e) => setCalApiKey(e.target.value)}
-                  className="font-mono"
-                />
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={verifyKey} disabled={!calApiKey || verifying}>
-                    {verifying ? 'Verifying...' : 'Verify'}
+              <div className="mt-4 space-y-4">
+                {/* OAuth Option - One Click */}
+                <div className="border-b pb-4">
+                  <p className="text-sm font-medium mb-2">Quick Connect</p>
+                  <Button 
+                    onClick={() => window.location.href = `/api/calcom/oauth/authorize?projectId=${projectId}`}
+                    className="w-full"
+                  >
+                    Connect with Cal.com OAuth
                   </Button>
-                  <Button onClick={connectKey} disabled={!calApiKey || loading}>
-                    {loading ? 'Connecting...' : 'Connect'}
-                  </Button>
-                  <Button variant="outline" asChild>
-                    <a
-                      href="https://app.cal.com/settings/developer/api-keys"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Get Key <ExternalLink className="w-4 h-4 ml-1" />
-                    </a>
-                  </Button>
+                  <p className="text-xs text-gray-500 mt-2">One-click authorization</p>
+                </div>
+                
+                {/* API Key Option - Manual */}
+                <div>
+                  <p className="text-sm font-medium mb-2">Or use API Key</p>
+                  <Label htmlFor="calkey">Cal.com API Key</Label>
+                  <Input
+                    id="calkey"
+                    type="password"
+                    placeholder="cal_live_xxxxx"
+                    value={calApiKey}
+                    onChange={(e) => setCalApiKey(e.target.value)}
+                    className="font-mono mt-1"
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <Button variant="outline" onClick={verifyKey} disabled={!calApiKey || verifying}>
+                      {verifying ? 'Verifying...' : 'Verify'}
+                    </Button>
+                    <Button onClick={connectKey} disabled={!calApiKey || loading}>
+                      {loading ? 'Connecting...' : 'Connect'}
+                    </Button>
+                    <Button variant="outline" asChild>
+                      <a
+                        href="https://app.cal.com/settings/developer/api-keys"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Get Key <ExternalLink className="w-4 h-4 ml-1" />
+                      </a>
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : (
