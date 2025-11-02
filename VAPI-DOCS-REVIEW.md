@@ -2,22 +2,19 @@
 
 ## Critical Security Issue 🚨
 
-### Missing: Webhook Signature Verification
+### ✅ FIXED: Webhook Signature Verification
 
-**Current State:** Your Vapi webhook (`src/app/api/vapi/webhook/route.ts`) has **NO signature verification**, unlike your Stripe webhook which properly verifies signatures.
+**Previous State:** Your Vapi webhook (`src/app/api/vapi/webhook/route.ts`) had NO signature verification, unlike your Stripe webhook which properly verifies signatures.
 
-**Risk:** Anyone with your webhook URL can send fake events to your system.
+**Risk:** Anyone with your webhook URL could send fake events to your system.
 
-**Recommendation:** Implement signature verification similar to Stripe. According to [Vapi server authentication docs](https://docs.vapi.ai/server-url/server-authentication), Vapi signs webhooks with a secret.
+**✅ IMPLEMENTED:** Signature verification added using HMAC-SHA256, matching Vapi's authentication pattern. The webhook now:
+- Verifies `X-Vapi-Signature` header against `VAPI_WEBHOOK_SECRET`
+- Respects `SKIP_WEBHOOK_VERIFICATION` for development
+- Returns 401 for invalid/missing signatures
+- Logs all verification failures
 
-**Implementation Needed:**
-```typescript
-// Similar to Stripe pattern in src/app/api/stripe/webhook/route.ts
-const signature = req.headers.get('vapi-signature')
-// Verify signature using VAPI_WEBHOOK_SECRET
-```
-
-**Priority:** 🔴 **CRITICAL** - Implement before production
+**Priority:** ✅ **COMPLETED**
 
 ---
 
@@ -137,8 +134,8 @@ Based on Vapi documentation review:
 ## Summary & Action Items
 
 ### Immediate (Before Production):
-1. 🔴 **Add webhook signature verification** - Security vulnerability
-2. 🔴 **Test webhook authentication** - Verify serverUrlSecret works correctly
+1. ✅ **Add webhook signature verification** - COMPLETED
+2. 🔴 **Test webhook authentication** - Verify VAPI_WEBHOOK_SECRET works correctly in production
 
 ### Short-term Enhancements:
 1. 🟡 Consider adding Vapi's built-in call insights for richer analytics

@@ -1,10 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { headers } from 'next/headers'
+import crypto from 'crypto'
 import { prisma } from '@/lib/db'
 import { createVapiClient } from '@/lib/vapi'
 
 export async function POST(req: NextRequest) {
   try {
-    const payload = await req.json()
+    // Get raw body for signature verification
+    const arrayBuf = await req.arrayBuffer()
+    const rawBody = Buffer.from(arrayBuf)
+    
+    // Verify webhook signature if secret is configured
+    const webhookSecret = process.env.VAPI_WEBHOOK_SECRET
+    const skipVerification = process.env.SKIP_WEBHOOK_VERIFICATION === 'true'
+    
+    if (webhookSecret && !skipVerification) {
+      const headersList = headers()
+      const signature = headersList.get('x-vapi-signature')
+      
+      if (!signature) {
+        console.error('Vapi webhook signature missing')
+        return NextResponse.json({ error: 'No signature' }, { status: 401 })
+      }
+      
+      try {
+        const expectedSignature = crypto
+          .createHmac('sha256', webhookSecret)
+          .update(rawBody)
+          .digest('hex')
+        
+        if (signature !== expectedSignature) {
+          console.error('Vapi webhook signature verification failed')
+          return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+        }
+      } catch (err: any) {
+        console.error('Vapi webhook signature verification error:', err.message)
+        return NextResponse.json({ error: 'Verification failed' }, { status: 401 })
+      }
+    }
+    
+    // Parse payload after verification
+    const payload = JSON.parse(rawBody.toString())
     const { type, call, message } = payload
 
     console.log('Vapi webhook received:', type, payload)
