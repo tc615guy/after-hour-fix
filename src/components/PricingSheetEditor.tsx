@@ -232,7 +232,7 @@ export default function PricingSheetEditor({ projectId, trade = 'plumbing' }: Pr
   }
 
   const downloadTemplate = () => {
-    window.location.href = `/api/projects/${projectId}/pricing/template`
+    window.location.href = `/api/projects/${projectId}/pricing/template?trade=${trade}`
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
