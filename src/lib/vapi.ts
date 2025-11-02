@@ -152,9 +152,11 @@ export class VapiClient {
     try {
       // Create phone number with assistant and all configuration in one request
       const payload: any = {
-        provider: 'twilio', // Use 'twilio' provider for BYO Twilio numbers
-        phoneNumber: number, // E.164 format
+        provider: 'twilio',
+        number, // Use 'number' field, not 'phoneNumber'
         assistantId,
+        twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
+        twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
       }
       
       // Add server URL configuration if provided
