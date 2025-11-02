@@ -86,6 +86,13 @@ export async function POST(req: NextRequest) {
       fallbackDestination: project?.forwardingNumber || undefined,
     })
     console.log(`[B2B Provision] Vapi integration complete: ${vapiNumber.id}`)
+    console.log(`[B2B Provision] Vapi number response:`, JSON.stringify(vapiNumber, null, 2))
+    
+    // If assistantId is missing from response, explicitly attach it
+    if (!vapiNumber.assistantId) {
+      console.log(`[B2B Provision] Assistant ID missing from response, attaching to assistant: ${agent.vapiAssistantId}`)
+      await vapiClient.attachNumberToAssistant(vapiNumber.id, agent.vapiAssistantId)
+    }
 
     // Check if number already exists
     const existingNumber = await prisma.phoneNumber.findUnique({
