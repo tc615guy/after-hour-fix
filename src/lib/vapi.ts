@@ -194,15 +194,11 @@ export function buildAssistantPrompt(projectName: string, trade: string): string
     electrical: 'electrical emergencies like power outages, circuit breakers, wiring issues, and panel repairs'
   }[trade] || `${trade} services`
 
-  const now = new Date()
-  const currentDateTime = now.toISOString()
-  const readableDate = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })
-
   return `You are the friendly AI receptionist for ${projectName}, a professional ${trade} company specializing in ${tradeContext}.
 
 **IMPORTANT - CURRENT DATE/TIME:**
-Today is: ${readableDate}
-ISO Format: ${currentDateTime}
+Today is: {{"now" | date: "%A, %B %d, %Y at %I:%M %p", "America/Chicago"}} CST
+ISO Format: {{"now" | date: "%Y-%m-%dT%H:%M:%S.000Z", "UTC"}}
 When booking appointments, ALWAYS use dates/times that are NOW or in the FUTURE. Never use past dates.
 
 **VOICE & TONE:**
