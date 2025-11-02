@@ -101,12 +101,6 @@ When purchasing or syncing phone numbers:
 3. Fallback forwarding is set to the project's `forwardingNumber` if configured
 4. Use Settings → Phone Numbers → "Sync from Vapi" to update database
 
-### Fixing Orphaned Numbers
-If phone numbers become attached to deleted assistants (e.g., after assistant recreation):
-```bash
-npx tsx scripts/fix-demo-phone-numbers.ts
-```
-
 ## Production Validation Steps
 
 1) Confirm HTTPS for `NEXT_PUBLIC_APP_URL` and that assistant tools are attached (inspect the assistant config or logs).
