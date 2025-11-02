@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { MessageSquare, Sparkles, Copy, Check } from 'lucide-react'
+import { MessageSquare, Sparkles, Copy, Check, Edit2 } from 'lucide-react'
 
 interface ResponseTemplate {
   id: string
@@ -100,7 +100,9 @@ export default function PricingResponseTemplates({
   const [templates, setTemplates] = useState<ResponseTemplate[]>(DEFAULT_TEMPLATES)
   const [loading, setLoading] = useState<boolean>(true)
   const [saving, setSaving] = useState<boolean>(false)
+  const [pushing, setPushing] = useState<boolean>(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   // Replace placeholders in template text
@@ -159,6 +161,25 @@ export default function PricingResponseTemplates({
     }
   }
 
+  const pushToAssistant = async () => {
+    try {
+      setPushing(true)
+      // Push pricing to assistant
+      const res = await fetch('/api/agents/push-pricing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to push to assistant')
+      alert('Templates pushed to assistant successfully!')
+    } catch (error: any) {
+      alert(`Error: ${error.message}`)
+    } finally {
+      setPushing(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Info Card */}
@@ -193,6 +214,9 @@ export default function PricingResponseTemplates({
             </Button>
             <Button variant="outline" size="sm" onClick={saveTemplates} disabled={saving}>
               {saving ? 'Saving...' : 'Save Templates'}
+            </Button>
+            <Button size="sm" onClick={pushToAssistant} disabled={pushing}>
+              {pushing ? 'Pushing...' : 'Update Assistant'}
             </Button>
           </div>
         </div>
@@ -244,24 +268,58 @@ export default function PricingResponseTemplates({
             {expandedId === template.id && (
               <CardContent className="space-y-3 pt-0">
                 <div>
-                  <Label className="text-xs font-semibold text-gray-600">AI Response:</Label>
-                  <div className="mt-2 p-4 bg-white border rounded-lg relative">
-                    <p className="text-sm text-gray-800 italic whitespace-pre-wrap">
-                      {fillTemplate(template.template)}
-                    </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-xs font-semibold text-gray-600">AI Response:</Label>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="absolute top-2 right-2"
-                      onClick={() => copyToClipboard(fillTemplate(template.template), template.id)}
+                      onClick={() => setEditingId(editingId === template.id ? null : template.id)}
                     >
-                      {copiedId === template.id ? (
-                        <Check className="w-4 h-4 text-green-600" />
+                      {editingId === template.id ? (
+                        <>
+                          <Check className="w-4 h-4 mr-1" />
+                          Done
+                        </>
                       ) : (
-                        <Copy className="w-4 h-4" />
+                        <>
+                          <Edit2 className="w-4 h-4 mr-1" />
+                          Edit
+                        </>
                       )}
                     </Button>
                   </div>
+                  {editingId === template.id ? (
+                    <Textarea
+                      value={template.template}
+                      onChange={(e) => {
+                        setTemplates(
+                          templates.map((t) =>
+                            t.id === template.id ? { ...t, template: e.target.value } : t
+                          )
+                        )
+                      }}
+                      className="font-mono text-xs"
+                      rows={6}
+                    />
+                  ) : (
+                    <div className="mt-2 p-4 bg-white border rounded-lg relative">
+                      <p className="text-sm text-gray-800 italic whitespace-pre-wrap">
+                        {fillTemplate(template.template)}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => copyToClipboard(fillTemplate(template.template), template.id)}
+                      >
+                        {copiedId === template.id ? (
+                          <Check className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
