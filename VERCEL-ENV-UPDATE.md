@@ -3,8 +3,10 @@
 ## CRITICAL: Production Using Wrong Database URL
 
 Your production Vercel deployment is using an **OLD Supabase database URL**:
-- **Current (BROKEN)**: `aws-1-us-east-2.pooler.supabase.com:5432`
-- **Correct**: `db.tnbqmihtsjytmoncnpji.supabase.co:5432`
+- **Current (BROKEN)**: `aws-1-us-east-2.pooler.supabase.com:5432` (wrong region or port)
+- **Correct**: `aws-1-us-east-2.pooler.supabase.com:6543` (transaction pooler)
+
+**Your Project Reference**: `tnbqmihtsjytmoncnpji`
 
 ## How to Fix in Vercel Dashboard:
 
@@ -16,8 +18,10 @@ Your production Vercel deployment is using an **OLD Supabase database URL**:
 
 ### Your Working .env DATABASE_URL:
 ```
-postgresql://postgres.[PROJECT-REF]:[PASSWORD]@db.tnbqmihtsjytmoncnpji.supabase.co:5432/postgres
+postgresql://postgres.tnbqmihtsjytmoncnpji:Bdbshsubd7177Bgggf@aws-1-us-east-2.pooler.supabase.com:6543/postgres
 ```
+
+**NOTE**: Make sure it's port **6543** (transaction pooler), not **5432**!
 
 6. **Click**: "Save" 
 7. **Redeploy**: Settings → Deployment → Production → "Redeploy"

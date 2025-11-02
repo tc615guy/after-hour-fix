@@ -11,15 +11,14 @@
 
 ### 1. DATABASE_URL (Pooled Connection)
 - Find the section: **"Use Connection Pooling"**
-- Select: **"Session pooler"** (port 5432)
+- Select: **"Transaction pooler"** (port 6543)
 - Copy the connection string
-- Format: `postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-us-east-2.pooler.supabase.com:5432/postgres`
+- Format: `postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-1-us-east-2.pooler.supabase.com:6543/postgres`
 
 ### 2. DIRECT_URL (Direct Connection)
-- Find the section: **"Use Connection Pooling"**
-- Select: **"Connection String"** tab (NOT pooling)
-- Copy the connection string  
-- Format: `postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-us-east-2.pooler.supabase.com:6543/postgres`
+- Find the section: **"Connection string"** (NOT pooling)
+- Copy the direct connection string  
+- Format: `postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres`
 
 ## Or If You Need IPv6 Support:
 
