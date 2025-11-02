@@ -69,35 +69,44 @@ export async function POST(req: NextRequest) {
       numberToPurchase = availableNumbers[0].phoneNumber
     }
 
-    // Purchase from Twilio
+    // Step 1: Purchase from Twilio
     console.log(`[B2B Provision] Purchasing number from Twilio: ${numberToPurchase}`)
     const twilioSid = await purchaseTwilioNumber(numberToPurchase)
     console.log(`[B2B Provision] Twilio purchase complete: ${twilioSid}`)
 
-    // Store in database immediately
-    // Note: Customer must manually add to Vapi dashboard via BYO, then click "Sync from Vapi"
+    // Step 2: Add to Vapi (BYO)
+    const vapiClient = createVapiClient()
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const serverUrl = `${appUrl}/api/vapi/webhook`
     const serverUrlSecret = process.env.VAPI_WEBHOOK_SECRET
 
+    const vapiNumber = await vapiClient.purchasePhoneNumber(numberToPurchase, agent.vapiAssistantId, {
+      serverUrl,
+      serverUrlSecret,
+      fallbackDestination: project?.forwardingNumber || undefined,
+    })
+    console.log(`[B2B Provision] Vapi integration complete: ${vapiNumber.id}`)
+
     // Check if number already exists
     const existingNumber = await prisma.phoneNumber.findUnique({
-      where: { e164: numberToPurchase },
+      where: { e164: vapiNumber.number },
     })
 
     if (existingNumber) {
+      // Number already purchased, just return success
       return NextResponse.json({
         success: true,
         phoneNumber: existingNumber,
-        message: 'Number already in database. Use "Sync from Vapi" to update.',
+        vapiNumberId: existingNumber.vapiNumberId,
+        message: 'Number already purchased',
       })
     }
 
     const phoneNumber = await prisma.phoneNumber.create({
       data: {
         projectId: input.projectId,
-        e164: numberToPurchase,
-        vapiNumberId: null, // Will be set after manual Vapi configuration
+        e164: vapiNumber.number,
+        vapiNumberId: vapiNumber.id,
         label: 'Main',
         serverUrl,
         serverUrlSecret,
@@ -108,15 +117,14 @@ export async function POST(req: NextRequest) {
       data: {
         projectId: input.projectId,
         type: 'number.purchased',
-        payload: { numberId: phoneNumber.id, e164: numberToPurchase, twilioSid },
+        payload: { numberId: phoneNumber.id, e164: vapiNumber.number },
       },
     })
 
     return NextResponse.json({
       success: true,
       phoneNumber,
-      message: 'Number purchased from Twilio. Please add to Vapi dashboard and click "Sync from Vapi".',
-      requiresVapiSetup: true,
+      vapiNumberId: vapiNumber.id,
     })
   } catch (error: any) {
     console.error('Purchase number error:', error)
