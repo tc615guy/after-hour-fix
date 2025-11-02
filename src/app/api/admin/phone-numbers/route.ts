@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { requireAdminSession } from '@/lib/api-guard'
+import { requireAdmin } from '@/lib/api-guard'
 import { createVapiClient } from '@/lib/vapi'
 import { z } from 'zod'
 
@@ -14,7 +14,7 @@ const DeleteSchema = z.object({
 
 export async function DELETE(req: NextRequest) {
   try {
-    await requireAdminSession(req)
+    await requireAdmin(req)
 
     const body = await req.json()
     const { e164s } = DeleteSchema.parse(body)
