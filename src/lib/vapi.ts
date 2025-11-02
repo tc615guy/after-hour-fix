@@ -419,5 +419,36 @@ export function buildAssistantTools(appUrl: string, projectId?: string): VapiAss
         url: `${appUrl}/api/pricing/assistant${q}`,
       },
     },
+    {
+      type: 'function',
+      function: {
+        name: 'get_knowledge',
+        description: 'Get FAQs, warranty info, service area coverage, and knowledge snippets. Call this when customer asks questions about policies, coverage, or service details.',
+        parameters: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      server: {
+        url: `${appUrl}/api/knowledge${q}`,
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'check_service_area',
+        description: 'Check if a customer address is within the service area coverage. Call this after getting the address but before booking to ensure we can service them.',
+        parameters: {
+          type: 'object',
+          properties: {
+            address: { type: 'string', description: 'Full service address to check' },
+          },
+          required: ['address'],
+        },
+      },
+      server: {
+        url: `${appUrl}/api/service-area/check${q}`,
+      },
+    },
   ]
 }

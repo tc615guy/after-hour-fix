@@ -49,6 +49,10 @@ model Project {
   businessHours          Json? // { mon: {open: "08:00", close: "17:00", enabled: true}, ... }
   holidays               Json? // Array of holiday dates [{date: "2024-12-25", name: "Christmas"}]
 
+  // Business Info
+  businessAddress        String? // Business base address for service area calculation
+  warrantyInfo           Json? // { period: "1 year", coverage: "...", exclusions: [...] }
+  
   // Service Area
   serviceArea            Json? // { type: "radius|zipcodes|cities", value: [...], address: "..." }
   serviceRadius          Int? // Miles from business address
@@ -170,6 +174,7 @@ model Technician {
   name             String
   phone            String    // Direct line for emergency routing
   email            String?
+  address          String?   // Technician home/start address for routing
   isActive         Boolean   @default(true)
 
   // On-Call / Emergency Availability
