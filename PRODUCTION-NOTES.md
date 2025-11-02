@@ -23,6 +23,10 @@ This document summarizes required .env settings and app behavior changes to revi
 - VAPI_WEBHOOK_URL
   - Production: use an HTTPS URL (for example, `https://app.yourdomain.com/api/vapi/webhook`).
 
+- VAPI_WEBHOOK_SECRET
+  - Optional but recommended for production. Set a secret key to secure webhook communication.
+  - This secret is sent to Vapi when purchasing phone numbers for authentication.
+
 - SKIP_WEBHOOK_VERIFICATION
   - Production: `false`.
   - Dev: may be `true` for fast local iteration.
