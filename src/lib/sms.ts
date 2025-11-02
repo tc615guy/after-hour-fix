@@ -82,9 +82,10 @@ export async function searchAvailableNumbers(areaCode?: string, country: string 
   }
 
   try {
+    const areaCodeNum = areaCode ? parseInt(areaCode, 10) : undefined
     const numbers = await client.availablePhoneNumbers(country)
       .local
-      .list({ areaCode, limit: 20 })
+      .list({ areaCode: areaCodeNum, limit: 20 })
 
     return numbers.map((num: any) => ({
       phoneNumber: num.phoneNumber,
