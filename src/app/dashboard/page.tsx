@@ -358,9 +358,28 @@ export default function DashboardPage() {
     let s = String(input).trim()
     // Remove surrounding quotes
     s = s.replace(/^"|"$/g, '')
+
+    // Handle Excel serial date numbers (e.g., 45000 = 2023-03-06)
+    const numValue = parseFloat(s)
+    if (!isNaN(numValue) && numValue > 25000 && numValue < 100000) {
+      // Excel dates start from 1900-01-01 (serial 1)
+      const excelEpoch = new Date(1899, 11, 30) // 1899-12-30
+      const date = new Date(excelEpoch.getTime() + numValue * 86400000)
+      if (!isNaN(date.getTime())) return date.toISOString()
+    }
+
+    // Handle Unix timestamps (seconds or milliseconds)
+    if (!isNaN(numValue) && numValue > 1000000000) {
+      // If > 10 digits, assume milliseconds; otherwise seconds
+      const timestamp = numValue > 10000000000 ? numValue : numValue * 1000
+      const date = new Date(timestamp)
+      if (!isNaN(date.getTime())) return date.toISOString()
+    }
+
     // First try native parsing
     const native = new Date(s)
     if (!isNaN(native.getTime())) return native.toISOString()
+
     // Handle formats like: M/D/YYYY, H:MM[:SS] AM/PM
     const commaIdx = s.indexOf(',')
     if (commaIdx > -1) {
@@ -369,12 +388,24 @@ export default function DashboardPage() {
       const iso = parseMDYWithTime(left, right)
       if (iso) return iso
     }
+
     // Handle formats like: M/D/YYYY H:MM AM/PM (no comma)
     const mdyTime = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i)
     if (mdyTime) {
       const iso = mdyToIso(mdyTime)
       if (iso) return iso
     }
+
+    // Handle 24-hour formats: M/D/YYYY HH:MM or M-D-YYYY HH:MM
+    const mdy24 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/)
+    if (mdy24) {
+      const [_, m, d, y, hh, mm, ss] = mdy24
+      let year = Number(y)
+      if (year < 100) year += 2000
+      const date = new Date(year, Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss || '0'))
+      if (!isNaN(date.getTime())) return date.toISOString()
+    }
+
     // Handle formats like: YYYY-MM-DD HH:MM[:SS]
     const ymdTime = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/)
     if (ymdTime) {
@@ -382,6 +413,17 @@ export default function DashboardPage() {
       const date = new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss || '0'))
       if (!isNaN(date.getTime())) return date.toISOString()
     }
+
+    // Handle date-only formats (assume noon for consistent results)
+    const dateOnly = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/)
+    if (dateOnly) {
+      const [_, m, d, y] = dateOnly
+      let year = Number(y)
+      if (year < 100) year += 2000
+      const date = new Date(year, Number(m) - 1, Number(d), 12, 0, 0)
+      if (!isNaN(date.getTime())) return date.toISOString()
+    }
+
     return null
   }
 
