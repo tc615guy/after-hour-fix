@@ -150,11 +150,11 @@ export class VapiClient {
     options?: { serverUrl?: string; serverUrlSecret?: string; fallbackDestination?: string }
   ): Promise<VapiPhoneNumber> {
     try {
-      // For BYO numbers, first create the number record, then attach to assistant
-      // Based on the error, the API expects a different structure
+      // Create phone number with assistant and all configuration in one request
       const payload: any = {
+        provider: 'twilio', // Use 'twilio' provider for BYO Twilio numbers
+        phoneNumber: number, // E.164 format
         assistantId,
-        provider: 'vapi', // Use 'vapi' provider for BYO custom numbers
       }
       
       // Add server URL configuration if provided
@@ -175,16 +175,8 @@ export class VapiClient {
         }
       }
       
-      // First, create phone number without assistant
-      const createResponse = await this.client.post('/phone-number', {
-        provider: 'vapi',
-        phoneNumber: number, // Try phoneNumber instead of number
-      })
-      const phoneNumberId = createResponse.data.id
-      
-      // Then, attach to assistant
-      const attachResponse = await this.client.patch(`/phone-number/${phoneNumberId}`, payload)
-      return attachResponse.data
+      const response = await this.client.post('/phone-number', payload)
+      return response.data
     } catch (error: any) {
       const details = error.response?.data || error.message
       console.error('Vapi purchasePhoneNumber error:', details)
