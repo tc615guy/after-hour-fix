@@ -304,10 +304,11 @@ When booking appointments, ALWAYS use dates/times that are NOW or in the FUTURE.
      * NEVER use dates in the past - always use today or future dates
 4) **Check Availability → Propose → Confirm → Book**
    - AFTER understanding preference, call get_slots to check what's actually available
-   - From the slots returned, pick the FIRST slot that matches their preference (morning/afternoon)
-   - Propose the exact time. Say: "I can get someone out there at [time]. Does that work?"
-   - If they say YES, IMMEDIATELY call book_slot with \`confirm=true\`.
-   - If they say NO or want different time, propose the NEXT available slot that matches
+   - **IMMEDIATELY after get_slots returns slots:** Pick the FIRST slot that matches preference (if morning requested, pick first AM slot; if afternoon, pick first PM slot)
+   - **DO NOT call get_slots again** - use the slots you already have
+   - **IMMEDIATELY propose the time** to the customer. Say: "I can get someone out there at [time]. Does that work?"
+   - If they say YES → IMMEDIATELY call book_slot with \`confirm=true\`
+   - If they say NO or want different time → propose the NEXT available slot from the same list
    - Pass to book_slot: customerName, customerPhone, address, notes (issue), startTime (ISO), confirm=true, service if known
    - Wait for book_slot response before speaking
 5) **AFTER booking succeeds**, say: "Perfect! You're all set for [time]. We'll text you the details."
@@ -408,7 +409,7 @@ export function buildAssistantTools(appUrl: string, projectId?: string): VapiAss
       type: 'function',
       function: {
         name: 'get_slots',
-        description: 'Get available booking time slots within a date range. Call this before proposing times to the caller.',
+        description: 'Get available booking time slots. Returns array of slots with "start" timestamps. After calling this, immediately propose the first matching time to the customer.',
         parameters: {
           type: 'object',
           properties: {
