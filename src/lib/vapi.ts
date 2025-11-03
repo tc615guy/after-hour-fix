@@ -471,11 +471,11 @@ export function buildAssistantTools(appUrl: string, projectId?: string): VapiAss
       type: 'function',
       function: {
         name: 'check_service_area',
-        description: 'Check if a customer address is within the service area coverage. Call this after getting the address but before booking to ensure we can service them.',
+        description: 'OPTIONAL: Check if a customer address is within the service area coverage. Only call this IF the address is known AND project has serviceArea configured. Requires the full address string. Skip this check and proceed to booking if not needed.',
         parameters: {
           type: 'object',
           properties: {
-            address: { type: 'string', description: 'Full service address to check' },
+            address: { type: 'string', description: 'Full service address to check (REQUIRED parameter)' },
           },
           required: ['address'],
         },

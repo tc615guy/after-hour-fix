@@ -278,6 +278,7 @@ export async function POST(req: NextRequest) {
       const bookingPayload = {
         eventTypeId: eventTypeId,
         start: startTime.toISOString(),
+        timeZone: project.timezone || 'America/Chicago', // Required: top-level timeZone
         attendee: {
           name: input.customerName,
           email: `${phoneDigits}@sms.afterhourfix.com`,
