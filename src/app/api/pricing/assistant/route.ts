@@ -38,10 +38,10 @@ export async function GET(req: NextRequest) {
     const pricing = await getPricing(projectId)
     
     // Format result for Vapi AI
-    const parts = []
+    const parts: string[] = []
     if (pricing.tripFee > 0) parts.push(`Trip fee: $${pricing.tripFee}`)
     if (pricing.items.length > 0) {
-      const examples = pricing.items.slice(0, 3).map(item => 
+      const examples = pricing.items.slice(0, 3).map((item: any) => 
         item.basePrice ? `${item.service}: $${item.basePrice}` : item.service
       )
       parts.push(`Services: ${examples.join(', ')}`)
@@ -66,10 +66,10 @@ export async function POST(req: NextRequest) {
     const pricing = await getPricing(projectId)
     
     // Format result for Vapi AI
-    const parts = []
+    const parts: string[] = []
     if (pricing.tripFee > 0) parts.push(`Trip fee: $${pricing.tripFee}`)
     if (pricing.items.length > 0) {
-      const examples = pricing.items.slice(0, 3).map(item => 
+      const examples = pricing.items.slice(0, 3).map((item: any) => 
         item.basePrice ? `${item.service}: $${item.basePrice}` : item.service
       )
       parts.push(`Services: ${examples.join(', ')}`)
