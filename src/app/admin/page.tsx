@@ -66,7 +66,6 @@ export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [loginError, setLoginError] = useState('')
   const [selected, setSelected] = useState<Record<string, boolean>>({})
-  const [syncingAssistants, setSyncingAssistants] = useState(false)
   const [upgradingAssistants, setUpgradingAssistants] = useState(false)
   const allSelected = Object.keys(selected).length > 0 && Object.values(selected).every(Boolean)
 
@@ -131,24 +130,6 @@ export default function AdminDashboard() {
       window.location.href = '/dashboard'
     } catch (error: any) {
       alert(`Error: ${error.message}`)
-    }
-  }
-
-  const handleSyncAllAssistants = async () => {
-    if (!confirm('Sync all assistants with latest prompts and tools?')) return
-    
-    try {
-      setSyncingAssistants(true)
-      const res = await fetch('/api/admin/sync-all-assistants', { method: 'POST' })
-      const data = await res.json()
-      
-      if (!res.ok) throw new Error(data.error || 'Sync failed')
-      
-      alert(`✅ Successfully synced ${data.synced}/${data.total} assistants!`)
-    } catch (error: any) {
-      alert(`Error: ${error.message}`)
-    } finally {
-      setSyncingAssistants(false)
     }
   }
 
@@ -283,15 +264,6 @@ export default function AdminDashboard() {
               >
                 <RefreshCcw className={`w-4 h-4 mr-2 ${upgradingAssistants ? 'animate-spin' : ''}`} />
                 {upgradingAssistants ? 'Upgrading...' : 'Upgrade to Premium'}
-              </Button>
-              <Button 
-                variant="outline" 
-                className="bg-white text-purple-600 hover:bg-purple-50"
-                onClick={handleSyncAllAssistants}
-                disabled={syncingAssistants}
-              >
-                <RefreshCcw className={`w-4 h-4 mr-2 ${syncingAssistants ? 'animate-spin' : ''}`} />
-                {syncingAssistants ? 'Syncing...' : 'Sync All Assistants'}
               </Button>
               <Button 
                 variant="outline" 
