@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Phone, Calendar, MessageSquare, TrendingUp, CheckCircle, Shield } from 'lucide-react'
+import { Phone, Calendar, MessageSquare, TrendingUp, CheckCircle, Shield, Users, Navigation, DollarSign } from 'lucide-react'
 import AuthRedirect from '@/components/AuthRedirect'
 import type { Metadata } from 'next'
 
@@ -336,6 +336,106 @@ export default function HomePage() {
               </CardDescription>
             </CardHeader>
           </Card>
+        </div>
+      </section>
+
+      {/* Competitive Comparison */}
+      <section className="bg-gray-50 py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why AfterHourFix Beats the Competition</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              While others only offer basic call answering, we provide enterprise-grade scheduling intelligence
+            </p>
+          </div>
+
+          <div className="max-w-6xl mx-auto overflow-x-auto">
+            <table className="w-full border-collapse bg-white rounded-lg shadow-lg overflow-hidden">
+              <thead className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+                <tr>
+                  <th className="text-left p-4 font-semibold">Feature</th>
+                  <th className="text-center p-4 font-semibold">AfterHourFix</th>
+                  <th className="text-center p-4 font-semibold bg-blue-500/90">Other AI Voice Agents</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="p-4 font-semibold">24/7 Call Answering</td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                </tr>
+                <tr className="border-b bg-gray-50">
+                  <td className="p-4 font-semibold">Smart Technician Scheduling</td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                  <td className="text-center p-4 text-gray-400">✗</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-4 font-semibold flex items-center gap-2">
+                    <Navigation className="w-4 h-4 text-blue-600" />
+                    Distance-Based Routing
+                  </td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                  <td className="text-center p-4 text-gray-400">✗</td>
+                </tr>
+                <tr className="border-b bg-gray-50">
+                  <td className="p-4 font-semibold">Traffic-Aware Travel Time</td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                  <td className="text-center p-4 text-gray-400">✗</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-4 font-semibold flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-green-600" />
+                    Fuel Savings Calculator
+                  </td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                  <td className="text-center p-4 text-gray-400">✗</td>
+                </tr>
+                <tr className="border-b bg-gray-50">
+                  <td className="p-4 font-semibold flex items-center gap-2">
+                    <Users className="w-4 h-4 text-purple-600" />
+                    Smart Gap Finder
+                  </td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                  <td className="text-center p-4 text-gray-400">✗</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-4 font-semibold">Calendar Integration (Cal.com)</td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                  <td className="text-center p-4 text-gray-400">Limited</td>
+                </tr>
+                <tr className="border-b bg-gray-50">
+                  <td className="p-4 font-semibold">CSV Import/Export</td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                  <td className="text-center p-4 text-gray-400">✗</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-4 font-semibold">Multi-Trade Templates (Plumbing/HVAC/Electrical)</td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                  <td className="text-center p-4 text-gray-400">✗</td>
+                </tr>
+                <tr className="border-b bg-gray-50">
+                  <td className="p-4 font-semibold">One-Click Technician Assignment</td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                  <td className="text-center p-4 text-gray-400">✗</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-4 font-semibold">Auto-Conflict Detection</td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                  <td className="text-center p-4 text-gray-400">✗</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-8 text-center">
+            <div className="inline-block bg-blue-50 border-2 border-blue-200 rounded-lg p-6 max-w-2xl">
+              <p className="text-blue-900 font-semibold text-lg mb-2">🏆 The Only Platform With Enterprise Scheduling Intelligence</p>
+              <p className="text-blue-800">
+                While competitors only answer calls, AfterHourFix optimizes your entire operation with smart routing, 
+                fuel savings tracking, and technician management.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
