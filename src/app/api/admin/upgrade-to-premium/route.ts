@@ -7,18 +7,27 @@ export async function POST(req: NextRequest) {
   try {
     await requireAdmin(req)
 
+    const body = await req.json().catch(() => ({}))
+    const projectIds = body.projectIds || [] // Optional: specific projects to upgrade
+
     console.log('[Admin] Upgrading Premium plan projects to premium stack...')
+    console.log(`[Admin] Project IDs filter: ${projectIds.length > 0 ? projectIds.join(', ') : 'ALL Premium projects'}`)
     
-    // Get all Premium projects
+    // Get Premium projects (filtered if projectIds provided)
+    const whereClause: any = { 
+      plan: 'Premium',
+      deletedAt: null,
+    }
+    if (projectIds.length > 0) {
+      whereClause.id = { in: projectIds }
+    }
+
     const projects = await prisma.project.findMany({
-      where: { 
-        plan: 'Premium',
-        deletedAt: null,
-      },
+      where: whereClause,
       include: { agents: true },
     })
 
-    console.log(`[Admin] Found ${projects.length} Premium projects`)
+    console.log(`[Admin] Found ${projects.length} Premium projects to upgrade`)
 
     let successCount = 0
     const results: Array<{ agentId: string; name: string; project: string; success: boolean; error?: string }> = []

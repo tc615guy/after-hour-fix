@@ -179,16 +179,39 @@ export default function AdminDashboard() {
   }
 
   const handleUpgradeToPremium = async () => {
-    if (!confirm('Upgrade Premium plan projects to premium stack?\n\n✅ GPT-4o (best reasoning)\n✅ ElevenLabs voice (most natural)\n✅ Deepgram Nova 2 (best accuracy)\n\nOnly projects on Premium plan will be upgraded.')) return
+    // Check which Premium projects are selected
+    const selectedPremium = filteredCustomers.filter(
+      c => selected[c.id] && c.plan === 'Premium'
+    )
+    
+    const allPremium = customers.filter(c => c.plan === 'Premium')
+    
+    if (selectedPremium.length === 0 && allPremium.length > 0) {
+      alert('Please select Premium plan projects to upgrade, or deselect all to upgrade all Premium projects.')
+      return
+    }
+    
+    const targetCount = selectedPremium.length > 0 ? selectedPremium.length : allPremium.length
+    const confirmMsg = selectedPremium.length > 0
+      ? `Upgrade ${selectedPremium.length} selected Premium plan project(s) to premium stack?\n\n✅ GPT-4o (best reasoning)\n✅ ElevenLabs voice (most natural)\n✅ Deepgram Nova 2 (best accuracy)`
+      : 'Upgrade ALL Premium plan projects to premium stack?\n\n✅ GPT-4o (best reasoning)\n✅ ElevenLabs voice (most natural)\n✅ Deepgram Nova 2 (best accuracy)'
+    
+    if (!confirm(confirmMsg)) return
     
     try {
       setUpgradingAssistants(true)
-      const res = await fetch('/api/admin/upgrade-to-premium', { method: 'POST' })
+      const projectIds = selectedPremium.map(c => c.id)
+      const res = await fetch('/api/admin/upgrade-to-premium', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectIds })
+      })
       const data = await res.json()
       
       if (!res.ok) throw new Error(data.error || 'Upgrade failed')
       
-      alert(`✅ Successfully upgraded ${data.upgraded}/${data.total} assistants for ${data.projects} Premium project(s)!\n\nAll Premium assistants now using GPT-4o + ElevenLabs + Deepgram Nova 2`)
+      alert(`✅ Successfully upgraded ${data.upgraded}/${data.total} assistants for ${data.projects} Premium project(s)!\n\nAll upgraded assistants now using GPT-4o + ElevenLabs + Deepgram Nova 2`)
+      await loadAdminData() // Refresh the list
     } catch (error: any) {
       alert(`Error: ${error.message}`)
     } finally {
