@@ -158,8 +158,12 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
 
     // Check between bookings
     for (let i = 0; i < sorted.length - 1; i++) {
-      const currentEnd = sorted[i].slotEnd ? new Date(sorted[i].slotEnd) : new Date(sorted[i].slotStart || '')
-      const nextStart = new Date(sorted[i + 1].slotStart || '')
+      const currSlotStart = sorted[i].slotStart
+      const nextSlotStart = sorted[i + 1].slotStart
+      if (!currSlotStart || !nextSlotStart) continue
+      
+      const currentEnd = sorted[i].slotEnd ? new Date(sorted[i].slotEnd) : new Date(currSlotStart)
+      const nextStart = new Date(nextSlotStart)
       
       if (nextStart.getTime() - currentEnd.getTime() > 15 * 60 * 1000) { // 15 min gap
         gaps.push({ start: new Date(currentEnd), end: new Date(nextStart) })
@@ -168,9 +172,11 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
 
     // Check after last booking
     const lastBooking = sorted[sorted.length - 1]
-    const lastEnd = lastBooking.slotEnd ? new Date(lastBooking.slotEnd) : new Date(lastBooking.slotStart || '')
-    if (lastEnd.getHours() < DAY_END_HOUR) {
-      gaps.push({ start: new Date(lastEnd), end: new Date(endOfDay) })
+    if (lastBooking.slotStart) {
+      const lastEnd = lastBooking.slotEnd ? new Date(lastBooking.slotEnd) : new Date(lastBooking.slotStart)
+      if (lastEnd.getHours() < DAY_END_HOUR) {
+        gaps.push({ start: new Date(lastEnd), end: new Date(endOfDay) })
+      }
     }
 
     return gaps
