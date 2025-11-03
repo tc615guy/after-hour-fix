@@ -55,10 +55,14 @@ export async function POST(req: NextRequest) {
       case 'status-update': {
         if (!call?.id) break
 
+        console.log(`[Webhook] status-update for call ${call.id}, status=${call.status}, assistantId=${call.assistantId}`)
+
         // Find agent by vapiAssistantId from call metadata
         const agent = call.assistantId
           ? await prisma.agent.findFirst({ where: { vapiAssistantId: call.assistantId } })
           : null
+
+        console.log(`[Webhook] Found agent:`, agent ? { id: agent.id, name: agent.name, projectId: agent.projectId } : 'null')
 
         const projectId = agent?.projectId || null
 
