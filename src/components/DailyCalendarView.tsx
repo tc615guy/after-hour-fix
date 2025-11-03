@@ -41,9 +41,75 @@ type DailyCalendarViewProps = {
   projectId: string
 }
 
+type TechRowProps = {
+  tech: { id: string; name: string }
+  bookings: Booking[]
+  isUnassigned?: boolean
+  onBookingClick: (booking: Booking) => void
+  selectedDate: Date
+}
+
 const DAY_START_HOUR = 7 // 7 AM
 const DAY_END_HOUR = 19 // 7 PM
 const TIME_SLOT_HEIGHT = 40 // pixels per hour
+const COLUMN_WIDTH = 80
+
+function TechRow({ tech, bookings, isUnassigned, onBookingClick, selectedDate }: TechRowProps) {
+  // Get bookings for each hour
+  const hourSlots = Array(DAY_END_HOUR - DAY_START_HOUR + 1).fill(null).map((_, i) => {
+    const hour = DAY_START_HOUR + i
+    const hourStart = new Date(selectedDate)
+    hourStart.setHours(hour, 0, 0, 0)
+    const hourEnd = new Date(selectedDate)
+    hourEnd.setHours(hour + 1, 0, 0, 0)
+    
+    return bookings.filter(booking => {
+      if (!booking.slotStart) return false
+      const bookingStart = new Date(booking.slotStart)
+      const bookingEnd = booking.slotEnd ? new Date(booking.slotEnd) : new Date(bookingStart.getTime() + 60 * 60 * 1000)
+      // Check if booking overlaps with this hour
+      return bookingStart < hourEnd && bookingEnd > hourStart
+    })
+  })
+
+  return (
+    <tr className="border-b border-gray-200 hover:bg-gray-50">
+      <td className="p-3 bg-gray-50 font-semibold sticky left-0 z-10 border-r border-gray-200">
+        <div className="flex items-center gap-2">
+          <User className={`w-4 h-4 ${isUnassigned ? 'text-gray-500' : 'text-blue-600'}`} />
+          <span>{tech.name}</span>
+        </div>
+      </td>
+      {hourSlots.map((hourBookings, idx) => {
+        const hour = DAY_START_HOUR + idx
+        const isGap = hourBookings.length === 0
+        
+        return (
+          <td key={hour} className="border-l border-gray-200 relative h-12 p-0">
+            {isGap ? (
+              <div className="h-full w-full bg-green-50 border border-dashed border-green-300 hover:bg-green-100 cursor-pointer transition-colors flex items-center justify-center">
+                <span className="text-xs text-green-600 font-semibold">+</span>
+              </div>
+            ) : (
+              hourBookings.map((booking) => (
+                <div
+                  key={booking.id}
+                  className={`h-full w-full p-1 cursor-pointer hover:opacity-90 transition-opacity rounded ${isUnassigned ? 'bg-amber-400' : 'bg-blue-500'}`}
+                  onClick={() => onBookingClick(booking)}
+                >
+                  <div className="text-white text-xs font-semibold truncate">{booking.customerName}</div>
+                  {booking.priceCents && (
+                    <div className="text-white text-xs opacity-90">{formatCurrency(booking.priceCents / 100)}</div>
+                  )}
+                </div>
+              ))
+            )}
+          </td>
+        )
+      })}
+    </tr>
+  )
+}
 
 export default function DailyCalendarView({ projectId }: DailyCalendarViewProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
@@ -112,97 +178,6 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
     return bookings.filter(b => b.technicianId === techId)
   }
 
-  // Calculate position and height for a booking
-  function getBookingStyle(booking: Booking): {
-    top: number
-    height: number
-    left: number
-    width: string | number
-  } {
-    const start = new Date(booking.slotStart || '')
-    const end = booking.slotEnd ? new Date(booking.slotEnd) : new Date(start.getTime() + 60 * 60 * 1000) // default 1 hour
-    
-    const startHour = start.getHours() + start.getMinutes() / 60
-    const endHour = end.getHours() + end.getMinutes() / 60
-    const duration = endHour - startHour
-
-    const top = (startHour - DAY_START_HOUR) * TIME_SLOT_HEIGHT
-    const height = duration * TIME_SLOT_HEIGHT
-    
-    // Simple single-column layout for now
-    return { top, height, left: 20, width: 'calc(100% - 40px)' }
-  }
-
-  // Detect gaps in a technician's schedule
-  function detectGaps(techBookings: Booking[]): Array<{ start: Date; end: Date }> {
-    const startOfDay = new Date(selectedDate)
-    startOfDay.setHours(DAY_START_HOUR, 0, 0, 0)
-    const endOfDay = new Date(selectedDate)
-    endOfDay.setHours(DAY_END_HOUR, 0, 0, 0)
-    
-    if (techBookings.length === 0) {
-      return [{ start: startOfDay, end: endOfDay }]
-    }
-
-    const sorted = [...techBookings].sort((a, b) => 
-      new Date(a.slotStart || 0).getTime() - new Date(b.slotStart || 0).getTime()
-    )
-
-    const gaps: Array<{ start: Date; end: Date }> = []
-    
-    // Check before first booking
-    const firstStart = new Date(sorted[0].slotStart || '')
-    if (firstStart.getHours() > DAY_START_HOUR || (firstStart.getHours() === DAY_START_HOUR && firstStart.getMinutes() > 0)) {
-      gaps.push({ start: new Date(startOfDay), end: firstStart })
-    }
-
-    // Check between bookings
-    for (let i = 0; i < sorted.length - 1; i++) {
-      const currBooking = sorted[i]
-      const nextBooking = sorted[i + 1]
-      if (!currBooking.slotStart || !nextBooking.slotStart) continue
-      
-      const currentEnd = currBooking.slotEnd ? new Date(currBooking.slotEnd) : new Date(currBooking.slotStart)
-      const nextStart = new Date(nextBooking.slotStart)
-      
-      if (nextStart.getTime() - currentEnd.getTime() > 15 * 60 * 1000) { // 15 min gap
-        gaps.push({ start: new Date(currentEnd), end: new Date(nextStart) })
-      }
-    }
-
-    // Check after last booking
-    const lastBooking = sorted[sorted.length - 1]
-    if (lastBooking.slotStart) {
-      const lastEnd = lastBooking.slotEnd ? new Date(lastBooking.slotEnd) : new Date(lastBooking.slotStart)
-      if (lastEnd.getHours() < DAY_END_HOUR) {
-        gaps.push({ start: new Date(lastEnd), end: new Date(endOfDay) })
-      }
-    }
-
-    return gaps
-  }
-
-  function renderTimeSlots() {
-    const slots = []
-    for (let hour = DAY_START_HOUR; hour <= DAY_END_HOUR; hour++) {
-      const displayHour = hour > 12 ? hour - 12 : hour
-      const ampm = hour >= 12 ? 'PM' : 'AM'
-      slots.push(
-        <div
-          key={hour}
-          className="border-t border-gray-200 flex items-center"
-          style={{ height: TIME_SLOT_HEIGHT }}
-        >
-          <span className="text-xs text-gray-500 mr-3 w-12 text-right">
-            {displayHour}:00 {ampm}
-          </span>
-          <div className="flex-1 border-t border-gray-100"></div>
-        </div>
-      )
-    }
-    return slots
-  }
-
   if (loading) {
     return (
       <Card>
@@ -241,130 +216,48 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
-            {/* Unassigned bookings */}
-            {getBookingsForTech(null).length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <User className="w-4 h-4 text-gray-500" />
-                  <h3 className="font-semibold text-gray-700">Unassigned</h3>
-                  <Badge variant="outline" className="ml-auto">
-                    {getBookingsForTech(null).length}
-                  </Badge>
-                </div>
-                <div className="relative bg-gray-50 rounded-lg border-2 border-dashed border-gray-300" style={{ minHeight: (DAY_END_HOUR - DAY_START_HOUR) * TIME_SLOT_HEIGHT }}>
-                  <div className="absolute inset-0">
-                    <div className="p-4">
-                      {renderTimeSlots()}
-                    </div>
-                  </div>
-                  <div className="relative">
-                    {getBookingsForTech(null).map((booking) => {
-                      const style = getBookingStyle(booking)
+          <div className="overflow-x-auto">
+            <div className="inline-block min-w-full">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-gray-300">
+                    <th className="text-left p-2 font-semibold bg-gray-100 sticky left-0 z-10">Tech</th>
+                    {[...Array(DAY_END_HOUR - DAY_START_HOUR + 1)].map((_, i) => {
+                      const hour = DAY_START_HOUR + i
+                      const displayHour = hour > 12 ? hour - 12 : hour
+                      const ampm = hour >= 12 ? 'PM' : 'AM'
                       return (
-                        <div
-                          key={booking.id}
-                          className="absolute bg-amber-500 text-white rounded p-2 shadow-md cursor-pointer hover:shadow-lg transition-shadow"
-                          style={{ ...style, zIndex: 10 }}
-                          onClick={() => setSelectedBooking(booking)}
-                        >
-                          <div className="font-semibold text-xs">{booking.customerName}</div>
-                          <div className="text-xs opacity-90">
-                            {new Date(booking.slotStart || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - 
-                            {booking.slotEnd ? new Date(booking.slotEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '??'}
-                          </div>
-                          {booking.address && (
-                            <div className="text-xs opacity-75 truncate max-w-[200px]">
-                              {booking.address}
-                            </div>
-                          )}
-                        </div>
+                        <th key={hour} className="text-center p-2 font-semibold bg-gray-50 min-w-[80px] border-l border-gray-200">
+                          <div className="text-xs">{displayHour}{ampm === 'PM' ? 'p' : 'a'}</div>
+                        </th>
                       )
                     })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Technician schedules */}
-            {technicians.map((tech) => {
-              const techBookings = getBookingsForTech(tech.id)
-              const gaps = detectGaps(techBookings)
-              
-              return (
-                <div key={tech.id}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <User className="w-4 h-4 text-blue-600" />
-                    <h3 className="font-semibold">{tech.name}</h3>
-                    <Badge variant="outline" className="ml-auto">
-                      {techBookings.length} jobs
-                    </Badge>
-                  </div>
-                  <div className="relative bg-white rounded-lg border-2 border-blue-200" style={{ minHeight: (DAY_END_HOUR - DAY_START_HOUR) * TIME_SLOT_HEIGHT }}>
-                    <div className="absolute inset-0">
-                      <div className="p-4">
-                        {renderTimeSlots()}
-                      </div>
-                    </div>
-                    <div className="relative">
-                      {/* Render gaps */}
-                      {gaps.map((gap, idx) => {
-                        const gapStartHour = gap.start.getHours() + gap.start.getMinutes() / 60
-                        const gapEndHour = gap.end.getHours() + gap.end.getMinutes() / 60
-                        const gapDuration = gapEndHour - gapStartHour
-                        const top = (gapStartHour - DAY_START_HOUR) * TIME_SLOT_HEIGHT
-                        const height = gapDuration * TIME_SLOT_HEIGHT
-                        
-                        return (
-                          <div
-                            key={`gap-${idx}`}
-                            className="absolute bg-green-100 border-2 border-dashed border-green-400 rounded cursor-pointer hover:bg-green-200 transition-colors"
-                            style={{ top, height, left: 20, right: 20, zIndex: 5 }}
-                            onClick={() => {
-                              // TODO: Open create booking modal
-                              alert(`Create new booking from ${gap.start.toLocaleTimeString()} to ${gap.end.toLocaleTimeString()}`)
-                            }}
-                          >
-                            <div className="absolute inset-0 flex items-center justify-center text-xs text-green-700 font-semibold">
-                              + Add Job ({Math.round(gapDuration * 60)} min)
-                            </div>
-                          </div>
-                        )
-                      })}
-                      
-                      {/* Render bookings */}
-                      {techBookings.map((booking) => {
-                        const style = getBookingStyle(booking)
-                        return (
-                          <div
-                            key={booking.id}
-                            className="absolute bg-blue-600 text-white rounded p-2 shadow-md cursor-pointer hover:shadow-lg transition-shadow"
-                            style={{ ...style, zIndex: 10 }}
-                            onClick={() => setSelectedBooking(booking)}
-                          >
-                            <div className="font-semibold text-xs">{booking.customerName}</div>
-                            <div className="text-xs opacity-90">
-                              {new Date(booking.slotStart || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - 
-                              {booking.slotEnd ? new Date(booking.slotEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '??'}
-                            </div>
-                            {booking.address && (
-                              <div className="text-xs opacity-75 truncate max-w-[200px]">
-                                {booking.address}
-                              </div>
-                            )}
-                            {booking.priceCents && (
-                              <div className="text-xs opacity-90 font-semibold mt-1">
-                                {formatCurrency(booking.priceCents / 100)}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Unassigned row */}
+                  {getBookingsForTech(null).length > 0 && (
+                    <TechRow
+                      tech={{ id: 'unassigned', name: 'Unassigned' }}
+                      bookings={getBookingsForTech(null)}
+                      isUnassigned={true}
+                      onBookingClick={setSelectedBooking}
+                      selectedDate={selectedDate}
+                    />
+                  )}
+                  {/* Technician rows */}
+                  {technicians.map((tech) => (
+                    <TechRow
+                      key={tech.id}
+                      tech={tech}
+                      bookings={getBookingsForTech(tech.id)}
+                      onBookingClick={setSelectedBooking}
+                      selectedDate={selectedDate}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </CardContent>
       </Card>
