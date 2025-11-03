@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios'
 
-const CALCOM_BASE_URL = process.env.CALCOM_BASE_URL || 'https://api.cal.com/v1'
+const CALCOM_BASE_URL = process.env.CALCOM_BASE_URL || 'https://api.cal.com'
 const CALCOM_EVENT_TYPE_ID = process.env.CALCOM_EVENT_TYPE_ID ? parseInt(process.env.CALCOM_EVENT_TYPE_ID) : undefined
 
 export interface CalComUser {
@@ -122,28 +122,62 @@ export class CalComClient {
 
   async createBooking(input: CalComBookingInput): Promise<CalComBookingResponse> {
     try {
-      // Cal.com V1 API format
-      // For location, Cal.com expects just the address string when using "In Person" location type
-      const bookingData = {
-        eventTypeId: input.eventTypeId || CALCOM_EVENT_TYPE_ID,
-        start: input.start,
-        responses: {
+      const cfg: any = this.authParams()
+      // Use v2 if token auth, fallback to v1 if apiKey
+      if (this.mode === 'token') {
+        // Cal.com v2 API
+        cfg.headers = {
+          ...(cfg.headers || {}),
+          'cal-api-version': '2024-09-04',
+        }
+        
+        const bookingData = {
+          eventTypeId: input.eventTypeId || CALCOM_EVENT_TYPE_ID,
+          start: input.start,
+          end: input.end,
           name: input.attendee.name,
           email: input.attendee.email,
-          location: { optionValue: input.location || '', value: 'inPerson' },
+          location: input.location,
           notes: input.description || '',
-        },
-        timeZone: input.attendee.timeZone,
-        language: 'en',
-        metadata: input.metadata || {},
+          timeZone: input.attendee.timeZone,
+          metadata: input.metadata || {},
+        }
+
+        console.log('[Cal.com v2] Creating booking with:', JSON.stringify(bookingData, null, 2))
+        const response = await this.client.post('/v2/bookings', bookingData, cfg)
+        console.log('[Cal.com v2] Booking created successfully:', response.data?.booking)
+        
+        // Confirm the booking immediately
+        const bookingUid = response.data?.booking?.uid
+        if (bookingUid) {
+          console.log('[Cal.com v2] Confirming booking:', bookingUid)
+          await this.client.post(`/v2/bookings/${bookingUid}/confirm`, {}, cfg).catch(err => {
+            console.warn('[Cal.com v2] Confirm failed (may already be confirmed):', err.response?.data || err.message)
+          })
+        }
+        
+        return response.data?.booking || response.data
+      } else {
+        // Cal.com v1 API format for apiKey auth
+        const bookingData = {
+          eventTypeId: input.eventTypeId || CALCOM_EVENT_TYPE_ID,
+          start: input.start,
+          responses: {
+            name: input.attendee.name,
+            email: input.attendee.email,
+            location: { optionValue: input.location || '', value: 'inPerson' },
+            notes: input.description || '',
+          },
+          timeZone: input.attendee.timeZone,
+          language: 'en',
+          metadata: input.metadata || {},
+        }
+
+        console.log('[Cal.com v1] Creating booking with:', JSON.stringify(bookingData, null, 2))
+        const response = await this.client.post('/v1/bookings', bookingData, cfg)
+        console.log('[Cal.com v1] Booking created successfully:', response.data)
+        return response.data
       }
-
-      console.log('[Cal.com] Creating booking with:', JSON.stringify(bookingData, null, 2))
-
-      const response = await this.client.post('/bookings', bookingData, this.authParams())
-
-      console.log('[Cal.com] Booking created successfully:', response.data)
-      return response.data
     } catch (error: any) {
       console.error('Cal.com createBooking error:', error.response?.data || error.message)
       console.error('Request data:', error.config?.data)

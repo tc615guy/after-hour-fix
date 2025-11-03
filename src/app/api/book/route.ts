@@ -237,25 +237,73 @@ export async function POST(req: NextRequest) {
     }
     const newBooking = createdPayload.booking
 
-    // Create Cal.com booking
+    // Create Cal.com booking using v2 API (matches availability endpoint)
     let calcomBooking: any
+    let bookingUid: string | undefined
     try {
       const phoneDigits = (input.customerPhone || '').replace(/\D/g, '')
-      calcomBooking = await calcomClient.createBooking({
-        eventTypeId: resolveEventTypeId(project.trade),
+      const eventTypeId = resolveEventTypeId(project.trade) || project.calcomEventTypeId
+      
+      if (!eventTypeId) {
+        throw new Error('No Cal.com event type configured')
+      }
+      
+      // Use v2 API directly (matches how availability works)
+      const bookingPayload = {
+        eventTypeId: eventTypeId,
         start: startTime.toISOString(),
         end: endTime.toISOString(),
-        attendee: {
-          name: input.customerName,
-          email: `${phoneDigits}@sms.afterhourfix.com`,
-          timeZone: project.timezone,
-          phoneNumber: input.customerPhone,
-        },
-        title: `${project.trade} Service - ${input.customerName}`,
-        description: `Address: ${input.address}\n\nIssue: ${input.notes}`,
+        name: input.customerName,
+        email: `${phoneDigits}@sms.afterhourfix.com`,
         location: input.address,
+        notes: `Address: ${input.address}\n\nIssue: ${input.notes}`,
+        timeZone: project.timezone,
         metadata: { projectId, priorityUpsell: input.priorityUpsell, trade: project.trade },
+      }
+      
+      console.log('[BOOK] Creating Cal.com v2 booking:', JSON.stringify(bookingPayload, null, 2))
+      
+      const bookingRes = await fetch('https://api.cal.com/v2/bookings', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${project.calcomApiKey}`,
+          'cal-api-version': '2024-09-04',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingPayload),
       })
+      
+      if (!bookingRes.ok) {
+        const errorTxt = await bookingRes.text()
+        console.error('[BOOK] Cal.com v2 booking failed:', errorTxt.substring(0, 500))
+        throw new Error(`Cal.com booking failed: ${bookingRes.status}`)
+      }
+      
+      const bookingData = await bookingRes.json()
+      calcomBooking = bookingData?.booking || bookingData
+      bookingUid = calcomBooking?.uid
+      console.log('[BOOK] Cal.com v2 booking created:', { id: calcomBooking?.id, uid: bookingUid })
+      
+      // Confirm the booking immediately
+      if (bookingUid) {
+        console.log('[BOOK] Confirming Cal.com v2 booking:', bookingUid)
+        try {
+          const confirmRes = await fetch(`https://api.cal.com/v2/bookings/${bookingUid}/confirm`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${project.calcomApiKey}`,
+              'cal-api-version': '2024-09-04',
+            },
+          })
+          if (confirmRes.ok) {
+            console.log('[BOOK] Cal.com v2 booking confirmed successfully')
+          } else {
+            console.warn('[BOOK] Cal.com v2 confirm failed (may already be confirmed):', await confirmRes.text())
+          }
+        } catch (confirmErr: any) {
+          console.warn('[BOOK] Cal.com v2 confirm error:', confirmErr.message)
+        }
+      }
     } catch (e: any) {
       await fetch(`${appUrl}/api/projects/${projectId}/bookings/${newBooking.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'failed' }),
@@ -264,7 +312,7 @@ export async function POST(req: NextRequest) {
     }
 
     await fetch(`${appUrl}/api/projects/${projectId}/bookings/${newBooking.id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'booked', calcomBookingId: calcomBooking.id, calcomBookingUid: calcomBooking.uid })
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'booked', calcomBookingId: calcomBooking?.id, calcomBookingUid: bookingUid })
     }).catch(() => {})
 
     const smsMessage = buildBookingConfirmationSMS(project.name, input.customerName, startTime, input.address, input.notes)
