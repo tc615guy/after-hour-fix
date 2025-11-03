@@ -54,6 +54,21 @@ const DAY_END_HOUR = 19 // 7 PM
 const TIME_SLOT_HEIGHT = 40 // pixels per hour
 const COLUMN_WIDTH = 80
 
+// Generate consistent color based on technician ID
+function getTechColor(techId: string): string {
+  const colors = [
+    'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-red-500', 
+    'bg-yellow-500', 'bg-indigo-500', 'bg-pink-500', 'bg-teal-500',
+    'bg-orange-500', 'bg-cyan-500'
+  ]
+  // Hash the ID to get a consistent index
+  let hash = 0
+  for (let i = 0; i < techId.length; i++) {
+    hash = techId.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return colors[Math.abs(hash) % colors.length]
+}
+
 function TechRow({ tech, bookings, isUnassigned, onBookingClick, selectedDate }: TechRowProps) {
   // Get bookings for each hour
   const hourSlots = Array(DAY_END_HOUR - DAY_START_HOUR + 1).fill(null).map((_, i) => {
@@ -72,12 +87,14 @@ function TechRow({ tech, bookings, isUnassigned, onBookingClick, selectedDate }:
     })
   })
 
+  const techColor = isUnassigned ? 'bg-amber-400' : getTechColor(tech.id)
+  
   return (
     <tr className="border-b border-gray-200 hover:bg-gray-50">
-      <td className="p-3 bg-gray-50 font-semibold sticky left-0 z-10 border-r border-gray-200">
-        <div className="flex items-center gap-2">
-          <User className={`w-4 h-4 ${isUnassigned ? 'text-gray-500' : 'text-blue-600'}`} />
-          <span>{tech.name}</span>
+      <td className="p-2 bg-gray-50 font-semibold sticky left-0 z-10 border-r border-gray-200">
+        <div className="flex items-center gap-1">
+          <User className={`w-3 h-3 ${isUnassigned ? 'text-gray-500' : 'text-blue-600'}`} />
+          <span className="text-xs">{tech.name}</span>
         </div>
       </td>
       {hourSlots.map((hourBookings, idx) => {
@@ -85,7 +102,7 @@ function TechRow({ tech, bookings, isUnassigned, onBookingClick, selectedDate }:
         const isGap = hourBookings.length === 0
         
         return (
-          <td key={hour} className="border-l border-gray-200 relative h-12 p-0">
+          <td key={hour} className="border-l border-gray-200 relative h-10 p-0">
             {isGap ? (
               <div className="h-full w-full bg-green-50 border border-dashed border-green-300 hover:bg-green-100 cursor-pointer transition-colors flex items-center justify-center">
                 <span className="text-xs text-green-600 font-semibold">+</span>
@@ -94,13 +111,10 @@ function TechRow({ tech, bookings, isUnassigned, onBookingClick, selectedDate }:
               hourBookings.map((booking) => (
                 <div
                   key={booking.id}
-                  className={`h-full w-full p-1 cursor-pointer hover:opacity-90 transition-opacity rounded ${isUnassigned ? 'bg-amber-400' : 'bg-blue-500'}`}
+                  className={`h-full w-full p-1 cursor-pointer hover:opacity-90 transition-opacity rounded ${techColor}`}
                   onClick={() => onBookingClick(booking)}
                 >
                   <div className="text-white text-xs font-semibold truncate">{booking.customerName}</div>
-                  {booking.priceCents && (
-                    <div className="text-white text-xs opacity-90">{formatCurrency(booking.priceCents / 100)}</div>
-                  )}
                 </div>
               ))
             )}
@@ -196,38 +210,37 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
   })
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* Header with date navigation */}
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-semibold text-lg">{selectedDateStr}</h3>
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="sm" onClick={prevDay}>
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={today}>
+            Today
+          </Button>
+          <Button variant="outline" size="sm" onClick={nextDay}>
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+      
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xl">{selectedDateStr}</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={prevDay}>
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={today}>
-                Today
-              </Button>
-              <Button variant="outline" size="sm" onClick={nextDay}>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-2">
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full">
-              <table className="w-full border-collapse">
+              <table className="w-full border-collapse text-xs">
                 <thead>
                   <tr className="border-b-2 border-gray-300">
-                    <th className="text-left p-2 font-semibold bg-gray-100 sticky left-0 z-10">Tech</th>
+                    <th className="text-left p-1.5 font-semibold bg-gray-100 sticky left-0 z-10 text-xs">Tech</th>
                     {[...Array(DAY_END_HOUR - DAY_START_HOUR + 1)].map((_, i) => {
                       const hour = DAY_START_HOUR + i
                       const displayHour = hour > 12 ? hour - 12 : hour
                       const ampm = hour >= 12 ? 'PM' : 'AM'
                       return (
-                        <th key={hour} className="text-center p-2 font-semibold bg-gray-50 min-w-[80px] border-l border-gray-200">
+                        <th key={hour} className="text-center p-1 font-semibold bg-gray-50 min-w-[50px] border-l border-gray-200">
                           <div className="text-xs">{displayHour}{ampm === 'PM' ? 'p' : 'a'}</div>
                         </th>
                       )
@@ -264,52 +277,50 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
 
       {/* Booking detail modal */}
       {selectedBooking && (
-        <Card>
-          <CardHeader>
+        <Card className="border-2 border-blue-200">
+          <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle>Booking Details</CardTitle>
+              <CardTitle className="text-base">Booking Details</CardTitle>
               <Button variant="ghost" size="sm" onClick={() => setSelectedBooking(null)}>
-                Close
+                ×
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div>
-                <span className="text-sm font-semibold text-gray-600">Customer:</span>
-                <div className="text-lg font-bold">{selectedBooking.customerName}</div>
-              </div>
-              {selectedBooking.customerPhone && (
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-gray-500" />
-                  <span>{formatPhoneNumber(selectedBooking.customerPhone)}</span>
-                </div>
-              )}
-              {selectedBooking.address && (
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-gray-500 mt-1" />
-                  <span className="text-sm">{selectedBooking.address}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-gray-500" />
-                <span className="text-sm">
-                  {new Date(selectedBooking.slotStart || '').toLocaleString()}
-                </span>
-              </div>
-              {selectedBooking.priceCents && (
-                <div className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-gray-500" />
-                  <span className="text-lg font-bold">{formatCurrency(selectedBooking.priceCents / 100)}</span>
-                </div>
-              )}
-              {selectedBooking.notes && (
-                <div className="mt-3 pt-3 border-t">
-                  <span className="text-sm font-semibold text-gray-600">Notes:</span>
-                  <div className="text-sm text-gray-700">{selectedBooking.notes}</div>
-                </div>
-              )}
+          <CardContent className="pt-0 space-y-2 text-sm">
+            <div>
+              <span className="text-xs font-semibold text-gray-600 block mb-1">Customer:</span>
+              <div className="font-bold">{selectedBooking.customerName}</div>
             </div>
+            {selectedBooking.customerPhone && (
+              <div className="flex items-center gap-2">
+                <Phone className="w-3 h-3 text-gray-500" />
+                <span className="text-xs">{formatPhoneNumber(selectedBooking.customerPhone)}</span>
+              </div>
+            )}
+            {selectedBooking.address && (
+              <div className="flex items-start gap-2">
+                <MapPin className="w-3 h-3 text-gray-500 mt-0.5" />
+                <span className="text-xs">{selectedBooking.address}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Clock className="w-3 h-3 text-gray-500" />
+              <span className="text-xs">
+                {new Date(selectedBooking.slotStart || '').toLocaleString()}
+              </span>
+            </div>
+            {selectedBooking.priceCents && (
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-3 h-3 text-gray-500" />
+                <span className="font-bold">{formatCurrency(selectedBooking.priceCents / 100)}</span>
+              </div>
+            )}
+            {selectedBooking.notes && (
+              <div className="pt-2 border-t mt-2">
+                <span className="text-xs font-semibold text-gray-600 block mb-1">Notes:</span>
+                <div className="text-xs text-gray-700">{selectedBooking.notes}</div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

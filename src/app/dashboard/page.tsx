@@ -551,15 +551,15 @@ export default function DashboardPage() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-6">
        {/* Plan Usage Bar */}
         {selectedProject && (
-          <Card className="mb-6">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Plan Usage</CardTitle>
-              <CardDescription>Minutes used this billing period</CardDescription>
+          <Card className="mb-3 sm:mb-4">
+            <CardHeader className="pb-2 px-3 py-2">
+              <CardTitle className="text-xs sm:text-sm font-medium">Plan Usage</CardTitle>
+              <CardDescription className="text-xs">Minutes used this billing period</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 py-2">
               {(() => {
                 const used = stats.minutesUsed || 0
                 const cap = stats.minutesCap || 0
@@ -677,57 +677,55 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Calls Today</CardTitle>
-              <Phone className="w-4 h-4 text-gray-500" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4">
+          <Card className="border">
+            <CardHeader className="flex flex-row items-center justify-between pb-1 px-2 py-2">
+              <CardTitle className="text-xs font-medium">Calls Today</CardTitle>
+              <Phone className="w-3 h-3 text-gray-500" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.callsToday}</div>
+            <CardContent className="px-2 py-1">
+              <div className="text-lg sm:text-2xl font-bold">{stats.callsToday}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Bookings This Week</CardTitle>
-              <CalendarIcon className="w-4 h-4 text-gray-500" />
+          <Card className="border">
+            <CardHeader className="flex flex-row items-center justify-between pb-1 px-2 py-2">
+              <CardTitle className="text-xs font-medium">This Week</CardTitle>
+              <CalendarIcon className="w-3 h-3 text-gray-500" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.bookingsWeek}</div>
+            <CardContent className="px-2 py-1">
+              <div className="text-lg sm:text-2xl font-bold">{stats.bookingsWeek}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">AI Minutes Used</CardTitle>
-              <Clock className="w-4 h-4 text-gray-500" />
+          <Card className="border">
+            <CardHeader className="flex flex-row items-center justify-between pb-1 px-2 py-2">
+              <CardTitle className="text-xs font-medium">AI Minutes</CardTitle>
+              <Clock className="w-3 h-3 text-gray-500" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{Math.round(stats.minutesUsed)}</div>
-              <p className="text-xs text-gray-500">This billing period</p>
+            <CardContent className="px-2 py-1">
+              <div className="text-lg sm:text-2xl font-bold">{Math.round(stats.minutesUsed)}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Est. Revenue</CardTitle>
-              <DollarSign className="w-4 h-4 text-gray-500" />
+          <Card className="border">
+            <CardHeader className="flex flex-row items-center justify-between pb-1 px-2 py-2">
+              <CardTitle className="text-xs font-medium">Revenue</CardTitle>
+              <DollarSign className="w-3 h-3 text-gray-500" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(stats.estRevenue)}</div>
-              <p className="text-xs text-gray-500">This week</p>
+            <CardContent className="px-2 py-1">
+              <div className="text-lg sm:text-2xl font-bold">{formatCurrency(stats.estRevenue)}</div>
             </CardContent>
           </Card>
         </div>
 
         {/* Missed Opportunity Calculator */}
         {selectedProject && (
-          <div className="mb-8">
+          <div className="mb-4">
             <MissedOpportunityCalculator projectId={selectedProject.id} />
           </div>
         )}
 
         {/* Fuel & Time Savings */}
         {selectedProject && (
-          <div className="mb-8">
+          <div className="mb-4">
             <FuelSavings projectId={selectedProject.id} />
           </div>
         )}
