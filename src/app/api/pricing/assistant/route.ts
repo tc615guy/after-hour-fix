@@ -36,7 +36,22 @@ export async function GET(req: NextRequest) {
   try {
     const projectId = normalizeProjectId(req)
     const pricing = await getPricing(projectId)
-    return NextResponse.json({ success: true, pricing })
+    
+    // Format result for Vapi AI
+    const parts = []
+    if (pricing.tripFee > 0) parts.push(`Trip fee: $${pricing.tripFee}`)
+    if (pricing.items.length > 0) {
+      const examples = pricing.items.slice(0, 3).map(item => 
+        item.basePrice ? `${item.service}: $${item.basePrice}` : item.service
+      )
+      parts.push(`Services: ${examples.join(', ')}`)
+    }
+    if (pricing.notes) parts.push(`Note: ${pricing.notes}`)
+    
+    return NextResponse.json({ 
+      result: parts.join('. '),
+      pricing 
+    })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to get pricing' }, { status: 200 })
   }
@@ -49,7 +64,22 @@ export async function POST(req: NextRequest) {
     const parsed = RawSchema.parse(body)
     const projectId = normalizeProjectId(req, parsed?.projectId)
     const pricing = await getPricing(projectId)
-    return NextResponse.json({ success: true, pricing })
+    
+    // Format result for Vapi AI
+    const parts = []
+    if (pricing.tripFee > 0) parts.push(`Trip fee: $${pricing.tripFee}`)
+    if (pricing.items.length > 0) {
+      const examples = pricing.items.slice(0, 3).map(item => 
+        item.basePrice ? `${item.service}: $${item.basePrice}` : item.service
+      )
+      parts.push(`Services: ${examples.join(', ')}`)
+    }
+    if (pricing.notes) parts.push(`Note: ${pricing.notes}`)
+    
+    return NextResponse.json({ 
+      result: parts.join('. '),
+      pricing 
+    })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to get pricing' }, { status: 200 })
   }
