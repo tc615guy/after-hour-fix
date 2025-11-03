@@ -179,7 +179,7 @@ export default function AdminDashboard() {
   }
 
   const handleUpgradeToPremium = async () => {
-    if (!confirm('Upgrade all assistants to premium stack?\n\n✅ GPT-4o (best reasoning)\n✅ ElevenLabs voice (most natural)\n✅ Deepgram Nova 2 (best accuracy)\n\nNote: This will increase cost per call significantly.')) return
+    if (!confirm('Upgrade Premium plan projects to premium stack?\n\n✅ GPT-4o (best reasoning)\n✅ ElevenLabs voice (most natural)\n✅ Deepgram Nova 2 (best accuracy)\n\nOnly projects on Premium plan will be upgraded.')) return
     
     try {
       setUpgradingAssistants(true)
@@ -188,7 +188,7 @@ export default function AdminDashboard() {
       
       if (!res.ok) throw new Error(data.error || 'Upgrade failed')
       
-      alert(`✅ Successfully upgraded ${data.upgraded}/${data.total} assistants!\n\nAll assistants now using GPT-4o + ElevenLabs + Deepgram Nova 2`)
+      alert(`✅ Successfully upgraded ${data.upgraded}/${data.total} assistants for ${data.projects} Premium project(s)!\n\nAll Premium assistants now using GPT-4o + ElevenLabs + Deepgram Nova 2`)
     } catch (error: any) {
       alert(`Error: ${error.message}`)
     } finally {

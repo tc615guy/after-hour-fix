@@ -7,77 +7,82 @@ export async function POST(req: NextRequest) {
   try {
     await requireAdmin(req)
 
-    console.log('[Admin] Upgrading all assistants to premium stack...')
+    console.log('[Admin] Upgrading Premium plan projects to premium stack...')
     
-    const agents = await prisma.agent.findMany({
-      orderBy: { createdAt: 'desc' },
+    // Get all Premium projects
+    const projects = await prisma.project.findMany({
+      where: { 
+        plan: 'Premium',
+        deletedAt: null,
+      },
+      include: { agents: true },
     })
 
-    console.log(`[Admin] Found ${agents.length} assistants to upgrade`)
+    console.log(`[Admin] Found ${projects.length} Premium projects`)
 
     let successCount = 0
-    const results: Array<{ agentId: string; name: string; success: boolean; error?: string }> = []
+    const results: Array<{ agentId: string; name: string; project: string; success: boolean; error?: string }> = []
 
-    for (const agent of agents) {
-      try {
-        const project = await prisma.project.findUnique({ where: { id: agent.projectId } })
-        if (!project) {
-          results.push({ agentId: agent.id, name: agent.name, success: false, error: 'Project not found' })
-          continue
+    for (const project of projects) {
+      for (const agent of project.agents) {
+        try {
+          if (!agent || agent.deletedAt) continue
+
+          const vapi = createVapiClient()
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://afterhourfix.com'
+          const tools = buildAssistantTools(appUrl, agent.projectId)
+          const system = buildAssistantPrompt(project.name, project.trade)
+
+          console.log(`[Admin] Upgrading ${agent.name} (${project.name}) to premium stack`)
+
+          await vapi.updateAssistant(agent.vapiAssistantId, {
+            model: {
+              provider: 'openai',
+              model: 'gpt-4o', // Premium model for best function calling and reasoning
+              temperature: 0.7,
+              messages: [{ role: 'system', content: system } as any],
+              tools,
+            },
+            voice: {
+              provider: '11labs',
+              voiceId: 'burt', // Professional, warm male voice from ElevenLabs
+            },
+            transcriber: {
+              provider: 'deepgram',
+              model: 'nova-2', // Best accuracy transcription
+              language: 'en',
+            },
+          } as any)
+
+          await prisma.eventLog.create({
+            data: { 
+              projectId: agent.projectId, 
+              type: 'agent.upgraded',
+              payload: { 
+                agentId: agent.id,
+                stack: 'gpt-4o, elevenlabs-burt, deepgram-nova-2'
+              }
+            },
+          })
+
+          results.push({ agentId: agent.id, name: agent.name, project: project.name, success: true })
+          successCount++
+          console.log(`[Admin] ✅ ${agent.name} (${project.name}) upgraded successfully`)
+        } catch (error: any) {
+          console.error(`[Admin] Failed to upgrade ${agent.name}:`, error.message)
+          results.push({ agentId: agent.id, name: agent.name, project: project.name, success: false, error: error.message })
         }
-
-        const vapi = createVapiClient()
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://afterhourfix.com'
-        const tools = buildAssistantTools(appUrl, agent.projectId)
-        const system = buildAssistantPrompt(project.name, project.trade)
-
-        console.log(`[Admin] Upgrading ${agent.name} to premium stack`)
-
-        await vapi.updateAssistant(agent.vapiAssistantId, {
-          model: {
-            provider: 'openai',
-            model: 'gpt-4o', // Premium model for best function calling and reasoning
-            temperature: 0.7,
-            messages: [{ role: 'system', content: system } as any],
-            tools,
-          },
-          voice: {
-            provider: '11labs',
-            voiceId: 'burt', // Professional, warm male voice from ElevenLabs
-          },
-          transcriber: {
-            provider: 'deepgram',
-            model: 'nova-2', // Best accuracy transcription
-            language: 'en',
-          },
-        } as any)
-
-        await prisma.eventLog.create({
-          data: { 
-            projectId: agent.projectId, 
-            type: 'agent.upgraded',
-            payload: { 
-              agentId: agent.id,
-              stack: 'gpt-4o, elevenlabs-burt, deepgram-nova-2'
-            }
-          },
-        })
-
-        results.push({ agentId: agent.id, name: agent.name, success: true })
-        successCount++
-        console.log(`[Admin] ✅ ${agent.name} upgraded successfully`)
-      } catch (error: any) {
-        console.error(`[Admin] Failed to upgrade ${agent.name}:`, error.message)
-        results.push({ agentId: agent.id, name: agent.name, success: false, error: error.message })
       }
     }
 
-    console.log(`[Admin] Upgrade complete: ${successCount}/${agents.length} assistants upgraded`)
+    const totalAssistants = projects.reduce((sum, p) => sum + p.agents.length, 0)
+    console.log(`[Admin] Upgrade complete: ${successCount} assistants upgraded for ${projects.length} Premium projects`)
 
     return NextResponse.json({ 
       success: true, 
       upgraded: successCount, 
-      total: agents.length, 
+      total: totalAssistants, 
+      projects: projects.length,
       results 
     })
   } catch (error: any) {
