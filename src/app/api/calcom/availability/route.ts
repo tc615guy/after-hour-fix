@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { createCalComClient } from '@/lib/calcom'
 
 /**
  * GET/POST /api/calcom/availability?projectId=...&start=ISO&end=ISO
@@ -16,62 +17,34 @@ async function handleAvailabilityRequest(req: NextRequest) {
     if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
 
     const apiKey = project.calcomApiKey
-    const eventTypeId = project.calcomEventTypeId
-    if (!apiKey || !eventTypeId) {
-      return NextResponse.json({ error: 'Cal.com not connected or event type missing' }, { status: 400 })
+    const calcomUser = project.calcomUser
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Cal.com not connected' }, { status: 400 })
+    }
+    if (!calcomUser) {
+      return NextResponse.json({ error: 'Cal.com username not configured' }, { status: 400 })
     }
 
     const start = url.searchParams.get('start')
     const end = url.searchParams.get('end')
     // Default: next 7 days
     const now = new Date()
-    const startIso = start && !isNaN(new Date(start).getTime()) ? new Date(start).toISOString() : now.toISOString()
+    const startDate = start && !isNaN(new Date(start).getTime()) ? new Date(start) : now
     const endDefault = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-    const endIso = end && !isNaN(new Date(end).getTime()) ? new Date(end).toISOString() : endDefault.toISOString()
-
-    // Call Cal.com availability API (v1)
-    console.log(`[Cal.com Availability] Querying for projectId=${projectId}, eventTypeId=${eventTypeId}, start=${startIso}, end=${endIso}`)
-    const resp = await fetch(`https://api.cal.com/v1/availability/timeframes?eventTypeId=${eventTypeId}&startTime=${encodeURIComponent(startIso)}&endTime=${encodeURIComponent(endIso)}`, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'cal-api-version': '2024-08-13',
-      },
-    })
-
-    if (!resp.ok) {
-      const txt = await resp.text()
-      console.error('[Cal.com Availability] API error:', txt)
-      return NextResponse.json({ error: 'Failed to fetch availability from Cal.com' }, { status: 500 })
-    }
-
-    const data = await resp.json()
-    console.log('[Cal.com Availability] Raw response:', JSON.stringify(data).substring(0, 500))
+    const endDate = end && !isNaN(new Date(end).getTime()) ? new Date(end) : endDefault
     
-    // Normalize various possible shapes to a flat slots array
-    const calcomSlots: Array<{ start: string; end?: string }> = []
-    // Common shapes: data.timeframes[].slots[] or data.data.timeframes[].slots[]
-    const frames = (data?.timeframes || data?.data?.timeframes || data?.data || data) as any
-    const arr = Array.isArray(frames) ? frames : []
-    console.log(`[Cal.com Availability] Parsing ${arr.length} frames from response`)
-    
-    for (const f of arr) {
-      const s = f?.slots || f?.timeSlots || []
-      console.log(`[Cal.com Availability] Frame has ${s.length} slots`)
-      for (const slot of s) {
-        const st = slot?.start || slot?.startTime || slot?.time || slot
-        const en = slot?.end || slot?.endTime
-        if (st && !isNaN(new Date(st).getTime())) {
-          const convertedStart = new Date(st).toISOString()
-          calcomSlots.push({ start: convertedStart, end: en ? new Date(en).toISOString() : undefined })
-          
-          // Log first few slots for debugging
-          if (calcomSlots.length <= 3) {
-            console.log(`[Cal.com Availability] Slot ${calcomSlots.length}: raw="${st}" → converted="${convertedStart}"`)
-          }
-        }
-      }
-    }
+    const startIso = startDate.toISOString()
+    const endIso = endDate.toISOString()
 
+    // Use CalComClient to get availability
+    console.log(`[Cal.com Availability] Querying for projectId=${projectId}, username=${calcomUser}, start=${startIso}, end=${endIso}`)
+    const calcomClient = createCalComClient(apiKey)
+    
+    // getAvailability expects date strings like "2024-01-01"
+    const fromDate = startIso.split('T')[0]
+    const toDate = endIso.split('T')[0]
+    
+    const calcomSlots = await calcomClient.getAvailability(calcomUser, fromDate, toDate)
     console.log(`[Cal.com Availability] Found ${calcomSlots.length} slots from Cal.com`)
 
     // SMART ROUTING: Filter slots to only include those where at least one technician is available
