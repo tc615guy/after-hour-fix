@@ -90,10 +90,11 @@ async function getDistanceAndTime(
 }
 
 /**
- * GET /api/gaps?projectId=...&start=ISO&end=ISO
+ * GET/POST /api/gaps?projectId=...&start=ISO&end=ISO
  * Find gaps in technician schedules and suggest best assignments
+ * Vapi server functions use POST, but we accept both
  */
-export async function GET(req: NextRequest) {
+async function handleGapsRequest(req: NextRequest) {
   try {
     const url = new URL(req.url)
     const projectId = url.searchParams.get('projectId') || undefined
@@ -325,5 +326,14 @@ export async function GET(req: NextRequest) {
     console.error('[GAPS] Error:', error)
     return NextResponse.json({ error: error.message || 'Failed to find gaps' }, { status: 500 })
   }
+}
+
+// Handle both GET and POST (Vapi uses POST for server functions)
+export async function GET(req: NextRequest) {
+  return handleGapsRequest(req)
+}
+
+export async function POST(req: NextRequest) {
+  return handleGapsRequest(req)
 }
 
