@@ -158,12 +158,12 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
 
     // Check between bookings
     for (let i = 0; i < sorted.length - 1; i++) {
-      const currSlotStart = sorted[i].slotStart
-      const nextSlotStart = sorted[i + 1].slotStart
-      if (!currSlotStart || !nextSlotStart) continue
+      const currBooking = sorted[i]
+      const nextBooking = sorted[i + 1]
+      if (!currBooking.slotStart || !nextBooking.slotStart) continue
       
-      const currentEnd = sorted[i].slotEnd ? new Date(sorted[i].slotEnd) : new Date(currSlotStart)
-      const nextStart = new Date(nextSlotStart)
+      const currentEnd = currBooking.slotEnd ? new Date(currBooking.slotEnd) : new Date(currBooking.slotStart)
+      const nextStart = new Date(nextBooking.slotStart)
       
       if (nextStart.getTime() - currentEnd.getTime() > 15 * 60 * 1000) { // 15 min gap
         gaps.push({ start: new Date(currentEnd), end: new Date(nextStart) })
