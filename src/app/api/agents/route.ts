@@ -31,14 +31,17 @@ export async function POST(req: NextRequest) {
       name: input.name,
       firstMessage: "Hey there, thanks for calling! I can help you right away. What's going on?",
       voice: {
-        provider: 'cartesia',
-        voiceId: 'ec1e269e-9ca0-402f-8a18-58e0e022355a', // Ariana
-        model: 'sonic-3',
+        provider: '11labs',
+        voiceId: 'burt', // Professional, warm male voice from ElevenLabs
+      },
+      transcriber: {
+        provider: 'deepgram',
+        model: 'nova-2', // Best accuracy transcription
         language: 'en',
       },
       model: {
         provider: 'openai',
-        model: 'gpt-4o-mini', // Match demo assistants
+        model: 'gpt-4o', // Premium model for best function calling and reasoning
         temperature: 0.7,
         messages: [
           {

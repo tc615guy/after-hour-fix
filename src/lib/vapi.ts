@@ -40,6 +40,11 @@ export interface VapiAssistantInput {
     model?: string
     language?: string
   }
+  transcriber?: {
+    provider: string
+    model: string
+    language?: string
+  }
   firstMessage?: string
   recordingEnabled?: boolean
 }

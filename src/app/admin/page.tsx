@@ -67,6 +67,7 @@ export default function AdminDashboard() {
   const [loginError, setLoginError] = useState('')
   const [selected, setSelected] = useState<Record<string, boolean>>({})
   const [syncingAssistants, setSyncingAssistants] = useState(false)
+  const [upgradingAssistants, setUpgradingAssistants] = useState(false)
   const allSelected = Object.keys(selected).length > 0 && Object.values(selected).every(Boolean)
 
   const loadAdminData = async () => {
@@ -177,6 +178,24 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleUpgradeToPremium = async () => {
+    if (!confirm('Upgrade all assistants to premium stack?\n\n✅ GPT-4o (best reasoning)\n✅ ElevenLabs voice (most natural)\n✅ Deepgram Nova 2 (best accuracy)\n\nNote: This will increase cost per call significantly.')) return
+    
+    try {
+      setUpgradingAssistants(true)
+      const res = await fetch('/api/admin/upgrade-to-premium', { method: 'POST' })
+      const data = await res.json()
+      
+      if (!res.ok) throw new Error(data.error || 'Upgrade failed')
+      
+      alert(`✅ Successfully upgraded ${data.upgraded}/${data.total} assistants!\n\nAll assistants now using GPT-4o + ElevenLabs + Deepgram Nova 2`)
+    } catch (error: any) {
+      alert(`Error: ${error.message}`)
+    } finally {
+      setUpgradingAssistants(false)
+    }
+  }
+
   const filteredCustomers = customers.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -233,6 +252,15 @@ export default function AdminDashboard() {
               <p className="text-purple-100 mt-1">AfterHourFix Platform Analytics</p>
             </div>
             <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                className="bg-green-50 text-green-700 hover:bg-green-100 border-green-300"
+                onClick={handleUpgradeToPremium}
+                disabled={upgradingAssistants}
+              >
+                <RefreshCcw className={`w-4 h-4 mr-2 ${upgradingAssistants ? 'animate-spin' : ''}`} />
+                {upgradingAssistants ? 'Upgrading...' : 'Upgrade to Premium'}
+              </Button>
               <Button 
                 variant="outline" 
                 className="bg-white text-purple-600 hover:bg-purple-50"
