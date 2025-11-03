@@ -135,11 +135,13 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
 
   // Detect gaps in a technician's schedule
   function detectGaps(techBookings: Booking[]): Array<{ start: Date; end: Date }> {
+    const startOfDay = new Date(selectedDate)
+    startOfDay.setHours(DAY_START_HOUR, 0, 0, 0)
+    const endOfDay = new Date(selectedDate)
+    endOfDay.setHours(DAY_END_HOUR, 0, 0, 0)
+    
     if (techBookings.length === 0) {
-      return [{
-        start: new Date(selectedDate.setHours(DAY_START_HOUR, 0, 0, 0)),
-        end: new Date(selectedDate.setHours(DAY_END_HOUR, 0, 0, 0))
-      }]
+      return [{ start: startOfDay, end: endOfDay }]
     }
 
     const sorted = [...techBookings].sort((a, b) => 
@@ -150,11 +152,8 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
     
     // Check before first booking
     const firstStart = new Date(sorted[0].slotStart || '')
-    if (firstStart.getHours() > DAY_START_HOUR) {
-      gaps.push({
-        start: new Date(selectedDate.setHours(DAY_START_HOUR, 0, 0, 0)),
-        end: firstStart
-      })
+    if (firstStart.getHours() > DAY_START_HOUR || (firstStart.getHours() === DAY_START_HOUR && firstStart.getMinutes() > 0)) {
+      gaps.push({ start: new Date(startOfDay), end: firstStart })
     }
 
     // Check between bookings
@@ -163,7 +162,7 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
       const nextStart = new Date(sorted[i + 1].slotStart || '')
       
       if (nextStart.getTime() - currentEnd.getTime() > 15 * 60 * 1000) { // 15 min gap
-        gaps.push({ start: currentEnd, end: nextStart })
+        gaps.push({ start: new Date(currentEnd), end: new Date(nextStart) })
       }
     }
 
@@ -171,10 +170,7 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
     const lastBooking = sorted[sorted.length - 1]
     const lastEnd = lastBooking.slotEnd ? new Date(lastBooking.slotEnd) : new Date(lastBooking.slotStart || '')
     if (lastEnd.getHours() < DAY_END_HOUR) {
-      gaps.push({
-        start: lastEnd,
-        end: new Date(selectedDate.setHours(DAY_END_HOUR, 0, 0, 0))
-      })
+      gaps.push({ start: new Date(lastEnd), end: new Date(endOfDay) })
     }
 
     return gaps
