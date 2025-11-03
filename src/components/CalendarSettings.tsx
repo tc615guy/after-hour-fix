@@ -162,6 +162,39 @@ export default function CalendarSettings({ projectId }: Props) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Instructions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ExternalLink className="w-5 h-5" />
+            How to get your API key
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3 text-sm">
+            <ol className="list-decimal space-y-2 ml-4 text-gray-700">
+              <li>Go to <a href="https://app.cal.com" target="_blank" className="text-blue-600 underline">app.cal.com</a> and sign up for an account (or sign in if you already have one)</li>
+              <li>Complete your profile setup (if this is your first time)</li>
+              <li>Scroll down to the bottom of the left sidebar and click on "Settings" (gear icon)</li>
+              <li>In the left sidebar, scroll down to find the "Developer" section</li>
+              <li>Click on "API keys" under the Developer section</li>
+              <li>Click the "+ Add" button to create your first API key</li>
+              <li>Name the key your business name (e.g., "Best Plumber")</li>
+              <li>Toggle "Never expires" to ON (recommended)</li>
+              <li>Click "Save"</li>
+              <li>Click "Copy" to copy the API key to your clipboard</li>
+              <li>Click "Done" to close the modal</li>
+              <li>Return to this page and paste your API key in the "Cal.com API Key" field above</li>
+              <li>Click "Verify" to test your key (optional but recommended)</li>
+              <li>Click "Connect" to activate calendar integration</li>
+            </ol>
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+              <strong>💡 Tip:</strong> Make sure to save your API key securely - you won't be able to view it again after closing the modal on Cal.com!
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
