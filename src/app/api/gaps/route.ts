@@ -80,6 +80,13 @@ export async function GET(req: NextRequest) {
     for (const booking of unassigned) {
       const gap: any = { unassignedBooking: booking }
       
+      // Calculate duration for this booking
+      let bookingDuration = 60 // default
+      if (booking.slotStart && booking.slotEnd) {
+        const diffMs = new Date(booking.slotEnd).getTime() - new Date(booking.slotStart).getTime()
+        bookingDuration = Math.max(60, Math.round(diffMs / 60000))
+      }
+      
       // Find best technician for this booking
       const suggestions = []
       
@@ -90,9 +97,9 @@ export async function GET(req: NextRequest) {
         // Check if this technician has conflicts (overlapping bookings)
         const hasConflict = tech.bookings.some((b: any) => {
           const bStart = b.slotStart ? new Date(b.slotStart).getTime() : 0
-          const bEnd = b.slotEnd ? new Date(b.slotEnd).getTime() : bStart + 60 * 60 * 1000
+          const bEnd = b.slotEnd ? new Date(b.slotEnd).getTime() : (bStart || Date.now()) + 60 * 60 * 1000
           const bookingStart = booking.slotStart ? new Date(booking.slotStart).getTime() : 0
-          const bookingEnd = booking.slotEnd ? new Date(booking.slotEnd).getTime() : bookingStart + 60 * 60 * 1000
+          const bookingEnd = booking.slotEnd ? new Date(booking.slotEnd).getTime() : (bookingStart || Date.now()) + bookingDuration * 60 * 1000
           
           return bookingStart < bEnd && bookingEnd > bStart
         })
@@ -156,9 +163,9 @@ export async function GET(req: NextRequest) {
       const conflicts = technicians
         .filter((tech: any) => tech.bookings.some((b: any) => {
           const bStart = b.slotStart ? new Date(b.slotStart).getTime() : 0
-          const bEnd = b.slotEnd ? new Date(b.slotEnd).getTime() : bStart + 60 * 60 * 1000
+          const bEnd = b.slotEnd ? new Date(b.slotEnd).getTime() : (bStart || Date.now()) + 60 * 60 * 1000
           const bookingStart = booking.slotStart ? new Date(booking.slotStart).getTime() : 0
-          const bookingEnd = booking.slotEnd ? new Date(booking.slotEnd).getTime() : bookingStart + 60 * 60 * 1000
+          const bookingEnd = booking.slotEnd ? new Date(booking.slotEnd).getTime() : (bookingStart || Date.now()) + bookingDuration * 60 * 1000
           return bookingStart < bEnd && bookingEnd > bStart
         }))
         .map((tech: any) => tech.name)

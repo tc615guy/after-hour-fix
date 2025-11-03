@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Phone, Calendar as CalendarIcon, DollarSign, Clock, Settings, LogOut, List, Download, Upload, Shield } from 'lucide-react'
+import { Phone, Calendar as CalendarIcon, DollarSign, Clock, Settings, LogOut, List, Download, Upload, Shield, Users } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import MobileNav from '@/components/MobileNav'
 import { formatCurrency, formatDuration, formatPhoneNumber } from '@/lib/utils'
 import CalendarView from '@/components/CalendarView'
+import GapFinder from '@/components/GapFinder'
 import FirstTimePopup from '@/components/FirstTimePopup'
 import MissedOpportunityCalculator from '@/components/MissedOpportunityCalculator'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -20,7 +21,7 @@ export default function DashboardPage() {
   const [selectedProject, setSelectedProject] = useState<any>(null)
   const [calls, setCalls] = useState<any[]>([])
   const [bookings, setBookings] = useState<any[]>([])
-  const [view, setView] = useState<'list' | 'calendar'>('list')
+  const [view, setView] = useState<'list' | 'calendar' | 'gaps'>('list')
   const [stats, setStats] = useState({
     callsToday: 0,
     bookingsWeek: 0,
@@ -931,6 +932,14 @@ export default function DashboardPage() {
                   <CalendarIcon className="w-4 h-4 mr-2" />
                   Calendar
                 </Button>
+                <Button
+                  variant={view === 'gaps' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setView('gaps')}
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Smart Schedule
+                </Button>
               </div>
               {/* Mobile actions */}
               <div className="flex md:hidden gap-2">
@@ -1028,6 +1037,8 @@ export default function DashboardPage() {
             )}
             {view === 'calendar' && selectedProject ? (
               <CalendarView projectId={selectedProject.id} />
+            ) : view === 'gaps' && selectedProject ? (
+              <GapFinder projectId={selectedProject.id} />
             ) : bookings.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No bookings yet. First booking coming soon!
