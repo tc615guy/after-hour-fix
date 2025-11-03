@@ -321,6 +321,8 @@ export default function DashboardPage() {
         body: JSON.stringify({ rows })
       })
       const data = await res.json()
+      console.log('Import response:', { ok: res.ok, data })
+      
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Import failed')
       }
