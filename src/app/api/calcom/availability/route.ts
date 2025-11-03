@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { createCalComClient } from '@/lib/calcom'
 
 /**
  * GET/POST /api/calcom/availability?projectId=...&start=ISO&end=ISO
@@ -17,12 +16,9 @@ async function handleAvailabilityRequest(req: NextRequest) {
     if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
 
     const apiKey = project.calcomApiKey
-    const calcomUser = project.calcomUser
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Cal.com not connected' }, { status: 400 })
-    }
-    if (!calcomUser) {
-      return NextResponse.json({ error: 'Cal.com username not configured' }, { status: 400 })
+    const eventTypeId = project.calcomEventTypeId
+    if (!apiKey || !eventTypeId) {
+      return NextResponse.json({ error: 'Cal.com not connected or event type missing' }, { status: 400 })
     }
 
     const start = url.searchParams.get('start')
@@ -36,15 +32,43 @@ async function handleAvailabilityRequest(req: NextRequest) {
     const startIso = startDate.toISOString()
     const endIso = endDate.toISOString()
 
-    // Use CalComClient to get availability
-    console.log(`[Cal.com Availability] Querying for projectId=${projectId}, username=${calcomUser}, start=${startIso}, end=${endIso}`)
-    const calcomClient = createCalComClient(apiKey)
+    // Call Cal.com v2 slots API
+    console.log(`[Cal.com Availability] Querying v2 slots for projectId=${projectId}, eventTypeId=${eventTypeId}, start=${startIso}, end=${endIso}`)
     
-    // getAvailability expects date strings like "2024-01-01"
-    const fromDate = startIso.split('T')[0]
-    const toDate = endIso.split('T')[0]
+    const slotsUrl = new URL('https://api.cal.com/v2/slots')
+    slotsUrl.searchParams.set('eventTypeId', String(eventTypeId))
+    slotsUrl.searchParams.set('start', startIso)
+    slotsUrl.searchParams.set('end', endIso)
+    slotsUrl.searchParams.set('timeZone', project.timezone)
     
-    const calcomSlots = await calcomClient.getAvailability(calcomUser, fromDate, toDate)
+    const resp = await fetch(slotsUrl.toString(), {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'cal-api-version': '2024-06-11',
+      },
+    })
+
+    if (!resp.ok) {
+      const txt = await resp.text()
+      console.error('[Cal.com Availability] v2 API error:', txt)
+      return NextResponse.json({ error: 'Failed to fetch availability from Cal.com' }, { status: 500 })
+    }
+
+    const data = await resp.json()
+    console.log('[Cal.com Availability] v2 API response:', JSON.stringify(data).substring(0, 500))
+    
+    // Cal.com v2 returns { slots: [{ startTime, endTime }] }
+    const calcomSlots: Array<{ start: string; end?: string }> = []
+    const slotsArray = data?.slots || []
+    
+    for (const slot of slotsArray) {
+      const st = slot?.startTime || slot?.start
+      const en = slot?.endTime || slot?.end
+      if (st) {
+        calcomSlots.push({ start: st, end: en })
+      }
+    }
+    
     console.log(`[Cal.com Availability] Found ${calcomSlots.length} slots from Cal.com`)
 
     // SMART ROUTING: Filter slots to only include those where at least one technician is available
