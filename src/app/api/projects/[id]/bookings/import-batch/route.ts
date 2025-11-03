@@ -22,7 +22,11 @@ export async function POST(
 
     const url = new URL(req.url)
     const forceAsync = url.searchParams.get('async') === '1'
-    if (forceAsync || rows.length > 50) {
+    
+    // Only use async if BullMQ worker is enabled (production with dedicated worker)
+    const useAsync = forceAsync && process.env.BULLMQ_ENABLED === 'true'
+    
+    if (useAsync) {
       const job = await prisma.importJob.create({
         data: { projectId, type: 'bookings.importBatch', status: 'queued', total: rows.length },
       })
@@ -30,6 +34,7 @@ export async function POST(
       await audit({ projectId, type: 'bookings.importBatch.queued', payload: { count: rows.length, jobId: job.id } })
       return NextResponse.json({ queued: true, count: rows.length, jobId: job.id }, { status: 202 })
     }
+    // Otherwise process synchronously (even large batches)
 
     const results: { index: number; status: 'ok' | 'error'; error?: string }[] = []
     let created = 0
