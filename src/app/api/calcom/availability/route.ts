@@ -41,16 +41,16 @@ async function handleAvailabilityRequest(req: NextRequest) {
     // Try v2 API first
     if (project.calcomEventTypeId) {
       try {
-        const slotsUrl = new URL('https://api.cal.com/v2/slots')
+        const slotsUrl = new URL('https://api.cal.com/v2/slots/available')
         slotsUrl.searchParams.set('eventTypeId', String(project.calcomEventTypeId))
-        slotsUrl.searchParams.set('start', startIso)
-        slotsUrl.searchParams.set('end', endIso)
-        slotsUrl.searchParams.set('timeZone', project.timezone)
+        slotsUrl.searchParams.set('startTime', startIso)
+        slotsUrl.searchParams.set('endTime', endIso)
         
         const resp = await fetch(slotsUrl.toString(), {
           headers: {
             'Authorization': `Bearer ${apiKey}`,
-            'cal-api-version': '2024-09-04',
+            'cal-api-version': '2024-08-12',
+            'Content-Type': 'application/json',
           },
         })
 
