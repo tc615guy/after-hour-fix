@@ -143,24 +143,31 @@ async function handleAvailabilityRequest(req: NextRequest) {
     const limitedSlots = availableSlots.slice(0, 20)
     console.log(`[Cal.com Availability] Limiting response to ${limitedSlots.length} slots for AI processing`)
 
-    // Return format that Vapi AI can read
-    // Vapi needs a result field with a human-readable message
-    const slotTimes = limitedSlots.map(s => {
-      const dt = new Date(s.start)
-      return dt.toLocaleString('en-US', { 
-        weekday: 'short', 
-        month: 'short', 
-        day: 'numeric', 
-        hour: 'numeric', 
-        minute: '2-digit',
-        timeZone: project.timezone || 'America/Chicago'
-      })
+  // Return format that Vapi AI can read
+  // Vapi needs a result field with a human-readable message
+  const slotTimes = limitedSlots.map(s => {
+    const dt = new Date(s.start)
+    return dt.toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: project.timezone || 'America/Chicago'
     })
-    
-    return NextResponse.json({ 
-      result: `Available times: ${slotTimes.slice(0, 5).join(', ')}${slotTimes.length > 5 ? `, and ${slotTimes.length - 5} more slots` : ''}`,
-      slots: limitedSlots 
-    })
+  })
+
+  const response = {
+    result: `Available times: ${slotTimes.slice(0, 5).join(', ')}${slotTimes.length > 5 ? `, and ${slotTimes.length - 5} more slots` : ''}`,
+    slots: limitedSlots
+  }
+
+  console.log('[Cal.com Availability] FULL RESPONSE PAYLOAD:', JSON.stringify(response, null, 2))
+  console.log('[Cal.com Availability] Response keys:', Object.keys(response))
+  console.log('[Cal.com Availability] Result field type:', typeof response.result)
+  console.log('[Cal.com Availability] Result field value:', response.result)
+
+  return NextResponse.json(response)
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to get availability' }, { status: 500 })
   }
