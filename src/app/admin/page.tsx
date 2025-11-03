@@ -83,6 +83,12 @@ export default function AdminDashboard() {
         return
       }
       setIsAdmin(true)
+      
+      // Store admin email in localStorage for detail page access
+      const checkData = await authRes.json()
+      if (checkData.user?.email) {
+        localStorage.setItem('adminEmail', checkData.user.email)
+      }
 
       // Load stats and customers
       const [statsRes, customersRes] = await Promise.all([
