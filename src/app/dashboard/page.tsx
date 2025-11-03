@@ -427,68 +427,8 @@ export default function DashboardPage() {
   }
 
   const handleImportCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-      try {
-        const text = e.target?.result as string
-        const lines = text.split('\n')
-        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
-
-        // Parse CSV rows
-        const bookingsToImport = []
-        for (let i = 1; i < lines.length; i++) {
-          if (!lines[i].trim()) continue
-
-          const values = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g)?.map(v => v.trim().replace(/^"|"$/g, '')) || []
-
-          if (values.length < headers.length) continue
-
-          const booking = {
-            customerName: values[0] || '',
-            customerPhone: values[1] || '',
-            customerEmail: values[2] || '',
-            slotStart: parseDateFlexible(values[3]),
-            status: values[4] || 'booked',
-            priceCents: values[5]
-              ? Math.round(
-                  parseFloat(
-                    values[5]
-                      .replace(/[^0-9.,-]/g, '')
-                      .replace(/,(?=\d{3}(\D|$))/g, '') // remove thousands commas
-                  ) * 100
-                )
-              : null,
-            notes: values[6] || ''
-          }
-
-          bookingsToImport.push(booking)
-        }
-
-        // Send to API
-        const res = await fetch(`/api/projects/${selectedProject.id}/bookings/import`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bookings: bookingsToImport })
-        })
-
-        if (!res.ok) {
-          const data = await res.json()
-          throw new Error(data.error || 'Import failed')
-        }
-
-        alert(`Successfully imported ${bookingsToImport.length} bookings`)
-        loadProjectData(selectedProject.id)
-      } catch (error: any) {
-        alert(`Import failed: ${error.message}`)
-      }
-    }
-    reader.readAsText(file)
-
-    // Reset input
-    event.target.value = ''
+    // Redirect to preview mode - same handler as preview
+    handleImportCSVPreview(event)
   }
 
   if (loading) {
