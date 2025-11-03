@@ -149,23 +149,26 @@ async function handleAvailabilityRequest(req: NextRequest) {
     let filteredSlots = availableSlots
     if (currentHour >= 16) { // After 4 PM
       // Get today's date in the project timezone (not UTC!)
-      const todayStr = currentTime.toLocaleDateString('en-US', { 
+      // toLocaleDateString returns MM/DD/YYYY, so we need to parse it correctly
+      const dateParts = currentTime.toLocaleDateString('en-US', { 
         year: 'numeric', 
         month: '2-digit', 
         day: '2-digit',
         timeZone: tz 
-      }).split('/').reverse().join('-') // Convert MM/DD/YYYY to YYYY-MM-DD
+      }).split('/') // [MM, DD, YYYY]
+      const todayStr = `${dateParts[2]}-${dateParts[0]}-${dateParts[1]}` // YYYY-MM-DD
       
       console.log(`[Cal.com Availability] After 4 PM (${currentHour}:00) - filtering out slots for ${todayStr}`)
       
       filteredSlots = availableSlots.filter(slot => {
         // Convert slot time to project timezone date string
-        const slotDate = new Date(slot.start).toLocaleDateString('en-US', {
+        const slotParts = new Date(slot.start).toLocaleDateString('en-US', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
           timeZone: tz
-        }).split('/').reverse().join('-') // Convert MM/DD/YYYY to YYYY-MM-DD
+        }).split('/') // [MM, DD, YYYY]
+        const slotDate = `${slotParts[2]}-${slotParts[0]}-${slotParts[1]}` // YYYY-MM-DD
         
         return slotDate !== todayStr // Exclude today's slots
       })
