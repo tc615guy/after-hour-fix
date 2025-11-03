@@ -12,6 +12,7 @@ import MobileNav from '@/components/MobileNav'
 import { formatCurrency, formatDuration, formatPhoneNumber } from '@/lib/utils'
 import CalendarView from '@/components/CalendarView'
 import GapFinder from '@/components/GapFinder'
+import FuelSavings from '@/components/FuelSavings'
 import FirstTimePopup from '@/components/FirstTimePopup'
 import MissedOpportunityCalculator from '@/components/MissedOpportunityCalculator'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -697,6 +698,13 @@ export default function DashboardPage() {
         {selectedProject && (
           <div className="mb-8">
             <MissedOpportunityCalculator projectId={selectedProject.id} />
+          </div>
+        )}
+
+        {/* Fuel & Time Savings */}
+        {selectedProject && (
+          <div className="mb-8">
+            <FuelSavings projectId={selectedProject.id} />
           </div>
         )}
 
