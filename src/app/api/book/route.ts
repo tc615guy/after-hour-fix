@@ -259,8 +259,8 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           eventTypeId: eventTypeId,
-          slotStart: startTime.toISOString(),
-          slotEnd: endTime.toISOString(),
+          slotUtcStartDate: startTime.toISOString(),
+          slotUtcEndDate: endTime.toISOString(),
         }),
       })
       
@@ -276,17 +276,28 @@ export async function POST(req: NextRequest) {
       // Step 2: Create booking with correct v2 format
       const bookingPayload = {
         eventTypeId: eventTypeId,
-        startTime: startTime.toISOString(),
-        attendees: [
-          {
-            email: `${phoneDigits}@sms.afterhourfix.com`,
-            name: input.customerName,
-          }
-        ],
+        start: startTime.toISOString(),  // "start", not "startTime"
+        attendee: {  // "attendee" (singular), not "attendees" (plural)
+          name: input.customerName,
+          email: `${phoneDigits}@sms.afterhourfix.com`,
+          timeZone: project.timezone || 'America/Chicago',
+          language: 'en',
+        },
+        metadata: {
+          customerPhone: input.customerPhone,
+          address: input.address,
+          notes: input.notes,
+        },
+        responses: {
+          name: input.customerName,
+          email: `${phoneDigits}@sms.afterhourfix.com`,
+          location: { optionValue: '', value: input.address },
+          notes: input.notes,
+        },
       }
-      
+
       console.log('[BOOK] Creating Cal.com v2 booking:', JSON.stringify(bookingPayload, null, 2))
-      
+
       const bookingRes = await fetch('https://api.cal.com/v2/bookings', {
         method: 'POST',
         headers: {
