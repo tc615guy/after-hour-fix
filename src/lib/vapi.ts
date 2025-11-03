@@ -409,7 +409,7 @@ export function buildAssistantTools(appUrl: string, projectId?: string): VapiAss
       type: 'function',
       function: {
         name: 'get_slots',
-        description: 'Get available booking time slots. Returns array of slots with "start" timestamps. After calling this, immediately propose the first matching time to the customer.',
+        description: 'Get available booking time slots. Returns a list of times in the "result" field that you should read to the customer. Immediately after calling this, propose the first time from the result to the customer.',
         parameters: {
           type: 'object',
           properties: {
