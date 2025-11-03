@@ -193,9 +193,16 @@ async function handleAvailabilityRequest(req: NextRequest) {
     })
   })
 
+  // Vapi expects a "result" field with human-readable text for the AI
+  // AND the structured data for programmatic access
+  const resultText = `Available times: ${slotTimes.slice(0, 5).join(', ')}${slotTimes.length > 5 ? `, and ${slotTimes.length - 5} more slots` : ''}`
+  
   const response = {
-    result: `Available times: ${slotTimes.slice(0, 5).join(', ')}${slotTimes.length > 5 ? `, and ${slotTimes.length - 5} more slots` : ''}`,
-    slots: limitedSlots
+    result: resultText,
+    slots: limitedSlots,
+    // Also include the result as "message" for compatibility
+    message: resultText,
+    success: true
   }
 
   console.log('[Cal.com Availability] FULL RESPONSE PAYLOAD:', JSON.stringify(response, null, 2))

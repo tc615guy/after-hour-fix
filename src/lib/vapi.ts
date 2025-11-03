@@ -418,6 +418,7 @@ export function buildAssistantTools(appUrl: string, projectId?: string): VapiAss
       },
       server: {
         url: `${appUrl}/api/calcom/availability${q}`,
+        timeoutSeconds: 20,
       },
     },
     {
