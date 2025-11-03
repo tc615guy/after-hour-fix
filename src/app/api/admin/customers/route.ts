@@ -6,8 +6,9 @@ export async function GET(req: NextRequest) {
   try {
     await requireAdmin(req)
 
-    // Get all projects with detailed data
+    // Get all projects with detailed data (exclude soft-deleted)
     const projects = await prisma.project.findMany({
+      where: { deletedAt: null },
       include: {
         owner: true,
         calls: {

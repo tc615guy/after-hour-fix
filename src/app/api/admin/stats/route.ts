@@ -6,8 +6,9 @@ export async function GET(req: NextRequest) {
   try {
     await requireAdmin(req)
 
-    // Get all projects with their metrics
+    // Get all projects with their metrics (exclude soft-deleted)
     const projects = await prisma.project.findMany({
+      where: { deletedAt: null },
       include: {
         calls: true,
         bookings: true,
@@ -46,6 +47,7 @@ export async function GET(req: NextRequest) {
     const planPrices: Record<string, number> = {
       'Starter': 14900, // $149 in cents
       'Pro': 29900,     // $299 in cents
+      'Premium': 49900, // $499 in cents
     }
 
     const mrr = projects.reduce((sum, p) => {
