@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
     const endIso = end && !isNaN(new Date(end).getTime()) ? new Date(end).toISOString() : endDefault.toISOString()
 
     // Call Cal.com availability API (v1)
+    console.log(`[Cal.com Availability] Querying for projectId=${projectId}, eventTypeId=${eventTypeId}, start=${startIso}, end=${endIso}`)
     const resp = await fetch(`https://api.cal.com/v1/availability/timeframes?eventTypeId=${eventTypeId}&startTime=${encodeURIComponent(startIso)}&endTime=${encodeURIComponent(endIso)}`, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -38,18 +39,23 @@ export async function GET(req: NextRequest) {
 
     if (!resp.ok) {
       const txt = await resp.text()
-      console.error('Cal.com availability error:', txt)
+      console.error('[Cal.com Availability] API error:', txt)
       return NextResponse.json({ error: 'Failed to fetch availability from Cal.com' }, { status: 500 })
     }
 
     const data = await resp.json()
+    console.log('[Cal.com Availability] Raw response:', JSON.stringify(data).substring(0, 500))
+    
     // Normalize various possible shapes to a flat slots array
     const slots: Array<{ start: string; end?: string }> = []
     // Common shapes: data.timeframes[].slots[] or data.data.timeframes[].slots[]
     const frames = (data?.timeframes || data?.data?.timeframes || data?.data || data) as any
     const arr = Array.isArray(frames) ? frames : []
+    console.log(`[Cal.com Availability] Parsing ${arr.length} frames from response`)
+    
     for (const f of arr) {
       const s = f?.slots || f?.timeSlots || []
+      console.log(`[Cal.com Availability] Frame has ${s.length} slots`)
       for (const slot of s) {
         const st = slot?.start || slot?.startTime || slot?.time || slot
         const en = slot?.end || slot?.endTime
@@ -57,6 +63,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    console.log(`[Cal.com Availability] Returning ${slots.length} slots total`)
     return NextResponse.json({ success: true, slots })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to get availability' }, { status: 500 })
