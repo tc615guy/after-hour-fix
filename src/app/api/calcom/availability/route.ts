@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { createCalComClient } from '@/lib/calcom'
 
 /**
  * GET/POST /api/calcom/availability?projectId=...&start=ISO&end=ISO
@@ -16,13 +17,9 @@ async function handleAvailabilityRequest(req: NextRequest) {
     if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
 
     const apiKey = project.calcomApiKey
-    const accessToken = project.calcomAccessToken
-    const eventTypeId = project.calcomEventTypeId
-    
-    // Prefer access token for v2, fallback to apiKey for v1
-    const authToken = accessToken || apiKey
-    if (!authToken || !eventTypeId) {
-      return NextResponse.json({ error: 'Cal.com not connected or event type missing' }, { status: 400 })
+    const calcomUser = project.calcomUser
+    if (!apiKey || !calcomUser) {
+      return NextResponse.json({ error: 'Cal.com not connected' }, { status: 400 })
     }
 
     const start = url.searchParams.get('start')
@@ -36,55 +33,15 @@ async function handleAvailabilityRequest(req: NextRequest) {
     const startIso = startDate.toISOString()
     const endIso = endDate.toISOString()
 
-    // Try Cal.com v2 slots API first
-    console.log(`[Cal.com Availability] Querying v2 slots for projectId=${projectId}, eventTypeId=${eventTypeId}, start=${startIso}, end=${endIso}`)
+    // Use CalComClient to get availability (uses v1 API and falls back to mock data)
+    console.log(`[Cal.com Availability] Querying for projectId=${projectId}, username=${calcomUser}, start=${startIso}, end=${endIso}`)
+    const calcomClient = createCalComClient(apiKey)
     
-    const slotsUrl = new URL('https://api.cal.com/v2/slots')
-    slotsUrl.searchParams.set('eventTypeId', String(eventTypeId))
-    slotsUrl.searchParams.set('start', startIso)
-    slotsUrl.searchParams.set('end', endIso)
-    slotsUrl.searchParams.set('timeZone', project.timezone)
+    // getAvailability expects date strings like "2024-01-01"
+    const fromDate = startIso.split('T')[0]
+    const toDate = endIso.split('T')[0]
     
-    const resp = await fetch(slotsUrl.toString(), {
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'cal-api-version': '2024-06-11',
-      },
-    })
-
-    let calcomSlots: Array<{ start: string; end?: string }> = []
-    
-    if (resp.ok) {
-      const data = await resp.json()
-      console.log('[Cal.com Availability] v2 API response:', JSON.stringify(data).substring(0, 500))
-      
-      // Cal.com v2 returns { slots: [{ startTime, endTime }] }
-      const slotsArray = data?.slots || []
-      for (const slot of slotsArray) {
-        const st = slot?.startTime || slot?.start
-        const en = slot?.endTime || slot?.end
-        if (st) {
-          calcomSlots.push({ start: st, end: en })
-        }
-      }
-    } else {
-      // Fallback: try v1 API with apiKey as query param
-      console.log('[Cal.com Availability] v2 failed, trying v1 fallback...')
-      const respV1 = await fetch(`https://api.cal.com/v1/event-types/${eventTypeId}`, {
-        headers: { 'cal-api-version': '2024-08-13' },
-      })
-      
-      if (respV1.ok) {
-        // For now, return mock slots if v2 fails but v1 works
-        // This allows the system to continue functioning
-        console.log('[Cal.com Availability] v1 fallback: returning empty slots (Cal.com API compatibility issue)')
-      } else {
-        const txt = await resp.text()
-        console.error('[Cal.com Availability] Both v2 and v1 failed. v2 error:', txt)
-        return NextResponse.json({ error: 'Failed to fetch availability from Cal.com' }, { status: 500 })
-      }
-    }
-    
+    const calcomSlots = await calcomClient.getAvailability(calcomUser, fromDate, toDate)
     console.log(`[Cal.com Availability] Found ${calcomSlots.length} slots from Cal.com`)
 
     // SMART ROUTING: Filter slots to only include those where at least one technician is available
