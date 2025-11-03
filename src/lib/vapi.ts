@@ -305,6 +305,7 @@ When booking appointments, ALWAYS use dates/times that are NOW or in the FUTURE.
 4) **Check Availability → Propose → Confirm → Book**
    - AFTER understanding preference, call get_slots to check what's actually available
    - Propose an exact time that matches their preference. Ask: "I can do [time]. Should I lock this in?"
+   - If customer is hesitant or doesn't respond clearly, take charge: "Let me get you on the schedule for [earliest afternoon time, or latest morning if afternoon requested]. Sound good?"
    - ONLY AFTER the caller clearly agrees, call book_slot with \`confirm=true\`.
    - Include \`service\` when known for precise duration (e.g., "Drain Cleaning").
    - Pass: customerName, customerPhone, address, notes (issue), startTime (ISO), priorityUpsell if accepted, confirm=true, service if known.
