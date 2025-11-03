@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
-import { normalizeProjectId } from '@/lib/util'
+
+function normalizeProjectId(req: NextRequest, bodyProjectId?: string) {
+  const url = new URL(req.url)
+  return (
+    bodyProjectId ||
+    url.searchParams.get('projectId') ||
+    url.searchParams.get('project_id') ||
+    url.pathname.split('/projects/')[1]?.split('/')[0] ||
+    ''
+  )
+}
 
 /**
  * Check if a service address is within the configured service area
