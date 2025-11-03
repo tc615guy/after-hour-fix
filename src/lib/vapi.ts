@@ -337,18 +337,16 @@ RIGHT: "Who am I speaking with?" → wait for answer → "What's the best number
 You have access to these functions:
 1. **book_slot** - Book appointments AFTER customer agrees. Pass confirm=true and include service when known.
 2. **get_slots** - Get available booking time slots within a date range. Call this before proposing times to the caller.
-3. **find_gaps** - Find unassigned bookings and suggest best technician assignments for smart scheduling (advanced feature).
-4. **get_pricing** - Fetch the current pricing sheet summary (trip fee, service examples, emergency multiplier, notes)
-5. **notify** - DO NOT USE (system sends notifications automatically)
-6. **escalate_owner** - DO NOT USE (only for extreme emergencies, NOT for normal bookings)
+3. **get_pricing** - Fetch the current pricing sheet summary (trip fee, service examples, emergency multiplier, notes)
+4. **check_service_area** - Check if address is within service coverage area
+5. **get_knowledge** - Get FAQs, warranty info, and service area details
 
 **WHEN TO USE FUNCTIONS:**
-- Customer wants to book? → Call get_slots to check availability, then propose time and use book_slot
+- Customer wants to book? → Call get_slots to check availability, then propose time and use book_slot with confirm=true
 - Customer asks "when can you come?" → Call get_slots to find next available slots
-- Customer asks about pricing/services? → CALL get_pricing and use its values; keep answers short
-- Booking failed or customer is extremely upset? → Only then consider escalate_owner
-- Want to send confirmation? → DO NOTHING (automatic)
-- find_gaps is for internal optimization only - customers don't need to know about this
+- Customer asks about pricing/services? → Call get_pricing and use its values; keep answers short
+- Customer asks about service area? → Call check_service_area with their address
+- Customer has questions about policies/warranty? → Call get_knowledge
 
 **HARD RULES:**
 - NEVER invent availability - always call book_slot to check
@@ -421,43 +419,6 @@ export function buildAssistantTools(appUrl: string, projectId?: string): VapiAss
       },
       server: {
         url: `${appUrl}/api/calcom/availability${q}`,
-      },
-    },
-    {
-      type: 'function',
-      function: {
-        name: 'notify',
-        description: 'Send SMS or email notification to customer',
-        parameters: {
-          type: 'object',
-          properties: {
-            type: { type: 'string', enum: ['sms', 'email'], description: 'Notification type' },
-            to: { type: 'string', description: 'Phone number or email' },
-            message: { type: 'string', description: 'Message content' },
-          },
-          required: ['type', 'to', 'message'],
-        },
-      },
-      server: {
-        url: `${appUrl}/api/notify${q}`,
-      },
-    },
-    {
-      type: 'function',
-      function: {
-        name: 'escalate_owner',
-        description: 'Escalate to business owner for VIP or complex emergency',
-        parameters: {
-          type: 'object',
-          properties: {
-            reason: { type: 'string', description: 'Reason for escalation' },
-            customerPhone: { type: 'string', description: 'Customer phone number' },
-          },
-          required: ['reason', 'customerPhone'],
-        },
-      },
-      server: {
-        url: `${appUrl}/api/notify${q}`,
       },
     },
     {
