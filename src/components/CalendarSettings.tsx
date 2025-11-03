@@ -20,8 +20,18 @@ export default function CalendarSettings({ projectId }: Props) {
   const [connected, setConnected] = useState(false)
   const [username, setUsername] = useState<string | null>(null)
   const [verifying, setVerifying] = useState(false)
-
+  const [oauthAvailable, setOauthAvailable] = useState(false)
+  
   useEffect(() => {
+    // Check if OAuth is configured
+    fetch('/api/calcom/oauth/authorize?projectId=test')
+      .then((res) => res.json())
+      .then((data) => {
+        // If no error, OAuth is configured
+        setOauthAvailable(!data.error || !data.error.includes('not configured'))
+      })
+      .catch(() => setOauthAvailable(false))
+    
     const load = async () => {
       try {
         const res = await fetch(`/api/projects/${projectId}`)
@@ -100,20 +110,22 @@ export default function CalendarSettings({ projectId }: Props) {
             {!connected ? (
               <div className="mt-4 space-y-4">
                 {/* OAuth Option - One Click */}
-                <div className="border-b pb-4">
-                  <p className="text-sm font-medium mb-2">Quick Connect</p>
-                  <Button 
-                    onClick={() => window.location.href = `/api/calcom/oauth/authorize?projectId=${projectId}`}
-                    className="w-full"
-                  >
-                    Connect with Cal.com OAuth
-                  </Button>
-                  <p className="text-xs text-gray-500 mt-2">One-click authorization</p>
-                </div>
+                {oauthAvailable && (
+                  <div className="border-b pb-4">
+                    <p className="text-sm font-medium mb-2">Quick Connect</p>
+                    <Button 
+                      onClick={() => window.location.href = `/api/calcom/oauth/authorize?projectId=${projectId}`}
+                      className="w-full"
+                    >
+                      Connect with Cal.com OAuth
+                    </Button>
+                    <p className="text-xs text-gray-500 mt-2">One-click authorization</p>
+                  </div>
+                )}
                 
                 {/* API Key Option - Manual */}
                 <div>
-                  <p className="text-sm font-medium mb-2">Or use API Key</p>
+                  <p className="text-sm font-medium mb-2">{oauthAvailable ? 'Or use API Key' : 'Connect with API Key'}</p>
                   <Label htmlFor="calkey">Cal.com API Key</Label>
                   <Input
                     id="calkey"
