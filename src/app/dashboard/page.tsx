@@ -323,9 +323,22 @@ export default function DashboardPage() {
       const data = await res.json()
       console.log('Import response:', { ok: res.ok, data })
       
-      if (!res.ok || !data.success) {
+      if (!res.ok) {
         throw new Error(data.error || 'Import failed')
       }
+      
+      // Handle async queued imports
+      if (data.queued) {
+        alert(`Queued ${data.count} rows for import. Processing in background...`)
+        await loadProjectData(selectedProject.id)
+        return
+      }
+      
+      // Handle synchronous imports
+      if (!data.success) {
+        throw new Error(data.error || 'Import failed')
+      }
+      
       const errors = (data.results || []).filter((r: any) => r.status === 'error').map((r: any) => ({ index: r.index, error: r.error }))
       setCsvResults({ created: data.created || 0, errors })
       
