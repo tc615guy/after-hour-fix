@@ -140,8 +140,24 @@ async function handleAvailabilityRequest(req: NextRequest) {
 
     console.log(`[Cal.com Availability] Returning ${availableSlots.length} available slots (filtered from ${calcomSlots.length} Cal.com slots)`)
 
+    // BUSINESS RULE: If it's after 4 PM in project timezone, filter out today's slots
+    // (Unless it's an emergency, but AI will handle that separately)
+    const tz = project.timezone || 'America/Chicago'
+    const nowInTz = new Date().toLocaleString('en-US', { timeZone: tz })
+    const currentHour = new Date(nowInTz).getHours()
+    
+    let filteredSlots = availableSlots
+    if (currentHour >= 16) { // After 4 PM
+      const todayStr = new Date(nowInTz).toISOString().split('T')[0] // YYYY-MM-DD
+      filteredSlots = availableSlots.filter(slot => {
+        const slotDate = new Date(slot.start).toISOString().split('T')[0]
+        return slotDate !== todayStr // Exclude today's slots
+      })
+      console.log(`[Cal.com Availability] After 4 PM - filtered out today's slots. ${filteredSlots.length} slots remain`)
+    }
+
     // Limit to first 20 slots to avoid overwhelming the AI with too many options
-    const limitedSlots = availableSlots.slice(0, 20)
+    const limitedSlots = filteredSlots.slice(0, 20)
     console.log(`[Cal.com Availability] Limiting response to ${limitedSlots.length} slots for AI processing`)
 
   // Return format that Vapi AI can read
