@@ -217,7 +217,7 @@ export default function DashboardPage() {
           city: find('city','servicecity','service city'),
           state: find('state','province','servicestate','service state'),
           zip: find('zip','zipcode','postal','postalcode','postal code','service zip'),
-          appointmentId: find('appointmentid','appointment id','apptid','appt id','id','booking id','confirmation number','reference'),
+          appointmentId: find('appointmentid','appointment id','apptid','appt id','booking id','confirmation number','reference'),
           jobNumber: find('jobnumber','job number','job no','job #','work order','workorder','wo number','invoice number','invoice'),
           status: find('status','appointment status','job status','state','booking status'),
           value: find('value','amount','price','total','cost','job total','invoice total','grand total','subtotal'),
