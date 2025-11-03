@@ -123,9 +123,36 @@ async function main() {
             const combinedNotes = parts.join(' ')
             const status = (r.status || '').toLowerCase() === 'scheduled' ? 'booked' : (r.status || 'booked')
             const address = r.address || [r.street, r.city, r.state, r.zip].filter(Boolean).join(', ').trim() || null
+            
+            // Try to match technician by ID or name
+            let technicianId = null
+            if (r.technicianId || r.technician) {
+              const techName = (r.technician || '').trim()
+              const techId = (r.technicianId || '').trim()
+              
+              if (techId) {
+                const byId = await prisma.technician.findFirst({
+                  where: { projectId, id: techId, deletedAt: null },
+                  select: { id: true },
+                })
+                if (byId) technicianId = byId.id
+              } else if (techName) {
+                const byName = await prisma.technician.findFirst({
+                  where: { 
+                    projectId, 
+                    name: { equals: techName, mode: 'insensitive' },
+                    deletedAt: null 
+                  },
+                  select: { id: true },
+                })
+                if (byName) technicianId = byName.id
+              }
+            }
+            
             await prisma.booking.create({
               data: {
                 projectId,
+                technicianId,
                 customerName: r.customerName || 'Unknown',
                 customerPhone: r.customerPhone || null,
                 customerEmail: r.customerEmail || null,
