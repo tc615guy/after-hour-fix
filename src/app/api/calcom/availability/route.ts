@@ -143,11 +143,9 @@ async function handleAvailabilityRequest(req: NextRequest) {
     const limitedSlots = availableSlots.slice(0, 20)
     console.log(`[Cal.com Availability] Limiting response to ${limitedSlots.length} slots for AI processing`)
 
-    return NextResponse.json({
-      result: `Found ${availableSlots.length} available slots. Showing next ${limitedSlots.length} options.`,
-      slots: limitedSlots,
-      totalAvailable: availableSlots.length
-    })
+    // Return simple format that VAPI AI can process
+    // Just return slots array directly for better AI compatibility
+    return NextResponse.json({ slots: limitedSlots })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to get availability' }, { status: 500 })
   }
