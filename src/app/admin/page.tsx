@@ -68,6 +68,7 @@ export default function AdminDashboard() {
   const [selected, setSelected] = useState<Record<string, boolean>>({})
   const [upgradingAssistants, setUpgradingAssistants] = useState(false)
   const [diagnosing, setDiagnosing] = useState(false)
+  const [syncingAssistants, setSyncingAssistants] = useState(false)
   const allSelected = Object.keys(selected).length > 0 && Object.values(selected).every(Boolean)
 
   const loadAdminData = async () => {
@@ -157,6 +158,27 @@ export default function AdminDashboard() {
       await loadAdminData()
     } catch (error: any) {
       alert(`Error: ${error.message}`)
+    }
+  }
+
+  const handleSyncAllAssistants = async () => {
+    if (!confirm('Sync ALL assistants with latest prompts and tools?\n\nThis will update all Vapi assistants to use the latest system prompts and tool URLs.')) return
+    
+    try {
+      setSyncingAssistants(true)
+      const res = await fetch('/api/admin/sync-all-assistants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const data = await res.json()
+      
+      if (!res.ok) throw new Error(data.error || 'Sync failed')
+      
+      alert(`✅ Successfully synced ${data.synced}/${data.total} assistants!\n\nAll assistants now have the latest prompts and tools.`)
+    } catch (error: any) {
+      alert(`Error: ${error.message}`)
+    } finally {
+      setSyncingAssistants(false)
     }
   }
 
@@ -308,6 +330,15 @@ export default function AdminDashboard() {
               <p className="text-purple-100 mt-1">AfterHourFix Platform Analytics</p>
             </div>
             <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                className="bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-300"
+                onClick={handleSyncAllAssistants}
+                disabled={syncingAssistants}
+              >
+                <RefreshCcw className={`w-4 h-4 mr-2 ${syncingAssistants ? 'animate-spin' : ''}`} />
+                {syncingAssistants ? 'Syncing...' : 'Sync All Assistants'}
+              </Button>
               <Button 
                 variant="outline" 
                 className="bg-green-50 text-green-700 hover:bg-green-100 border-green-300"
