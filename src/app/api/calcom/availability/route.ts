@@ -50,7 +50,7 @@ async function handleAvailabilityRequest(req: NextRequest) {
         const resp = await fetch(slotsUrl.toString(), {
           headers: {
             'Authorization': `Bearer ${apiKey}`,
-            'cal-api-version': '2024-06-11',
+            'cal-api-version': '2024-09-04',
           },
         })
 
