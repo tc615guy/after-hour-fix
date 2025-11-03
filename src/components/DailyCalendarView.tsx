@@ -51,8 +51,8 @@ type TechRowProps = {
 
 const DAY_START_HOUR = 7 // 7 AM
 const DAY_END_HOUR = 19 // 7 PM
-const TIME_SLOT_HEIGHT = 40 // pixels per hour
-const COLUMN_WIDTH = 80
+const TIME_SLOT_HEIGHT = 50 // pixels per hour
+const COLUMN_WIDTH = 100
 
 // Generate consistent color based on technician ID
 function getTechColor(techId: string): string {
@@ -100,10 +100,10 @@ function TechRow({ tech, bookings, isUnassigned, onBookingClick, selectedDate }:
   
   return (
     <tr className="border-b border-gray-200 hover:bg-gray-50">
-      <td className="p-2 bg-gray-50 font-semibold sticky left-0 z-10 border-r border-gray-200">
+      <td className="p-3 bg-gray-50 font-semibold sticky left-0 z-10 border-r border-gray-200">
         <div className="flex items-center gap-1">
-          <User className={`w-3 h-3 ${isUnassigned ? 'text-gray-500' : 'text-blue-600'}`} />
-          <span className="text-xs">{tech.name}</span>
+          <User className={`w-4 h-4 ${isUnassigned ? 'text-gray-500' : 'text-blue-600'}`} />
+          <span>{tech.name}</span>
         </div>
       </td>
       {hourSlots.map((hourBookings, idx) => {
@@ -111,7 +111,7 @@ function TechRow({ tech, bookings, isUnassigned, onBookingClick, selectedDate }:
         const isGap = hourBookings.length === 0
         
         return (
-          <td key={hour} className="border-l border-gray-200 relative h-10 p-0">
+          <td key={hour} className="border-l border-gray-200 relative h-12 p-0">
             {isGap ? (
               <div className="h-full w-full bg-green-50 border border-dashed border-green-300 hover:bg-green-100 cursor-pointer transition-colors flex items-center justify-center">
                 <span className="text-xs text-green-600 font-semibold">+</span>
@@ -122,10 +122,10 @@ function TechRow({ tech, bookings, isUnassigned, onBookingClick, selectedDate }:
                 return (
                   <div
                     key={booking.id}
-                    className={`h-full w-full p-1 cursor-pointer hover:opacity-90 transition-opacity rounded ${bookingColor}`}
+                    className={`h-full w-full p-1.5 cursor-pointer hover:opacity-90 transition-opacity rounded ${bookingColor}`}
                     onClick={() => onBookingClick(booking)}
                   >
-                    <div className="text-white text-xs font-semibold truncate">{booking.customerName}</div>
+                    <div className="text-white font-semibold truncate">{booking.customerName}</div>
                   </div>
                 )
               })
@@ -251,20 +251,20 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
       </div>
       
       <Card>
-        <CardContent className="p-2">
+        <CardContent className="p-4">
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full">
-              <table className="w-full border-collapse text-xs">
+              <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b-2 border-gray-300">
-                    <th className="text-left p-1.5 font-semibold bg-gray-100 sticky left-0 z-10 text-xs">Tech</th>
+                    <th className="text-left p-2 font-semibold bg-gray-100 sticky left-0 z-10">Tech</th>
                     {[...Array(DAY_END_HOUR - DAY_START_HOUR + 1)].map((_, i) => {
                       const hour = DAY_START_HOUR + i
                       const displayHour = hour > 12 ? hour - 12 : hour
                       const ampm = hour >= 12 ? 'PM' : 'AM'
                       return (
-                        <th key={hour} className="text-center p-1 font-semibold bg-gray-50 min-w-[50px] border-l border-gray-200">
-                          <div className="text-xs">{displayHour}{ampm === 'PM' ? 'p' : 'a'}</div>
+                        <th key={hour} className="text-center p-2 font-semibold bg-gray-50 min-w-[70px] border-l border-gray-200">
+                          <div>{displayHour}{ampm === 'PM' ? 'p' : 'a'}</div>
                         </th>
                       )
                     })}
