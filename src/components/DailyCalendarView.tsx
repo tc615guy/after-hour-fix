@@ -58,13 +58,15 @@ const COLUMN_WIDTH = 80
 function getTechColor(techId: string): string {
   const colors = [
     'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-red-500', 
-    'bg-yellow-500', 'bg-indigo-500', 'bg-pink-500', 'bg-teal-500',
-    'bg-orange-500', 'bg-cyan-500'
+    'bg-indigo-500', 'bg-pink-500', 'bg-teal-500',
+    'bg-orange-500', 'bg-cyan-500', 'bg-rose-500'
   ]
-  // Hash the ID to get a consistent index
+  // Hash the ID to get a consistent index - use a better hash function
   let hash = 0
   for (let i = 0; i < techId.length; i++) {
-    hash = techId.charCodeAt(i) + ((hash << 5) - hash)
+    const char = techId.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash | 0 // Convert to 32-bit integer
   }
   return colors[Math.abs(hash) % colors.length]
 }
@@ -87,7 +89,14 @@ function TechRow({ tech, bookings, isUnassigned, onBookingClick, selectedDate }:
     })
   })
 
-  const techColor = isUnassigned ? 'bg-amber-400' : getTechColor(tech.id)
+  // Row's default color (for gaps indication)
+  const rowTechColor = isUnassigned ? 'bg-amber-400' : getTechColor(tech.id)
+  
+  // Helper to get color for a specific booking based on its technicianId
+  const getBookingColor = (booking: Booking) => {
+    if (!booking.technicianId) return 'bg-amber-400' // Unassigned
+    return getTechColor(booking.technicianId)
+  }
   
   return (
     <tr className="border-b border-gray-200 hover:bg-gray-50">
@@ -108,15 +117,18 @@ function TechRow({ tech, bookings, isUnassigned, onBookingClick, selectedDate }:
                 <span className="text-xs text-green-600 font-semibold">+</span>
               </div>
             ) : (
-              hourBookings.map((booking) => (
-                <div
-                  key={booking.id}
-                  className={`h-full w-full p-1 cursor-pointer hover:opacity-90 transition-opacity rounded ${techColor}`}
-                  onClick={() => onBookingClick(booking)}
-                >
-                  <div className="text-white text-xs font-semibold truncate">{booking.customerName}</div>
-                </div>
-              ))
+              hourBookings.map((booking) => {
+                const bookingColor = getBookingColor(booking)
+                return (
+                  <div
+                    key={booking.id}
+                    className={`h-full w-full p-1 cursor-pointer hover:opacity-90 transition-opacity rounded ${bookingColor}`}
+                    onClick={() => onBookingClick(booking)}
+                  >
+                    <div className="text-white text-xs font-semibold truncate">{booking.customerName}</div>
+                  </div>
+                )
+              })
             )}
           </td>
         )
