@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}))
     const { address } = z
       .object({
-        address: z.string().min(3),
+        address: z.string().min(3).optional(), // ✅ Make address optional
       })
       .parse(body)
     
@@ -31,6 +31,16 @@ export async function POST(req: NextRequest) {
     const project = await prisma.project.findUnique({ where: { id: projectId } })
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+    }
+    
+    // If no address provided, skip the check and allow booking
+    if (!address) {
+      const msg = 'We service your area!'
+      return NextResponse.json({
+        result: msg,
+        inServiceArea: true,
+        message: msg,
+      })
     }
 
     const businessAddress = (project as any).businessAddress
