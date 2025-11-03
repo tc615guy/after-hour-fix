@@ -5,7 +5,7 @@ import { audit } from '@/lib/audit'
 
 /**
  * POST /api/projects/[id]/bookings/bulk-delete
- * Soft-delete all bookings for a project (for re-import purposes)
+ * Hard-delete all bookings for a project (for re-import purposes)
  */
 export async function POST(
   req: NextRequest,
@@ -35,7 +35,7 @@ export async function POST(
     return NextResponse.json({ 
       success: true, 
       deleted: result.count,
-      message: `Soft-deleted ${result.count} booking(s). You can now re-import with proper mappings.`,
+      message: `Deleted ${result.count} booking(s). You can now re-import with proper mappings.`,
     })
   } catch (error: any) {
     captureException(error)
