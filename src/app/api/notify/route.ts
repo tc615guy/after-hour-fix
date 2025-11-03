@@ -7,6 +7,9 @@ const NotifySchema = z.object({
   to: z.string(),
   message: z.string(),
   reason: z.string().optional(),
+  customerPhone: z.string().optional(),
+  recordingUrl: z.string().optional(),
+  transcript: z.string().optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -40,8 +43,34 @@ export async function POST(req: NextRequest) {
     }
 
     if (input.type === 'escalate') {
-      // Send escalation email/SMS to business owner
-      console.log('[ESCALATE] Reason:', input.reason, 'Customer:', input.to)
+      // Send escalation email to business owner with full context
+      console.log('[ESCALATE] Reason:', input.reason, 'Customer:', input.customerPhone || 'N/A')
+
+      const emailBody = `
+        <h2>Call Escalation Alert</h2>
+        <p><strong>${input.message}</strong></p>
+
+        <h3>Details:</h3>
+        <ul>
+          <li><strong>Reason:</strong> ${input.reason || 'N/A'}</li>
+          <li><strong>Customer Phone:</strong> ${input.customerPhone || 'N/A'}</li>
+          ${input.recordingUrl ? `<li><strong>Recording:</strong> <a href="${input.recordingUrl}">Listen to call</a></li>` : ''}
+        </ul>
+
+        ${input.transcript ? `
+        <h3>Transcript Preview:</h3>
+        <p style="background: #f5f5f5; padding: 10px; border-left: 3px solid #e74c3c;">${input.transcript}</p>
+        ` : ''}
+
+        <p><em>Please review and follow up with this customer as needed.</em></p>
+      `
+
+      await sendEmail({
+        to: input.to,
+        subject: `🚨 Call Escalation: ${input.reason || 'Needs Review'}`,
+        html: emailBody,
+        text: `${input.message}\n\nCustomer: ${input.customerPhone}\nReason: ${input.reason}\n\n${input.transcript || ''}`,
+      })
 
       return NextResponse.json({
         success: true,

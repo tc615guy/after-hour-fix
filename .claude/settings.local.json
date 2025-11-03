@@ -23,7 +23,9 @@
       "Bash(timeout 5 bash -c \"curl -s http://localhost:4040/api/tunnels 2>/dev/null | grep -o ''https://[^\"\"]*\\.ngrok[^\"\"]*'' | head -1\")",
       "Bash(curl:*)",
       "Bash(where:*)",
-      "Bash(ngrok http:*)"
+      "Bash(ngrok http:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
