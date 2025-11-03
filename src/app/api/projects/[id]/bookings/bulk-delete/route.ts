@@ -18,14 +18,11 @@ export async function POST(
     const session = await requireSession(req)
     await ensureProjectAccess(session!.user.email || '', projectId)
 
-    // Soft delete all non-deleted bookings for this project
-    const result = await prisma.booking.updateMany({
+    // Hard delete all non-deleted bookings for this project (for re-import)
+    const result = await prisma.booking.deleteMany({
       where: {
         projectId,
         deletedAt: null,
-      },
-      data: {
-        deletedAt: new Date(),
       },
     })
 

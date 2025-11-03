@@ -52,6 +52,7 @@ export async function POST(
             where: {
               projectId,
               notes: { contains: tag },
+              deletedAt: null, // Only check non-deleted bookings
             },
           })
           if (existingByApt) {
@@ -66,6 +67,7 @@ export async function POST(
           where: {
             projectId,
             slotStart,
+            deletedAt: null, // Only check non-deleted bookings
             OR: [
               phoneDigits ? { customerPhone: { contains: phoneDigits } } : { customerName: { equals: r.customerName || '' } },
             ],
