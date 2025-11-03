@@ -279,6 +279,7 @@ export async function POST(req: NextRequest) {
         eventTypeId: eventTypeId,
         start: startTime.toISOString(),
         timeZone: project.timezone || 'America/Chicago', // Required: top-level timeZone
+        language: 'en', // ✅ ALSO required at root level by Cal.com v2
         attendee: {
           name: input.customerName,
           email: `${phoneDigits}@sms.afterhourfix.com`,

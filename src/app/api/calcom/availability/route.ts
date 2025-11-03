@@ -58,12 +58,13 @@ async function handleAvailabilityRequest(req: NextRequest) {
           const data = await resp.json()
           console.log('[Cal.com Availability] v2 API response:', JSON.stringify(data).substring(0, 500))
           
-          // Cal.com v2 returns { data: { "2025-11-03": [{start: "..."}, ...] } }
-          const daySlots = data?.data || {}
+          // Cal.com v2 returns { data: { slots: { "2025-11-03": [{time: "..."}, ...] } } }
+          const daySlots = data?.data?.slots || {}
           for (const dateKey in daySlots) {
             const slotsForDay = daySlots[dateKey] || []
             for (const slot of slotsForDay) {
-              const st = slot?.start
+              // v2 uses "time" not "start"
+              const st = slot?.time || slot?.start
               if (st) {
                 // Default duration to 1 hour if no end time
                 const en = slot?.end || null
