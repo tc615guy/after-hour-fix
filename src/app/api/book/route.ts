@@ -248,17 +248,41 @@ export async function POST(req: NextRequest) {
         throw new Error('No Cal.com event type configured')
       }
       
-      // Use v2 API directly (matches how availability works)
+      // Step 1: Reserve the slot first (prevents race conditions)
+      console.log('[BOOK] Reserving slot:', { start: startTime.toISOString(), end: endTime.toISOString() })
+      const reserveRes = await fetch('https://api.cal.com/v2/slots/reservations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${project.calcomApiKey}`,
+          'cal-api-version': '2024-09-04',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eventTypeId: eventTypeId,
+          slotStart: startTime.toISOString(),
+          slotEnd: endTime.toISOString(),
+        }),
+      })
+      
+      if (!reserveRes.ok) {
+        const errorTxt = await reserveRes.text()
+        console.error('[BOOK] Cal.com v2 reservation failed:', errorTxt.substring(0, 500))
+        // Continue anyway - reservation is optional but recommended
+      } else {
+        const reserveData = await reserveRes.json()
+        console.log('[BOOK] Slot reserved:', reserveData)
+      }
+      
+      // Step 2: Create booking with correct v2 format
       const bookingPayload = {
         eventTypeId: eventTypeId,
-        start: startTime.toISOString(),
-        end: endTime.toISOString(),
-        name: input.customerName,
-        email: `${phoneDigits}@sms.afterhourfix.com`,
-        location: input.address,
-        notes: `Address: ${input.address}\n\nIssue: ${input.notes}`,
-        timeZone: project.timezone,
-        metadata: { projectId, priorityUpsell: input.priorityUpsell, trade: project.trade },
+        startTime: startTime.toISOString(),
+        attendees: [
+          {
+            email: `${phoneDigits}@sms.afterhourfix.com`,
+            name: input.customerName,
+          }
+        ],
       }
       
       console.log('[BOOK] Creating Cal.com v2 booking:', JSON.stringify(bookingPayload, null, 2))
