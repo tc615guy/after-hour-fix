@@ -18,6 +18,16 @@ export async function POST(
     const session = await requireSession(req)
     await ensureProjectAccess(session!.user.email || '', projectId)
 
+    // First, count how many bookings exist
+    const countBefore = await prisma.booking.count({
+      where: {
+        projectId,
+        deletedAt: null,
+      },
+    })
+
+    console.log(`[BulkDelete] Found ${countBefore} non-deleted bookings for project ${projectId}`)
+
     // Hard delete all non-deleted bookings for this project (for re-import)
     const result = await prisma.booking.deleteMany({
       where: {
@@ -25,6 +35,8 @@ export async function POST(
         deletedAt: null,
       },
     })
+
+    console.log(`[BulkDelete] Deleted ${result.count} bookings`)
 
     await audit({ 
       projectId, 
