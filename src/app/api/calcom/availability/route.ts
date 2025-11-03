@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
 /**
- * GET /api/calcom/availability?projectId=...&start=ISO&end=ISO
+ * GET/POST /api/calcom/availability?projectId=...&start=ISO&end=ISO
  * Returns available time slots for the project's Cal.com event type
+ * Vapi server functions use POST, but we accept both
  */
-export async function GET(req: NextRequest) {
+async function handleAvailabilityRequest(req: NextRequest) {
   try {
     const url = new URL(req.url)
     const projectId = url.searchParams.get('projectId') || undefined
@@ -68,5 +69,14 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to get availability' }, { status: 500 })
   }
+}
+
+// Handle both GET and POST (Vapi uses POST for server functions)
+export async function GET(req: NextRequest) {
+  return handleAvailabilityRequest(req)
+}
+
+export async function POST(req: NextRequest) {
+  return handleAvailabilityRequest(req)
 }
 
