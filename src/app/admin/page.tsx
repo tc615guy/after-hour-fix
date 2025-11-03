@@ -67,6 +67,7 @@ export default function AdminDashboard() {
   const [loginError, setLoginError] = useState('')
   const [selected, setSelected] = useState<Record<string, boolean>>({})
   const [upgradingAssistants, setUpgradingAssistants] = useState(false)
+  const [diagnosing, setDiagnosing] = useState(false)
   const allSelected = Object.keys(selected).length > 0 && Object.values(selected).every(Boolean)
 
   const loadAdminData = async () => {
@@ -156,6 +157,57 @@ export default function AdminDashboard() {
       await loadAdminData()
     } catch (error: any) {
       alert(`Error: ${error.message}`)
+    }
+  }
+
+  const handleDiagnoseProject = async () => {
+    const projectName = prompt('Enter project name to diagnose:\n\nExample: Josh\'s Heating')
+    if (!projectName) return
+    
+    try {
+      setDiagnosing(true)
+      const res = await fetch('/api/admin/diagnose-project', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectName }),
+      })
+      const data = await res.json()
+      
+      if (!res.ok) throw new Error(data.error || 'Diagnostic failed')
+      
+      // Format diagnostic output
+      let output = `🔍 Diagnostic Report for: ${data.project.name}\n\n`
+      output += `Project ID: ${data.project.id}\n`
+      output += `Trade: ${data.project.trade}\n`
+      output += `Plan: ${data.project.plan}\n`
+      output += `Cal.com Connected: ${data.project.calcomConnected ? '✅' : '❌'}\n`
+      output += `Event Type ID: ${data.project.eventTypeId || 'N/A'}\n\n`
+      
+      output += `Assistants: ${data.assistants.length}\n`
+      for (const a of data.assistants) {
+        output += `  - ${a.name}: ${a.provider}/${a.model}\n`
+        output += `    Tools: ${a.toolCount} (${a.toolsCorrect ? '✅' : '❌'})\n`
+      }
+      
+      output += `\nPhone Numbers: ${data.phoneNumbers.length}\n`
+      for (const n of data.phoneNumbers) {
+        output += `  - ${n.number}: ${n.isCorrect ? '✅ Correct' : '❌ WRONG ASSISTANT'}\n`
+      }
+      
+      if (data.issues.length > 0) {
+        output += `\n⚠️ Issues:\n`
+        for (const issue of data.issues) {
+          output += `  - ${issue}\n`
+        }
+      } else {
+        output += `\n✅ No issues found!`
+      }
+      
+      alert(output)
+    } catch (error: any) {
+      alert(`Error: ${error.message}`)
+    } finally {
+      setDiagnosing(false)
     }
   }
 
@@ -264,6 +316,15 @@ export default function AdminDashboard() {
               >
                 <RefreshCcw className={`w-4 h-4 mr-2 ${upgradingAssistants ? 'animate-spin' : ''}`} />
                 {upgradingAssistants ? 'Upgrading...' : 'Upgrade to Premium'}
+              </Button>
+              <Button 
+                variant="outline" 
+                className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-300"
+                onClick={handleDiagnoseProject}
+                disabled={diagnosing}
+              >
+                <Search className={`w-4 h-4 mr-2 ${diagnosing ? 'animate-spin' : ''}`} />
+                {diagnosing ? 'Diagnosing...' : 'Diagnose Project'}
               </Button>
               <Button 
                 variant="outline" 
