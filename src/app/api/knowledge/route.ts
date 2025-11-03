@@ -2,13 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
 
+// Helper function to extract projectId from request
+function normalizeProjectId(req: NextRequest, bodyProjectId?: string) {
+  const url = new URL(req.url)
+  return (
+    bodyProjectId ||
+    url.searchParams.get('projectId') ||
+    url.searchParams.get('project_id') ||
+    url.pathname.split('/projects/')[1]?.split('/')[0] ||
+    ''
+  )
+}
+
 /**
  * API endpoint for AI assistant to query knowledge base, warranty, and service area info
  * Called via function calling from Vapi assistant
  */
-export async function POST(req: NextRequest) {
+async function handleKnowledgeRequest(req: NextRequest) {
   try {
-    const { projectId } = z.object({ projectId: z.string().min(1) }).parse(await req.json())
+    // Try to get projectId from body (POST) or query params (GET)
+    const body = await req.json().catch(() => ({}))
+    const projectId = normalizeProjectId(req, body.projectId)
 
     const project = await prisma.project.findUnique({ where: { id: projectId } })
     if (!project) {
@@ -81,7 +95,10 @@ export async function POST(req: NextRequest) {
       response += '\n'
     }
 
+    // Return format that Vapi AI can read
+    // Include a "result" field with human-readable knowledge summary
     return NextResponse.json({
+      result: response.trim() || 'No additional knowledge available.',
       success: true,
       knowledge: response,
       faqs: faqs.length,
@@ -92,9 +109,21 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('[Knowledge API] Error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch knowledge' },
-      { status: 500 }
+      { 
+        result: 'Unable to retrieve knowledge at this time.',
+        error: error.message || 'Failed to fetch knowledge' 
+      },
+      { status: 200 } // Return 200 so Vapi can read the error message
     )
   }
+}
+
+// Support both GET and POST requests
+export async function GET(req: NextRequest) {
+  return handleKnowledgeRequest(req)
+}
+
+export async function POST(req: NextRequest) {
+  return handleKnowledgeRequest(req)
 }
 

@@ -339,14 +339,12 @@ You have access to these functions:
 2. **get_slots** - Get available booking time slots within a date range. Call this before proposing times to the caller.
 3. **get_pricing** - Fetch the current pricing sheet summary (trip fee, service examples, emergency multiplier, notes)
 4. **check_service_area** - Check if address is within service coverage area
-5. **get_knowledge** - Get FAQs, warranty info, and service area details
 
 **WHEN TO USE FUNCTIONS:**
 - Customer wants to book? → Call get_slots to check availability, then propose time and use book_slot with confirm=true
 - Customer asks "when can you come?" → Call get_slots to find next available slots
 - Customer asks about pricing/services? → Call get_pricing and use its values; keep answers short
 - Customer asks about service area? → Call check_service_area with their address
-- Customer has questions about policies/warranty? → Call get_knowledge
 
 **HARD RULES:**
 - NEVER invent availability - always call get_slots first, then propose times from the results
@@ -451,20 +449,6 @@ export function buildAssistantTools(appUrl: string, projectId?: string): VapiAss
       },
       server: {
         url: `${appUrl}/api/gaps${q}`,
-      },
-    },
-    {
-      type: 'function',
-      function: {
-        name: 'get_knowledge',
-        description: 'Get FAQs, warranty info, service area coverage, and knowledge snippets. Call this when customer asks questions about policies, coverage, or service details.',
-        parameters: {
-          type: 'object',
-          properties: {},
-        },
-      },
-      server: {
-        url: `${appUrl}/api/knowledge${q}`,
       },
     },
     {
