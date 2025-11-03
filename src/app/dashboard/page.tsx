@@ -919,6 +919,30 @@ export default function DashboardPage() {
                   onChange={handleImportCSVPreview}
                   className="hidden"
                 />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    if (!selectedProject) return
+                    if (!confirm(`⚠️ Delete ALL ${bookings.length} bookings? This cannot be undone!\n\nYou can re-import after deletion to map technicians correctly.`)) return
+                    try {
+                      const res = await fetch(`/api/projects/${selectedProject.id}/bookings/bulk-delete`, {
+                        method: 'POST',
+                      })
+                      const data = await res.json()
+                      if (!res.ok) throw new Error(data.error || 'Failed to delete')
+                      alert(data.message || `Successfully deleted ${data.deleted} booking(s)`)
+                      await loadProjectData(selectedProject.id)
+                    } catch (e: any) {
+                      alert(e.message || 'Failed to delete bookings')
+                    }
+                  }}
+                  disabled={bookings.length === 0}
+                  title="Delete all bookings (for re-import)"
+                  className="text-red-600 border-red-300 hover:bg-red-50"
+                >
+                  🗑️ Clear All
+                </Button>
                 <div className="border-l mx-1"></div>
                 <div className="hidden md:flex items-center gap-2 mr-2">
                   <label className="text-xs text-gray-600">From</label>
