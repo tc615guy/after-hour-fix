@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
+import { normalizeProjectId } from '@/lib/util'
 
 /**
  * Check if a service address is within the configured service area
@@ -8,12 +9,14 @@ import { z } from 'zod'
  */
 export async function POST(req: NextRequest) {
   try {
-    const { projectId, address } = z
+    const body = await req.json().catch(() => ({}))
+    const { address } = z
       .object({
-        projectId: z.string().min(1),
         address: z.string().min(3),
       })
-      .parse(await req.json())
+      .parse(body)
+    
+    const projectId = normalizeProjectId(req)
 
     const project = await prisma.project.findUnique({ where: { id: projectId } })
     if (!project) {
@@ -26,9 +29,11 @@ export async function POST(req: NextRequest) {
 
     // If no service area is configured, allow all bookings
     if (!businessAddress && !serviceArea && !serviceRadius) {
+      const msg = 'We service your area!'
       return NextResponse.json({
+        result: msg,
         inServiceArea: true,
-        message: 'Service area not configured. All addresses accepted.',
+        message: msg,
       })
     }
 
@@ -44,28 +49,36 @@ export async function POST(req: NextRequest) {
     if (serviceArea?.type === 'zipcodes' && Array.isArray(serviceArea.value)) {
       const allowedZipCodes = serviceArea.value.map((z: any) => z.toString().padStart(5, '0'))
       if (zipCode && allowedZipCodes.includes(zipCode)) {
+        const msg = `We service ${zipCode}!`
         return NextResponse.json({
+          result: msg,
           inServiceArea: true,
-          message: `We service ${zipCode}. I can help you book!`,
+          message: msg,
         })
       }
+      const msg = `I'm sorry, we don't currently service ${zipCode ? zipCode : 'that area'}. We cover: ${serviceArea.value.slice(0, 5).join(', ')}${serviceArea.value.length > 5 ? ' and more' : ''}.`
       return NextResponse.json({
+        result: msg,
         inServiceArea: false,
-        message: `I'm sorry, we don't currently service ${zipCode ? zipCode : 'that area'}. We cover: ${serviceArea.value.slice(0, 5).join(', ')}${serviceArea.value.length > 5 ? ' and more' : ''}.`,
+        message: msg,
       })
     }
 
     if (serviceArea?.type === 'cities' && Array.isArray(serviceArea.value)) {
       const allowedCities = serviceArea.value.map((c: string) => c.toLowerCase())
       if (city && allowedCities.includes(city.toLowerCase())) {
+        const msg = `We service ${city}!`
         return NextResponse.json({
+          result: msg,
           inServiceArea: true,
-          message: `We service ${city}. I can help you book!`,
+          message: msg,
         })
       }
+      const msg = `I'm sorry, we don't currently service ${city ? city : 'that area'}. We cover: ${serviceArea.value.slice(0, 5).join(', ')}${serviceArea.value.length > 5 ? ' and more' : ''}.`
       return NextResponse.json({
+        result: msg,
         inServiceArea: false,
-        message: `I'm sorry, we don't currently service ${city ? city : 'that area'}. We cover: ${serviceArea.value.slice(0, 5).join(', ')}${serviceArea.value.length > 5 ? ' and more' : ''}.`,
+        message: msg,
       })
     }
 
@@ -76,9 +89,11 @@ export async function POST(req: NextRequest) {
       if (!googleApiKey) {
         // No API key configured - accept with warning
         console.warn(`[Service Area Check] No Google Maps API key configured for project ${projectId}`)
+        const msg = `We service your area!`
         return NextResponse.json({
+          result: msg,
           inServiceArea: true,
-          message: `Address accepted. Please note the service radius is ${serviceRadius} miles from our business.`,
+          message: `Address accepted. Service radius is ${serviceRadius} miles.`,
         })
       }
 
@@ -92,9 +107,11 @@ export async function POST(req: NextRequest) {
         if (!businessCoords || !customerCoords) {
           // Geocoding failed - accept with warning
           console.warn(`[Service Area Check] Geocoding failed for project ${projectId}`)
+          const msg = `We service your area!`
           return NextResponse.json({
+            result: msg,
             inServiceArea: true,
-            message: `Address accepted. Please note the service radius is ${serviceRadius} miles from our business.`,
+            message: `Address accepted. Service radius is ${serviceRadius} miles.`,
           })
         }
 
@@ -102,38 +119,46 @@ export async function POST(req: NextRequest) {
         const distanceMiles = calculateDistance(businessCoords, customerCoords)
 
         if (distanceMiles <= serviceRadius) {
+          const msg = `Perfect! You're within our service area, only ${distanceMiles.toFixed(1)} miles away.`
           return NextResponse.json({
+            result: msg,
             inServiceArea: true,
-            message: `Perfect! You're within our ${serviceRadius}-mile service area (${distanceMiles.toFixed(1)} miles away). I can help you book!`,
+            message: msg,
             distanceMiles: Math.round(distanceMiles * 10) / 10,
           })
         } else {
+          const msg = `I'm sorry, but you're ${distanceMiles.toFixed(1)} miles away, which is outside our ${serviceRadius}-mile service area.`
           return NextResponse.json({
+            result: msg,
             inServiceArea: false,
-            message: `I'm sorry, but you're ${distanceMiles.toFixed(1)} miles away, which is outside our ${serviceRadius}-mile service area. Is there another location closer to us where we could meet?`,
+            message: msg,
             distanceMiles: Math.round(distanceMiles * 10) / 10,
           })
         }
       } catch (geocodeError: any) {
         console.error('[Service Area Check] Geocoding error:', geocodeError.message)
         // On error, accept the booking but note it needs verification
+        const msg = `We service your area!`
         return NextResponse.json({
+          result: msg,
           inServiceArea: true,
-          message: `Address accepted. Please note the service radius is ${serviceRadius} miles from our business.`,
+          message: `Address accepted. Service radius is ${serviceRadius} miles.`,
         })
       }
     }
 
     // Default: accept if we can't determine
+    const msg = 'We service your area!'
     return NextResponse.json({
+      result: msg,
       inServiceArea: true,
-      message: 'Address accepted for booking.',
+      message: msg,
     })
   } catch (error: any) {
     console.error('[Service Area Check] Error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to check service area' },
-      { status: 500 }
+      { result: error.message || 'Error checking service area', error: error.message || 'Failed to check service area' },
+      { status: 200 }
     )
   }
 }
