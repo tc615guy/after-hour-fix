@@ -100,7 +100,10 @@ export async function POST(req: NextRequest) {
                 orderBy: { updatedAt: 'desc' },
               })
               const proId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
-              const cap = subs && proId && subs.priceId === proId ? 1200 : 500
+              const premiumId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM
+              const cap = subs && premiumId && subs.priceId === premiumId ? 500
+                : subs && proId && subs.priceId === proId ? 1200
+                : 500
               const used = (project.agents || []).reduce((s, a) => s + (a.minutesThisPeriod || 0), 0)
               if (!isTestAccount && used >= cap) {
                 // Attempt to forward regardless of business hours

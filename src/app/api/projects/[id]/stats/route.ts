@@ -53,7 +53,10 @@ export async function GET(
     const estRevenue = bookingsThisWeek.reduce((sum, b) => sum + (b.priceCents || 0), 0)
 
     const proId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
-    const cap = sub && proId && sub.priceId === proId ? 1200 : 500
+    const premiumId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM
+    const cap = sub && premiumId && sub.priceId === premiumId ? 500
+      : sub && proId && sub.priceId === proId ? 1200
+      : 500
     const stats = {
       callsToday,
       bookingsWeek,

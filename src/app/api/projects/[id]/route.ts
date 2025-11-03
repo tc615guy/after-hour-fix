@@ -28,7 +28,7 @@ export async function GET(
     }
 
     // Derive plan from owner's active subscription (fallback: starter)
-    let plan: 'starter' | 'pro' = 'starter'
+    let plan: 'starter' | 'pro' | 'premium' = 'starter'
     try {
       const subs = await prisma.subscription.findMany({
         where: { userId: project.ownerId, status: 'active' },
@@ -37,7 +37,9 @@ export async function GET(
       })
       const active = subs[0]
       const proPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || process.env.STRIPE_PRICE_PRO
-      if (active && proPrice && active.priceId === proPrice) plan = 'pro'
+      const premiumPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || process.env.STRIPE_PRICE_PREMIUM
+      if (active && premiumPrice && active.priceId === premiumPrice) plan = 'premium'
+      else if (active && proPrice && active.priceId === proPrice) plan = 'pro'
     } catch (e) {
       // ignore and default to starter
     }

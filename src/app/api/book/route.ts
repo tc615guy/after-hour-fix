@@ -96,14 +96,17 @@ export async function POST(req: NextRequest) {
 
     console.log('[BOOK] Project found:', project.name)
 
-    // Minutes cap enforcement (Starter=500, Pro=1200)
+    // Minutes cap enforcement (Starter=500, Pro=1200, Premium=500)
     try {
       const subs = await prisma.subscription.findFirst({
         where: { userId: project.ownerId, status: { in: ['active', 'trialing'] } },
         orderBy: { updatedAt: 'desc' },
       })
       const proId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
-      const cap = subs && proId && subs.priceId === proId ? 1200 : 500
+      const premiumId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM
+      const cap = subs && premiumId && subs.priceId === premiumId ? 500
+        : subs && proId && subs.priceId === proId ? 1200
+        : 500
       const used = (project.agents || []).reduce((s, a) => s + (a.minutesThisPeriod || 0), 0)
       if (used >= cap) {
         const msg = "We’ve reached this month’s included AI minutes. Let me connect you to the office to finish booking."

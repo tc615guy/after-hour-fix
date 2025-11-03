@@ -26,6 +26,7 @@ export const stripe = new Proxy({} as Stripe, {
 
 export const STARTER_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 'price_starter'
 export const PRO_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 'price_pro'
+export const PREMIUM_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || 'price_premium'
 
 export async function createCheckoutSession(
   userId: string,

@@ -36,6 +36,24 @@ export default function PricingPage() {
       ],
       popular: true,
     },
+    {
+      name: 'Premium',
+      price: 499,
+      priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM,
+      description: 'Best-in-class AI experience',
+      features: [
+        '500 AI minutes/month',
+        'GPT-4o AI model (premium)',
+        'ElevenLabs voice (most natural)',
+        'Deepgram Nova 2 transcription',
+        '1 phone number',
+        'Cal.com integration',
+        'Email & SMS confirmations',
+        'Call transcripts',
+        'Weekly ROI reports',
+        'Priority support',
+      ],
+    },
   ]
 
   return (
@@ -57,7 +75,7 @@ export default function PricingPage() {
           <p className="text-xl text-gray-600">Choose the plan that fits your business</p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {plans.map((plan) => (
             <Card key={plan.name} className={plan.popular ? 'border-blue-600 border-2 relative' : ''}>
               {plan.popular && (
