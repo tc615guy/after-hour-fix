@@ -143,10 +143,12 @@ export async function POST(req: NextRequest) {
         // Update agent minutes if completed
         if (call.status === 'ended' && call.duration && agent) {
           const minutes = Math.ceil(call.duration / 60)
-          await prisma.agent.update({
+          console.log(`[Webhook] Updating agent ${agent.id} minutes: +${minutes} (total will be ${(agent.minutesThisPeriod || 0) + minutes})`)
+          const updated = await prisma.agent.update({
             where: { id: agent.id },
             data: { minutesThisPeriod: { increment: minutes } },
           })
+          console.log(`[Webhook] Agent ${agent.id} minutes updated to ${updated.minutesThisPeriod}`)
 
           // Overage usage reporting (post-increment)
           try {
