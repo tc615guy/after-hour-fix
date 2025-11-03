@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios'
 
+// Cal.com v2 API base - no /api prefix needed
 const CALCOM_BASE_URL = process.env.CALCOM_BASE_URL || 'https://api.cal.com'
 const CALCOM_EVENT_TYPE_ID = process.env.CALCOM_EVENT_TYPE_ID ? parseInt(process.env.CALCOM_EVENT_TYPE_ID) : undefined
 

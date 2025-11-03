@@ -250,11 +250,11 @@ export async function POST(req: NextRequest) {
       
       // Step 1: Reserve the slot first (prevents race conditions)
       console.log('[BOOK] Reserving slot:', { start: startTime.toISOString(), end: endTime.toISOString() })
-      const reserveRes = await fetch('https://api.cal.com/v2/slots/reservations', {
+      const reserveRes = await fetch('https://api.cal.com/v2/slots/reserve', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${project.calcomApiKey}`,
-          'cal-api-version': '2024-09-04',
+          'cal-api-version': '2024-08-12',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -274,24 +274,24 @@ export async function POST(req: NextRequest) {
       }
       
       // Step 2: Create booking with correct v2 format
+      // Cal.com v2 uses /v2/bookings endpoint (not /v2/events/{id}/bookings)
       const bookingPayload = {
         eventTypeId: eventTypeId,
-        start: startTime.toISOString(),  // "start", not "startTime"
-        attendee: {  // "attendee" (singular), not "attendees" (plural)
+        start: startTime.toISOString(),
+        attendee: {
           name: input.customerName,
           email: `${phoneDigits}@sms.afterhourfix.com`,
           timeZone: project.timezone || 'America/Chicago',
           language: 'en',
         },
-        metadata: {
-          customerPhone: input.customerPhone,
+        bookingFieldsResponses: {
+          phone: input.customerPhone,
           address: input.address,
           notes: input.notes,
         },
-        responses: {
-          name: input.customerName,
-          email: `${phoneDigits}@sms.afterhourfix.com`,
-          location: { optionValue: '', value: input.address },
+        metadata: {
+          customerPhone: input.customerPhone,
+          address: input.address,
           notes: input.notes,
         },
       }
@@ -302,7 +302,7 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${project.calcomApiKey}`,
-          'cal-api-version': '2024-09-04',
+          'cal-api-version': '2024-08-12',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(bookingPayload),
@@ -327,7 +327,7 @@ export async function POST(req: NextRequest) {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${project.calcomApiKey}`,
-              'cal-api-version': '2024-09-04',
+              'cal-api-version': '2024-08-12',
             },
           })
           if (confirmRes.ok) {
