@@ -100,6 +100,7 @@ export async function POST(
           console.log(`[Import] Row ${i}: techId="${techId}", techName="${techName}"`)
         }
         
+        // First try by ID if provided
         if (techId) {
           const byId = await prisma.technician.findFirst({
             where: { projectId, id: techId, deletedAt: null },
@@ -108,10 +109,11 @@ export async function POST(
           if (byId) {
             technicianId = byId.id
             console.log(`[Import] Row ${i}: Matched technician by ID: ${byId.id}`)
-          } else {
-            console.log(`[Import] Row ${i}: Technician ID "${techId}" not found`)
           }
-        } else if (techName) {
+        }
+        
+        // If no match by ID, try by name if provided
+        if (!technicianId && techName) {
           const byName = await prisma.technician.findFirst({
             where: { 
               projectId, 
@@ -123,20 +125,22 @@ export async function POST(
           if (byName) {
             technicianId = byName.id
             console.log(`[Import] Row ${i}: Matched technician by name: ${byName.id} (${techName})`)
-          } else {
-            // Auto-create technician if doesn't exist
-            const newTech = await prisma.technician.create({
-              data: {
-                projectId,
-                name: techName,
-                phone: r.customerPhone || '000-000-0000', // Use customer phone as placeholder if no tech phone
-                isActive: true,
-              },
-            })
-            technicianId = newTech.id
-            console.log(`[Import] Row ${i}: Auto-created technician: ${newTech.id} (${techName})`)
-            await audit({ projectId, type: 'technician.autoCreated', payload: { id: newTech.id, name: techName } })
           }
+        }
+        
+        // If still no match and we have a name, auto-create
+        if (!technicianId && techName) {
+          const newTech = await prisma.technician.create({
+            data: {
+              projectId,
+              name: techName,
+              phone: r.customerPhone || '000-000-0000', // Use customer phone as placeholder if no tech phone
+              isActive: true,
+            },
+          })
+          technicianId = newTech.id
+          console.log(`[Import] Row ${i}: Auto-created technician: ${newTech.id} (${techName})`)
+          await audit({ projectId, type: 'technician.autoCreated', payload: { id: newTech.id, name: techName } })
         }
         
         if (!technicianId && (techId || techName)) {
