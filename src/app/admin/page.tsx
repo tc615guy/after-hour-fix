@@ -16,7 +16,8 @@ import {
   Search,
   ExternalLink,
   LogIn,
-  AlertCircle
+  AlertCircle,
+  RefreshCcw
 } from 'lucide-react'
 
 interface CustomerMetrics {
@@ -64,6 +65,7 @@ export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [loginError, setLoginError] = useState('')
   const [selected, setSelected] = useState<Record<string, boolean>>({})
+  const [syncingAssistants, setSyncingAssistants] = useState(false)
   const allSelected = Object.keys(selected).length > 0 && Object.values(selected).every(Boolean)
 
   const loadAdminData = async () => {
@@ -124,6 +126,24 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleSyncAllAssistants = async () => {
+    if (!confirm('Sync all assistants with latest prompts and tools?')) return
+    
+    try {
+      setSyncingAssistants(true)
+      const res = await fetch('/api/admin/sync-all-assistants', { method: 'POST' })
+      const data = await res.json()
+      
+      if (!res.ok) throw new Error(data.error || 'Sync failed')
+      
+      alert(`✅ Successfully synced ${data.synced}/${data.total} assistants!`)
+    } catch (error: any) {
+      alert(`Error: ${error.message}`)
+    } finally {
+      setSyncingAssistants(false)
+    }
+  }
+
   const filteredCustomers = customers.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -179,11 +199,22 @@ export default function AdminDashboard() {
               <h1 className="text-3xl font-bold">Admin Dashboard</h1>
               <p className="text-purple-100 mt-1">AfterHourFix Platform Analytics</p>
             </div>
-            <Link href="/dashboard">
-              <Button variant="outline" className="bg-white text-purple-600 hover:bg-purple-50">
-                Exit Admin Mode
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                className="bg-white text-purple-600 hover:bg-purple-50"
+                onClick={handleSyncAllAssistants}
+                disabled={syncingAssistants}
+              >
+                <RefreshCcw className={`w-4 h-4 mr-2 ${syncingAssistants ? 'animate-spin' : ''}`} />
+                {syncingAssistants ? 'Syncing...' : 'Sync All Assistants'}
               </Button>
-            </Link>
+              <Link href="/dashboard">
+                <Button variant="outline" className="bg-white text-purple-600 hover:bg-purple-50">
+                  Exit Admin Mode
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </header>
