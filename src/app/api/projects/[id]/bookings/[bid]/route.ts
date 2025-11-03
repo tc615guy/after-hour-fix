@@ -25,6 +25,7 @@ export async function PATCH(
     if (typeof body.status === 'string') data.status = body.status
     if (typeof body.calcomBookingId === 'number') data.calcomBookingId = body.calcomBookingId
     if (typeof body.calcomBookingUid === 'string') data.calcomBookingUid = body.calcomBookingUid
+    if (typeof body.technicianId === 'string') data.technicianId = body.technicianId
     if (body.slotStart) {
       const d = new Date(body.slotStart)
       if (isNaN(d.getTime())) return NextResponse.json({ error: 'Invalid time value' }, { status: 400 })

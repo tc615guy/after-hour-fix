@@ -465,6 +465,23 @@ export function buildAssistantTools(appUrl: string, projectId?: string): VapiAss
     {
       type: 'function',
       function: {
+        name: 'find_gaps',
+        description: 'Find unassigned bookings and suggest best technician assignments for smart scheduling.',
+        parameters: {
+          type: 'object',
+          properties: {
+            start: { type: 'string', description: 'ISO start datetime (optional, defaults to now)' },
+            end: { type: 'string', description: 'ISO end datetime (optional, defaults to 7 days ahead)' },
+          },
+        },
+      },
+      server: {
+        url: `${appUrl}/api/gaps${q}`,
+      },
+    },
+    {
+      type: 'function',
+      function: {
         name: 'get_knowledge',
         description: 'Get FAQs, warranty info, service area coverage, and knowledge snippets. Call this when customer asks questions about policies, coverage, or service details.',
         parameters: {
