@@ -329,6 +329,7 @@ export default function DashboardPage() {
       
       // Handle async queued imports
       if (data.queued) {
+        console.log('Async import queued, showing success message')
         alert(`Queued ${data.count} rows for import. Processing in background...`)
         await loadProjectData(selectedProject.id)
         return
