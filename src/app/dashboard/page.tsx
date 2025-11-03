@@ -50,6 +50,8 @@ export default function DashboardPage() {
     status: '',
     value: '',
     campaignSource: '',
+    technician: '',
+    technicianId: '',
     notes: '',
   })
   const [csvImporting, setCsvImporting] = useState(false)
@@ -218,6 +220,8 @@ export default function DashboardPage() {
           status: find('status','appointment status','job status','state','booking status'),
           value: find('value','amount','price','total','cost','job total','invoice total','grand total','subtotal'),
           campaignSource: find('campaignsource','campaign source','source','lead source','referral source','marketing source','utm source','origin'),
+          technician: find('technician','tech','tech name','technician name','assigned to','assigned tech','assigned technician','worker','employee'),
+          technicianId: find('technicianid','tech id','technician id','techid','tech_id','tech #','tech number','employee id','worker id'),
           notes: find('notes','memo','description','desc','comments','job description','work description','special instructions','customer notes'),
         })
       } catch (error: any) {
@@ -286,6 +290,8 @@ export default function DashboardPage() {
       appointmentId: apptId || undefined,
       jobNumber: jobNum || undefined,
       campaignSource: source || undefined,
+      technician: get(csvMapping.technician) || '',
+      technicianId: get(csvMapping.technicianId) || '',
       notes: notesTagged || ''
     }
   }
@@ -961,6 +967,8 @@ export default function DashboardPage() {
                     { key: 'date', label: 'Date (separate)' },
                     { key: 'startTime', label: 'Start Time (separate)' },
                     { key: 'endTime', label: 'End Time (separate)' },
+                    { key: 'technician', label: 'Technician Name' },
+                    { key: 'technicianId', label: 'Technician ID' },
                     { key: 'status', label: 'Status' },
                     { key: 'value', label: 'Value' },
                     { key: 'notes', label: 'Notes' },
