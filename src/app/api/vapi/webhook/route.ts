@@ -465,65 +465,19 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Booking fallback: if caller explicitly wanted to book/schedule but no booking was created,
-        // auto-create a pending booking from transcript so nothing is lost.
-        try {
-          if (project) {
-            const wantsBooking = /(book|schedule|appointment)/i.test(transcript)
-            if (wantsBooking) {
-              const phoneMatch = transcript.match(/(?:\+?1[\s\-\.]*)?(?:\(?\d{3}\)?[\s\-\.]?\d{3}[\s\-\.]?\d{4})/)
-              const phoneDigits = phoneMatch ? phoneMatch[0].replace(/\D/g, '') : ''
-              const timeMatch = transcript.match(/\b(\d{1,2})(?::(\d{2}))?\s?(am|pm)\b/i)
-              let slotStart: Date = new Date(Date.now() + 60 * 60 * 1000)
-              if (timeMatch) {
-                const hour = parseInt(timeMatch[1], 10) % 12
-                const min = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0
-                const ampm = (timeMatch[3] || '').toLowerCase() === 'pm' ? 12 : 0
-                const base = new Date()
-                base.setMinutes(min, 0, 0)
-                base.setHours(hour + ampm)
-                const isTomorrow = /tomorrow/i.test(transcript)
-                if (isTomorrow || base.getTime() < Date.now()) base.setDate(base.getDate() + 1)
-                slotStart = base
-              }
-              // dedupe: skip if similar exists
-              const windowStart = new Date(slotStart.getTime() - 30 * 60 * 1000)
-              const windowEnd = new Date(slotStart.getTime() + 30 * 60 * 1000)
-              if (phoneDigits) {
-                const existing = await prisma.booking.findFirst({
-                  where: {
-                    projectId: project.id,
-                    customerPhone: { contains: phoneDigits },
-                    slotStart: { gte: windowStart, lte: windowEnd },
-                  },
-                })
-                if (existing) return
-              }
-              const addressMatch = transcript.match(/\d{3,5}[^\n,]*,\s*[^\n,]+,\s*[A-Za-z]{2,}/)
-              const address = addressMatch ? addressMatch[0].trim() : undefined
-              const callRecord = await prisma.call.findFirst({ where: { vapiCallId: call.id } })
-              await prisma.booking.create({
-                data: {
-                  projectId: project.id,
-                  callId: callRecord?.id,
-                  customerName: null,
-                  customerPhone: phoneDigits || undefined,
-                  address,
-                  notes: '[AUTO] Created from call summary. ' + (summary || '').slice(0, 400),
-                  slotStart,
-                  slotEnd: new Date(slotStart.getTime() + 60 * 60 * 1000),
-                  status: 'pending',
-                  priceCents: null,
-                },
-              })
-              await prisma.eventLog.create({
-                data: { projectId: project.id, type: 'booking.auto_created_from_call', payload: { callId: call.id } },
-              })
-            }
-          }
-        } catch (e: any) {
-          console.warn('[BOOK-FALLBACK] auto-create failed:', e.message)
-        }
+        // DISABLED: Booking fallback auto-created bookings without confirmation
+        // This caused unconfirmed bookings to be created, leading to double-booking and scheduling conflicts.
+        // All bookings should now go through the proper book_slot API with confirm=true validation.
+        // try {
+        //   if (project) {
+        //     const wantsBooking = /(book|schedule|appointment)/i.test(transcript)
+        //     if (wantsBooking) {
+        //       ...auto-creation logic removed...
+        //     }
+        //   }
+        // } catch (e: any) {
+        //   console.warn('[BOOK-FALLBACK] auto-create failed:', e.message)
+        // }
 
         // Auto-capture first high-quality call as demo recording
         if (recordingUrl && voiceConfidence >= 0.85 && !escalated && agent) {
