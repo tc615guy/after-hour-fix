@@ -33,15 +33,58 @@ async function handleAvailabilityRequest(req: NextRequest) {
     const startIso = startDate.toISOString()
     const endIso = endDate.toISOString()
 
-    // Use CalComClient to get availability (uses v1 API and falls back to mock data)
-    console.log(`[Cal.com Availability] Querying for projectId=${projectId}, username=${calcomUser}, start=${startIso}, end=${endIso}`)
-    const calcomClient = createCalComClient(apiKey)
+    // Try Cal.com v2 slots API first, fallback to v1 via CalComClient
+    console.log(`[Cal.com Availability] Querying v2 slots for projectId=${projectId}, eventTypeId=${project.calcomEventTypeId}, start=${startIso}, end=${endIso}`)
     
-    // getAvailability expects date strings like "2024-01-01"
-    const fromDate = startIso.split('T')[0]
-    const toDate = endIso.split('T')[0]
+    let calcomSlots: Array<{ start: string; end?: string }> = []
     
-    const calcomSlots = await calcomClient.getAvailability(calcomUser, fromDate, toDate)
+    // Try v2 API first
+    if (project.calcomEventTypeId) {
+      try {
+        const slotsUrl = new URL('https://api.cal.com/v2/slots')
+        slotsUrl.searchParams.set('eventTypeId', String(project.calcomEventTypeId))
+        slotsUrl.searchParams.set('start', startIso)
+        slotsUrl.searchParams.set('end', endIso)
+        slotsUrl.searchParams.set('timeZone', project.timezone)
+        
+        const resp = await fetch(slotsUrl.toString(), {
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'cal-api-version': '2024-06-11',
+          },
+        })
+
+        if (resp.ok) {
+          const data = await resp.json()
+          console.log('[Cal.com Availability] v2 API response:', JSON.stringify(data).substring(0, 500))
+          
+          // Cal.com v2 returns { slots: [{ startTime, endTime }] }
+          const slotsArray = data?.slots || []
+          for (const slot of slotsArray) {
+            const st = slot?.startTime || slot?.start
+            const en = slot?.endTime || slot?.end
+            if (st) {
+              calcomSlots.push({ start: st, end: en })
+            }
+          }
+        } else {
+          const txt = await resp.text()
+          console.log(`[Cal.com Availability] v2 failed (${resp.status}): ${txt.substring(0, 200)}`)
+        }
+      } catch (v2Error: any) {
+        console.log(`[Cal.com Availability] v2 error: ${v2Error.message}`)
+      }
+    }
+    
+    // Fallback to v1 if v2 failed or returned no slots
+    if (calcomSlots.length === 0) {
+      console.log('[Cal.com Availability] Falling back to v1 via CalComClient')
+      const calcomClient = createCalComClient(apiKey)
+      const fromDate = startIso.split('T')[0]
+      const toDate = endIso.split('T')[0]
+      calcomSlots = await calcomClient.getAvailability(calcomUser, fromDate, toDate)
+    }
+    
     console.log(`[Cal.com Availability] Found ${calcomSlots.length} slots from Cal.com`)
 
     // SMART ROUTING: Filter slots to only include those where at least one technician is available
