@@ -60,7 +60,15 @@ async function handleAvailabilityRequest(req: NextRequest) {
       for (const slot of s) {
         const st = slot?.start || slot?.startTime || slot?.time || slot
         const en = slot?.end || slot?.endTime
-        if (st && !isNaN(new Date(st).getTime())) calcomSlots.push({ start: new Date(st).toISOString(), end: en ? new Date(en).toISOString() : undefined })
+        if (st && !isNaN(new Date(st).getTime())) {
+          const convertedStart = new Date(st).toISOString()
+          calcomSlots.push({ start: convertedStart, end: en ? new Date(en).toISOString() : undefined })
+          
+          // Log first few slots for debugging
+          if (calcomSlots.length <= 3) {
+            console.log(`[Cal.com Availability] Slot ${calcomSlots.length}: raw="${st}" → converted="${convertedStart}"`)
+          }
+        }
       }
     }
 
