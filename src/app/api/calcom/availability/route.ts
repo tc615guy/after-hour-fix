@@ -138,7 +138,7 @@ async function handleAvailabilityRequest(req: NextRequest) {
     }
 
     console.log(`[Cal.com Availability] Returning ${availableSlots.length} available slots (filtered from ${calcomSlots.length} Cal.com slots)`)
-    return NextResponse.json({ success: true, slots: availableSlots })
+    return NextResponse.json({ result: `Found ${availableSlots.length} available slots`, slots: availableSlots })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to get availability' }, { status: 500 })
   }
