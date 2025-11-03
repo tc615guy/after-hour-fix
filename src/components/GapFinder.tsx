@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle2, AlertCircle, MapPin, Clock, User, Users } from 'lucide-react'
+import { CheckCircle2, AlertCircle, MapPin, Clock, User, Users, Navigation } from 'lucide-react'
 
 interface Gap {
   unassignedBooking: {
@@ -156,7 +156,10 @@ export default function GapFinder({ projectId }: GapFinderProps) {
                         <div className="font-medium text-blue-600">
                           Suggested: {gap.suggestedTechnician.name}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                          {gap.suggestedTechnician.reason.includes('miles') && (
+                            <Navigation className="w-3 h-3 text-green-600" />
+                          )}
                           {gap.suggestedTechnician.reason}
                         </div>
                       </div>

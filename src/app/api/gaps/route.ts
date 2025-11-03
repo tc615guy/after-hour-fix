@@ -2,6 +2,51 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
 /**
+ * Geocode an address using Google Maps Geocoding API
+ */
+async function geocodeAddress(address: string, apiKey: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const encoded = encodeURIComponent(address)
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encoded}&key=${apiKey}`
+    
+    const response = await fetch(url)
+    const data = await response.json()
+
+    if (data.status === 'OK' && data.results && data.results.length > 0) {
+      const location = data.results[0].geometry.location
+      return { lat: location.lat, lng: location.lng }
+    }
+
+    console.warn('[Geocoding] No results for address:', address, data.status)
+    return null
+  } catch (error: any) {
+    console.error('[Geocoding] Error:', error.message)
+    return null
+  }
+}
+
+/**
+ * Calculate distance between two coordinates using Haversine formula
+ * Returns distance in miles
+ */
+function calculateDistance(
+  coord1: { lat: number; lng: number },
+  coord2: { lat: number; lng: number }
+): number {
+  const R = 3959 // Earth's radius in miles
+  const dLat = ((coord2.lat - coord1.lat) * Math.PI) / 180
+  const dLon = ((coord2.lng - coord1.lng) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((coord1.lat * Math.PI) / 180) *
+      Math.cos((coord2.lat * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+
+/**
  * GET /api/gaps?projectId=...&start=ISO&end=ISO
  * Find gaps in technician schedules and suggest best assignments
  */
@@ -22,6 +67,9 @@ export async function GET(req: NextRequest) {
     const startIso = start && !isNaN(new Date(start).getTime()) ? new Date(start).toISOString() : now.toISOString()
     const endDefault = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
     const endIso = end && !isNaN(new Date(end).getTime()) ? new Date(end).toISOString() : endDefault.toISOString()
+
+    // Get Google Maps API key if available
+    const googleApiKey = process.env.GOOGLE_MAPS_API_KEY
 
     // Get all bookings in range
     const bookings = await prisma.booking.findMany({
@@ -116,15 +164,43 @@ export async function GET(req: NextRequest) {
           return bEnd > 0 && bEnd <= bookingStart
         })
         
-        if (previousBooking?.address && booking.address) {
+        // Calculate distance-based scoring if we have addresses and Google API
+        if (previousBooking?.address && booking.address && googleApiKey) {
+          try {
+            const prevCoords = await geocodeAddress(previousBooking.address, googleApiKey)
+            const newCoords = await geocodeAddress(booking.address, googleApiKey)
+            
+            if (prevCoords && newCoords) {
+              const distance = calculateDistance(prevCoords, newCoords)
+              // Score decreases with distance: 0-2 miles = +100, 2-5 = +75, 5-10 = +50, 10+ = +25
+              if (distance < 2) {
+                score += 100
+                reasons.push(`${distance.toFixed(1)} miles away (very close)`)
+              } else if (distance < 5) {
+                score += 75
+                reasons.push(`${distance.toFixed(1)} miles away (nearby)`)
+              } else if (distance < 10) {
+                score += 50
+                reasons.push(`${distance.toFixed(1)} miles away`)
+              } else {
+                score += 25
+                reasons.push(`${distance.toFixed(1)} miles away`)
+              }
+            }
+          } catch (err) {
+            // Geocoding failed, fall back to city matching
+          }
+        }
+        
+        // Fallback: Simple city-based scoring if no distance calculation
+        if (!reasons.some(r => r.includes('miles')) && previousBooking?.address && booking.address) {
           const prevAddress = previousBooking.address
           const newAddress = booking.address
-          // Simple address-based scoring (same area = better)
           const prevCity = prevAddress.split(',').slice(-2)[0]?.trim().toLowerCase()
           const newCity = newAddress.split(',').slice(-2)[0]?.trim().toLowerCase()
           if (prevCity && newCity && prevCity === newCity) {
             score += 50
-            reasons.push(`Working in same area (${prevCity})`)
+            reasons.push(`Same city (${prevCity})`)
           }
         }
         
