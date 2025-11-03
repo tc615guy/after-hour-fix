@@ -362,12 +362,27 @@ export default function BusinessHoursEditor({ projectId }: BusinessHoursEditorPr
             </ul>
           </div>
 
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <h4 className="font-semibold text-sm mb-2 text-amber-800">💡 Tip:</h4>
-            <p className="text-xs text-amber-700">
-              The AI is your <strong>after-hours receptionist</strong>. During your Business Hours, calls go to you.
-              After hours, nights, and weekends - the AI takes over so you never miss an emergency!
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h4 className="font-semibold text-sm mb-2 text-red-800">⚠️ Important Setup Required:</h4>
+            <p className="text-xs text-red-700 mb-2">
+              This forwards calls <strong>from your AI number TO your business line</strong> during Business Hours.
             </p>
+            <p className="text-xs text-red-700 font-semibold">
+              You also need to configure your carrier to forward calls from your business line TO your AI number after hours/weekends.
+              <a href="/help/forwarding" target="_blank" className="underline ml-1">See instructions →</a>
+            </p>
+          </div>
+          
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <h4 className="font-semibold text-sm mb-2 text-amber-800">💡 How It Works:</h4>
+            <p className="text-xs text-amber-700 mb-1">
+              <strong>Scenario:</strong> Using your existing business line + AfterHourFix AI number
+            </p>
+            <ul className="text-xs text-amber-700 space-y-1 ml-4">
+              <li className="list-disc">Your business line forwards to AI after hours (carrier config)</li>
+              <li className="list-disc">AI forwards to your business line during business hours (above setting)</li>
+              <li className="list-disc">You get all the calls when you're available!</li>
+            </ul>
           </div>
         </CardContent>
       </Card>
