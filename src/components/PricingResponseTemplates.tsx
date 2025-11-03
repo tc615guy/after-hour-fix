@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { MessageSquare, Sparkles, Copy, Check, Edit2 } from 'lucide-react'
+import { MessageSquare, Sparkles, Copy, Check, Edit2, Plus, Trash2, X } from 'lucide-react'
 
 interface ResponseTemplate {
   id: string
@@ -26,68 +26,20 @@ interface PricingResponseTemplatesProps {
 
 const DEFAULT_TEMPLATES: ResponseTemplate[] = [
   {
-    id: 'simple-inquiry',
-    scenario: 'Customer asks: "How much do you charge?"',
-    title: 'General Pricing Inquiry',
-    description: 'When customer asks about general pricing',
-    template: `"Our pricing varies depending on the specific service you need. We charge a $[TRIP_FEE] trip fee to come out and assess the situation, and then the final price depends on the parts and labor required. Our technician will provide you with a detailed quote before starting any work. Would you like to schedule an appointment?"`,
+    id: 'general-pricing',
+    scenario: 'Customer asks about general pricing',
+    title: 'General Pricing Response',
+    description: 'When customer asks "How much?" or "What do you charge?"',
+    template: `"We charge $[TRIP_FEE] to come out and assess the situation. The final price depends on parts and labor needed. Our technician will give you an exact quote before starting any work. Would you like to book an appointment?"`,
     category: 'simple',
-  },
-  {
-    id: 'no-trip-fee',
-    scenario: 'Customer asks about pricing (No trip fee)',
-    title: 'General Pricing - No Trip Fee',
-    description: 'When no trip fee is configured',
-    template: `"Our pricing depends on the specific service and parts needed. Our technician will assess the situation and provide you with a detailed quote before starting any work. There's no charge for the estimate. Would you like to schedule an appointment?"`,
-    category: 'simple',
-  },
-  {
-    id: 'specific-service',
-    scenario: 'Customer asks about a specific service',
-    title: 'Specific Service Quote',
-    description: 'When customer asks about a particular service',
-    template: `"For [SERVICE_NAME], we typically charge around $[BASE_PRICE] plus the $[TRIP_FEE] trip fee. However, the final price may vary depending on the specific situation and any parts needed. Our technician will give you an exact quote when they arrive. Would you like to book an appointment?"`,
-    category: 'detailed',
   },
   {
     id: 'emergency-pricing',
     scenario: 'Emergency situation pricing',
     title: 'Emergency Rate Response',
     description: 'When customer needs emergency service',
-    template: `"Since this is an emergency situation, our emergency rates apply, which are [EMERGENCY_MULTIPLIER]x our standard pricing. This includes the $[TRIP_FEE] trip fee and priority response. We can have someone there within 30 minutes. Would you like me to dispatch a technician right away?"`,
+    template: `"Emergency rates apply, which are [EMERGENCY_MULTIPLIER]x our standard pricing with priority response. I can dispatch someone right away. Would you like to proceed?"`,
     category: 'emergency',
-  },
-  {
-    id: 'after-hours',
-    scenario: 'After-hours service request',
-    title: 'After-Hours Rate Response',
-    description: 'For calls outside business hours',
-    template: `"Since we're outside of regular business hours, after-hours rates apply, which are [EMERGENCY_MULTIPLIER]x our normal pricing. This includes the $[TRIP_FEE] trip fee. Our technician can still come out tonight if it's urgent, or we can schedule you for first thing tomorrow morning at standard rates. Which would you prefer?"`,
-    category: 'emergency',
-  },
-  {
-    id: 'price-objection',
-    scenario: 'Customer objects to pricing',
-    title: 'Pricing Objection Handling',
-    description: 'When customer thinks price is too high',
-    template: `"I understand your concern. Our pricing reflects our licensed, insured technicians, quality parts, and warranty on all work. The $[TRIP_FEE] trip fee covers the cost of having a technician come out, and you'll get an exact quote before any work begins. We also offer financing options for larger jobs. Would you like to schedule an appointment to get a firm quote?"`,
-    category: 'detailed',
-  },
-  {
-    id: 'competitor-comparison',
-    scenario: 'Customer mentions competitor pricing',
-    title: 'Competitor Price Comparison',
-    description: 'When customer compares to other companies',
-    template: `"I appreciate you doing your research. While other companies may quote different prices, our rates include licensed technicians, quality parts, workmanship warranty, and 24/7 availability. We're transparent about our $[TRIP_FEE] trip fee upfront, and our technician will provide a detailed quote before starting. We're confident in the value we provide. Would you like to schedule an appointment?"`,
-    category: 'detailed',
-  },
-  {
-    id: 'free-estimate',
-    scenario: 'Customer asks about free estimates',
-    title: 'Free Estimate Response',
-    description: 'When customer asks if estimates are free',
-    template: `"We charge a $[TRIP_FEE] trip fee for our technician to come out and assess your situation. This fee covers their time and expertise in diagnosing the issue. Once they provide you with a quote and you approve the work, the trip fee is often included in the total service price. This ensures our technicians can give you accurate, professional assessments."`,
-    category: 'detailed',
   },
 ]
 
@@ -255,13 +207,23 @@ export default function PricingResponseTemplates({
                     <span className="font-semibold">Scenario:</span> {template.scenario}
                   </CardDescription>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setExpandedId(expandedId === template.id ? null : template.id)}
-                >
-                  {expandedId === template.id ? 'Hide' : 'View'}
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setExpandedId(expandedId === template.id ? null : template.id)}
+                  >
+                    {expandedId === template.id ? 'Hide' : 'View'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => setTemplates(templates.filter((t) => t.id !== template.id))}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
 
@@ -322,14 +284,103 @@ export default function PricingResponseTemplates({
                   )}
                 </div>
 
-                <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
-                  <p className="font-semibold mb-1">When to use:</p>
-                  <p>{template.description}</p>
-                </div>
+                {editingId === template.id ? (
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-600">Title:</Label>
+                      <input
+                        type="text"
+                        value={template.title}
+                        onChange={(e) => {
+                          setTemplates(
+                            templates.map((t) => (t.id === template.id ? { ...t, title: e.target.value } : t))
+                          )
+                        }}
+                        className="w-full mt-1 px-2 py-1 border rounded text-xs"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-600">Scenario:</Label>
+                      <input
+                        type="text"
+                        value={template.scenario}
+                        onChange={(e) => {
+                          setTemplates(
+                            templates.map((t) => (t.id === template.id ? { ...t, scenario: e.target.value } : t))
+                          )
+                        }}
+                        className="w-full mt-1 px-2 py-1 border rounded text-xs"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-600">Description:</Label>
+                      <input
+                        type="text"
+                        value={template.description}
+                        onChange={(e) => {
+                          setTemplates(
+                            templates.map((t) => (t.id === template.id ? { ...t, description: e.target.value } : t))
+                          )
+                        }}
+                        className="w-full mt-1 px-2 py-1 border rounded text-xs"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-600">Category:</Label>
+                      <select
+                        value={template.category}
+                        onChange={(e) => {
+                          setTemplates(
+                            templates.map((t) =>
+                              t.id === template.id ? { ...t, category: e.target.value as any } : t
+                            )
+                          )
+                        }}
+                        className="w-full mt-1 px-2 py-1 border rounded text-xs"
+                      >
+                        <option value="simple">Simple</option>
+                        <option value="detailed">Detailed</option>
+                        <option value="emergency">Emergency</option>
+                      </select>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
+                    <p className="font-semibold mb-1">When to use:</p>
+                    <p>{template.description}</p>
+                  </div>
+                )}
               </CardContent>
             )}
           </Card>
         ))}
+        <Card className="border-dashed border-2 border-gray-300">
+          <CardContent className="pt-6">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                const newId = `custom-${Date.now()}`
+                setTemplates([
+                  ...templates,
+                  {
+                    id: newId,
+                    scenario: 'Custom pricing scenario',
+                    title: 'Custom Response',
+                    description: 'When customer asks about...',
+                    template: `"[Your custom response here] Use variables: $[TRIP_FEE], [EMERGENCY_MULTIPLIER]x for emergencies"`,
+                    category: 'simple',
+                  },
+                ])
+                setExpandedId(newId)
+                setEditingId(newId)
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Template
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Variables Reference */}
