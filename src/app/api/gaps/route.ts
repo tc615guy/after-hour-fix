@@ -47,6 +47,49 @@ function calculateDistance(
 }
 
 /**
+ * Get distance and travel time using Google Distance Matrix API
+ * Returns { distance: miles, duration: minutes } or null if failed
+ */
+async function getDistanceAndTime(
+  origin: { lat: number; lng: number },
+  destination: { lat: number; lng: number },
+  apiKey: string,
+  departureTime?: Date
+): Promise<{ distance: number; duration: number } | null> {
+  try {
+    const originStr = `${origin.lat},${origin.lng}`
+    const destStr = `${destination.lat},${destination.lng}`
+    const url = new URL('https://maps.googleapis.com/maps/api/distancematrix/json')
+    url.searchParams.set('origins', originStr)
+    url.searchParams.set('destinations', destStr)
+    url.searchParams.set('key', apiKey)
+    url.searchParams.set('units', 'imperial')
+    // Use departure_time for traffic-aware estimates (future bookings)
+    if (departureTime && departureTime > new Date()) {
+      url.searchParams.set('departure_time', Math.floor(departureTime.getTime() / 1000).toString())
+    }
+    
+    const response = await fetch(url.toString())
+    const data = await response.json()
+
+    if (data.status === 'OK' && data.rows && data.rows.length > 0) {
+      const element = data.rows[0].elements[0]
+      if (element && element.status === 'OK') {
+        const distanceMiles = element.distance.value / 1609.34 // Convert meters to miles
+        const durationMinutes = Math.ceil(element.duration.value / 60) // Convert seconds to minutes
+        return { distance: distanceMiles, duration: durationMinutes }
+      }
+    }
+
+    console.warn('[Distance Matrix] No results:', data.status)
+    return null
+  } catch (error: any) {
+    console.error('[Distance Matrix] Error:', error.message)
+    return null
+  }
+}
+
+/**
  * GET /api/gaps?projectId=...&start=ISO&end=ISO
  * Find gaps in technician schedules and suggest best assignments
  */
@@ -171,24 +214,48 @@ export async function GET(req: NextRequest) {
             const newCoords = await geocodeAddress(booking.address, googleApiKey)
             
             if (prevCoords && newCoords) {
-              const distance = calculateDistance(prevCoords, newCoords)
-              // Score decreases with distance: 0-2 miles = +100, 2-5 = +75, 5-10 = +50, 10+ = +25
-              if (distance < 2) {
-                score += 100
-                reasons.push(`${distance.toFixed(1)} miles away (very close)`)
-              } else if (distance < 5) {
-                score += 75
-                reasons.push(`${distance.toFixed(1)} miles away (nearby)`)
-              } else if (distance < 10) {
-                score += 50
-                reasons.push(`${distance.toFixed(1)} miles away`)
+              // Try Distance Matrix first for better accuracy
+              const bookingStart = booking.slotStart ? new Date(booking.slotStart) : undefined
+              const distanceTime = await getDistanceAndTime(prevCoords, newCoords, googleApiKey, bookingStart)
+              
+              if (distanceTime) {
+                // Use real travel time for scoring (includes traffic!)
+                const { distance, duration } = distanceTime
+                // Score decreases with distance and travel time
+                if (distance < 2 && duration < 5) {
+                  score += 100
+                  reasons.push(`${distance.toFixed(1)} mi, ${duration} min away (very close)`)
+                } else if (distance < 5 && duration < 15) {
+                  score += 75
+                  reasons.push(`${distance.toFixed(1)} mi, ${duration} min away (nearby)`)
+                } else if (distance < 10) {
+                  score += 50
+                  reasons.push(`${distance.toFixed(1)} mi, ${duration} min away`)
+                } else {
+                  score += 25
+                  reasons.push(`${distance.toFixed(1)} mi, ${duration} min away`)
+                }
               } else {
-                score += 25
-                reasons.push(`${distance.toFixed(1)} miles away`)
+                // Fallback to Haversine if Distance Matrix fails
+                const distance = calculateDistance(prevCoords, newCoords)
+                // Score decreases with distance: 0-2 miles = +100, 2-5 = +75, 5-10 = +50, 10+ = +25
+                if (distance < 2) {
+                  score += 100
+                  reasons.push(`${distance.toFixed(1)} miles away (very close)`)
+                } else if (distance < 5) {
+                  score += 75
+                  reasons.push(`${distance.toFixed(1)} miles away (nearby)`)
+                } else if (distance < 10) {
+                  score += 50
+                  reasons.push(`${distance.toFixed(1)} miles away`)
+                } else {
+                  score += 25
+                  reasons.push(`${distance.toFixed(1)} miles away`)
+                }
               }
             }
           } catch (err) {
-            // Geocoding failed, fall back to city matching
+            // Geocoding or API failed, fall back to city matching
           }
         }
         
