@@ -58,13 +58,17 @@ async function handleAvailabilityRequest(req: NextRequest) {
           const data = await resp.json()
           console.log('[Cal.com Availability] v2 API response:', JSON.stringify(data).substring(0, 500))
           
-          // Cal.com v2 returns { slots: [{ startTime, endTime }] }
-          const slotsArray = data?.slots || []
-          for (const slot of slotsArray) {
-            const st = slot?.startTime || slot?.start
-            const en = slot?.endTime || slot?.end
-            if (st) {
-              calcomSlots.push({ start: st, end: en })
+          // Cal.com v2 returns { data: { "2025-11-03": [{start: "..."}, ...] } }
+          const daySlots = data?.data || {}
+          for (const dateKey in daySlots) {
+            const slotsForDay = daySlots[dateKey] || []
+            for (const slot of slotsForDay) {
+              const st = slot?.start
+              if (st) {
+                // Default duration to 1 hour if no end time
+                const en = slot?.end || null
+                calcomSlots.push({ start: st, end: en })
+              }
             }
           }
         } else {
