@@ -194,14 +194,24 @@ async function handleAvailabilityRequest(req: NextRequest) {
   })
 
   // Vapi expects a "result" field with human-readable text for the AI
-  // AND the structured data for programmatic access
-  const resultText = `Available times: ${slotTimes.slice(0, 5).join(', ')}${slotTimes.length > 5 ? `, and ${slotTimes.length - 5} more slots` : ''}`
+  // Make it VERY explicit - tell the AI exactly what to say
+  const firstSlot = limitedSlots[0]
+  const firstTime = new Date(firstSlot.start).toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: project.timezone || 'America/Chicago'
+  })
+  
+  const resultText = `SUCCESS: Found ${limitedSlots.length} available slots. The first available time is ${firstTime}. Say to customer: "I can get someone out there at ${firstTime}. Does that work?"`
   
   const response = {
     result: resultText,
     slots: limitedSlots,
-    // Also include the result as "message" for compatibility
-    message: resultText,
+    firstSlot: firstTime,
+    totalSlots: limitedSlots.length,
     success: true
   }
 
