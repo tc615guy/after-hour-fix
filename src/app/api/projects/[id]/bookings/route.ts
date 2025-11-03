@@ -34,6 +34,14 @@ export async function GET(
       orderBy,
       take: limit,
       ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+      include: {
+        technician: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
     })
 
     const nextCursor = bookings.length === limit ? bookings[bookings.length - 1]?.id : undefined
