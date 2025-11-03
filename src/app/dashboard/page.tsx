@@ -326,8 +326,15 @@ export default function DashboardPage() {
       }
       const errors = (data.results || []).filter((r: any) => r.status === 'error').map((r: any) => ({ index: r.index, error: r.error }))
       setCsvResults({ created: data.created || 0, errors })
+      
+      if (errors.length > 0 && data.created === 0) {
+        // All rows failed - show detailed error
+        alert(`Import failed: ${errors[0].error}${errors.length > 1 ? ` (and ${errors.length - 1} more)` : ''}`)
+      }
+      
       await loadProjectData(selectedProject.id)
     } catch (e: any) {
+      console.error('Import error:', e)
       alert(`Import failed: ${e.message}`)
     } finally {
       setCsvImporting(false)
