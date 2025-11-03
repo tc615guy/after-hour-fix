@@ -179,7 +179,7 @@ export async function GET(
           const miles = calculateDistance(currentLocation, dest)
           actualMiles += miles
           
-          const travelTime = await getTravelTime(currentLocation, dest, googleApiKey, booking.slotStart)
+          const travelTime = await getTravelTime(currentLocation, dest, googleApiKey, booking.slotStart || undefined)
           if (travelTime) {
             actualMinutes += travelTime
           }
@@ -224,7 +224,7 @@ export async function GET(
               optimalMiles += nearestDist
               currentLocation = dest
 
-              const travelTime = await getTravelTime(currentLocation, dest, googleApiKey, nearest.slotStart)
+              const travelTime = await getTravelTime(currentLocation, dest, googleApiKey, nearest.slotStart || undefined)
               if (travelTime) {
                 optimalMinutes += travelTime
               }
