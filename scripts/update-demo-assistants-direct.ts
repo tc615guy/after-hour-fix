@@ -20,6 +20,12 @@ if (!VAPI_API_KEY) {
 // Demo assistants with their project IDs and trade info
 const DEMO_ASSISTANTS = [
   {
+    vapiAssistantId: '3d8a9feb-6089-42d7-996f-d03555702f6f',
+    name: "Josh's Heating and Cooling",
+    projectId: 'cmhi8al3a0001l504q942hc16',
+    trade: 'hvac',
+  },
+  {
     vapiAssistantId: '66ac9a80-cee3-4084-95fa-c51ede8ccf5c',
     name: 'Demo Plumbing',
     projectId: 'cmhi8al3a0001l504q942hc16',
@@ -100,7 +106,7 @@ async function updateAssistant(demo: typeof DEMO_ASSISTANTS[0]) {
 }
 
 async function main() {
-  console.log('🚀 Updating All 3 Demo Assistants with Latest Features\n')
+  console.log('🚀 Updating All Assistants with Latest Features\n')
   console.log('='.repeat(70))
 
   let successCount = 0
@@ -110,7 +116,7 @@ async function main() {
   }
 
   console.log('\n' + '='.repeat(70))
-  console.log(`✅ Update complete: ${successCount}/${DEMO_ASSISTANTS.length} demo assistants updated`)
+  console.log(`✅ Update complete: ${successCount}/${DEMO_ASSISTANTS.length} assistants updated`)
   console.log('='.repeat(70) + '\n')
 }
 
