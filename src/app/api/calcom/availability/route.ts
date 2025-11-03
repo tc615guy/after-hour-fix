@@ -143,13 +143,13 @@ async function handleAvailabilityRequest(req: NextRequest) {
     // BUSINESS RULE: If it's after 4 PM in project timezone, filter out today's slots
     // (Unless it's an emergency, but AI will handle that separately)
     const tz = project.timezone || 'America/Chicago'
-    const now = new Date()
-    const currentHour = parseInt(now.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: tz }))
+    const currentTime = new Date()
+    const currentHour = parseInt(currentTime.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: tz }))
     
     let filteredSlots = availableSlots
     if (currentHour >= 16) { // After 4 PM
       // Get today's date in the project timezone (not UTC!)
-      const todayStr = now.toLocaleDateString('en-US', { 
+      const todayStr = currentTime.toLocaleDateString('en-US', { 
         year: 'numeric', 
         month: '2-digit', 
         day: '2-digit',
