@@ -92,44 +92,58 @@ export async function POST(
         
         // Try to match technician by ID or name, create if doesn't exist
         let technicianId = null
-        if (r.technicianId || r.technician) {
-          const techName = (r.technician || '').trim()
-          const techId = (r.technicianId || '').trim()
-          
-          if (techId) {
-            const byId = await prisma.technician.findFirst({
-              where: { projectId, id: techId, deletedAt: null },
-              select: { id: true },
-            })
-            if (byId) technicianId = byId.id
-          } else if (techName) {
-            const byName = await prisma.technician.findFirst({
-              where: { 
-                projectId, 
-                name: { equals: techName, mode: 'insensitive' },
-                deletedAt: null 
+        const techName = (r.technician || '').trim()
+        const techId = (r.technicianId || '').trim()
+        
+        // Log for debugging
+        if (techId || techName) {
+          console.log(`[Import] Row ${i}: techId="${techId}", techName="${techName}"`)
+        }
+        
+        if (techId) {
+          const byId = await prisma.technician.findFirst({
+            where: { projectId, id: techId, deletedAt: null },
+            select: { id: true },
+          })
+          if (byId) {
+            technicianId = byId.id
+            console.log(`[Import] Row ${i}: Matched technician by ID: ${byId.id}`)
+          } else {
+            console.log(`[Import] Row ${i}: Technician ID "${techId}" not found`)
+          }
+        } else if (techName) {
+          const byName = await prisma.technician.findFirst({
+            where: { 
+              projectId, 
+              name: { equals: techName, mode: 'insensitive' },
+              deletedAt: null 
+            },
+            select: { id: true },
+          })
+          if (byName) {
+            technicianId = byName.id
+            console.log(`[Import] Row ${i}: Matched technician by name: ${byName.id} (${techName})`)
+          } else {
+            // Auto-create technician if doesn't exist
+            const newTech = await prisma.technician.create({
+              data: {
+                projectId,
+                name: techName,
+                phone: r.customerPhone || '000-000-0000', // Use customer phone as placeholder if no tech phone
+                isActive: true,
               },
-              select: { id: true },
             })
-            if (byName) {
-              technicianId = byName.id
-            } else {
-              // Auto-create technician if doesn't exist
-              const newTech = await prisma.technician.create({
-                data: {
-                  projectId,
-                  name: techName,
-                  phone: r.customerPhone || '000-000-0000', // Use customer phone as placeholder if no tech phone
-                  isActive: true,
-                },
-              })
-              technicianId = newTech.id
-              await audit({ projectId, type: 'technician.autoCreated', payload: { id: newTech.id, name: techName } })
-            }
+            technicianId = newTech.id
+            console.log(`[Import] Row ${i}: Auto-created technician: ${newTech.id} (${techName})`)
+            await audit({ projectId, type: 'technician.autoCreated', payload: { id: newTech.id, name: techName } })
           }
         }
         
-        await prisma.booking.create({
+        if (!technicianId && (techId || techName)) {
+          console.warn(`[Import] Row ${i}: Failed to assign technician (techId="${techId}", techName="${techName}")`)
+        }
+        
+        const booking = await prisma.booking.create({
           data: {
             projectId,
             technicianId,
@@ -144,6 +158,11 @@ export async function POST(
             priceCents: typeof r.priceCents === 'number' ? r.priceCents : null,
           },
         })
+        if (technicianId) {
+          console.log(`[Import] Row ${i}: Created booking ${booking.id} with technicianId=${technicianId}`)
+        } else {
+          console.log(`[Import] Row ${i}: Created booking ${booking.id} WITHOUT technicianId`)
+        }
         created++
         results.push({ index: i, status: 'ok' })
       } catch (e: any) {

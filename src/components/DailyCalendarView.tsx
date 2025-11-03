@@ -165,7 +165,18 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
 
       if (bookingsRes.ok) {
         const bookingsData = await bookingsRes.json()
-        setBookings(Array.isArray(bookingsData.bookings) ? bookingsData.bookings : [])
+        const bookingsList = Array.isArray(bookingsData.bookings) ? bookingsData.bookings : []
+        // Debug: Log first booking to check technicianId
+        if (bookingsList.length > 0) {
+          const firstBooking = bookingsList[0]
+          console.log('[DailyCalendar] First booking:', {
+            id: firstBooking.id,
+            customerName: firstBooking.customerName,
+            technicianId: firstBooking.technicianId,
+            technician: firstBooking.technician
+          })
+        }
+        setBookings(bookingsList)
       }
 
       if (techsRes.ok) {

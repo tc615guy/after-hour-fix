@@ -316,6 +316,20 @@ export default function DashboardPage() {
           return true
         })
       }
+      
+      // Debug: Log first row to see technician fields
+      if (rows.length > 0) {
+        const firstRow = rows[0]
+        console.log('[Dashboard] First row technician data:', {
+          technician: firstRow.technician,
+          technicianId: firstRow.technicianId,
+          csvMapping: {
+            technician: csvMapping.technician,
+            technicianId: csvMapping.technicianId
+          }
+        })
+      }
+      
       const res = await fetch(`/api/projects/${selectedProject.id}/bookings/import-batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
