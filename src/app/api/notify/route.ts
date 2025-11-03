@@ -15,7 +15,40 @@ const NotifySchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const params = body.parameters || body
+    let params = body.parameters || body
+
+    // Handle escalate_owner function format: {reason, customerPhone}
+    // Transform to notify format: {type: 'escalate', to, message, reason, customerPhone}
+    if (params.reason && params.customerPhone && !params.type) {
+      console.log('[NOTIFY] Detected escalate_owner function call, transforming parameters')
+
+      // Get project ID to find owner email
+      const url = new URL(req.url)
+      const projectId = url.searchParams.get('projectId')
+
+      if (!projectId) {
+        return NextResponse.json({ error: 'Missing projectId for escalation' }, { status: 400 })
+      }
+
+      const { prisma } = await import('@/lib/db')
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        include: { owner: true },
+      })
+
+      if (!project) {
+        return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      }
+
+      params = {
+        type: 'escalate',
+        to: project.owner.email,
+        message: `Escalation requested during call with customer ${params.customerPhone}`,
+        reason: params.reason,
+        customerPhone: params.customerPhone,
+      }
+    }
+
     const input = NotifySchema.parse(params)
 
     if (input.type === 'email') {
