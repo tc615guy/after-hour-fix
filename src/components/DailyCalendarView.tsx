@@ -117,7 +117,7 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
     top: number
     height: number
     left: number
-    width: number
+    width: string | number
   } {
     const start = new Date(booking.slotStart || '')
     const end = booking.slotEnd ? new Date(booking.slotEnd) : new Date(start.getTime() + 60 * 60 * 1000) // default 1 hour
