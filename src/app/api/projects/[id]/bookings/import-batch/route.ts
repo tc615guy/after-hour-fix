@@ -88,7 +88,7 @@ export async function POST(
         // Build address if components provided
         const address = r.address || [r.street, r.city, r.state, r.zip].filter(Boolean).join(', ').trim() || null
         
-        // Try to match technician by ID or name
+        // Try to match technician by ID or name, create if doesn't exist
         let technicianId = null
         if (r.technicianId || r.technician) {
           const techName = (r.technician || '').trim()
@@ -109,7 +109,21 @@ export async function POST(
               },
               select: { id: true },
             })
-            if (byName) technicianId = byName.id
+            if (byName) {
+              technicianId = byName.id
+            } else {
+              // Auto-create technician if doesn't exist
+              const newTech = await prisma.technician.create({
+                data: {
+                  projectId,
+                  name: techName,
+                  phone: r.customerPhone || '000-000-0000', // Use customer phone as placeholder if no tech phone
+                  isActive: true,
+                },
+              })
+              technicianId = newTech.id
+              await audit({ projectId, type: 'technician.autoCreated', payload: { id: newTech.id, name: techName } })
+            }
           }
         }
         

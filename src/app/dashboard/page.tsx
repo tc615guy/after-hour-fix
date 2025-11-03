@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch'
 import MobileNav from '@/components/MobileNav'
 import { formatCurrency, formatDuration, formatPhoneNumber } from '@/lib/utils'
 import CalendarView from '@/components/CalendarView'
+import DailyCalendarView from '@/components/DailyCalendarView'
 import GapFinder from '@/components/GapFinder'
 import FuelSavings from '@/components/FuelSavings'
 import FirstTimePopup from '@/components/FirstTimePopup'
@@ -22,7 +23,7 @@ export default function DashboardPage() {
   const [selectedProject, setSelectedProject] = useState<any>(null)
   const [calls, setCalls] = useState<any[]>([])
   const [bookings, setBookings] = useState<any[]>([])
-  const [view, setView] = useState<'list' | 'calendar' | 'gaps'>('list')
+  const [view, setView] = useState<'list' | 'calendar' | 'daily' | 'gaps'>('list')
   const [stats, setStats] = useState({
     callsToday: 0,
     bookingsWeek: 0,
@@ -961,7 +962,15 @@ export default function DashboardPage() {
                   onClick={() => setView('calendar')}
                 >
                   <CalendarIcon className="w-4 h-4 mr-2" />
-                  Calendar
+                  Month
+                </Button>
+                <Button
+                  variant={view === 'daily' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setView('daily')}
+                >
+                  <Clock className="w-4 h-4 mr-2" />
+                  Daily
                 </Button>
                 <Button
                   variant={view === 'gaps' ? 'default' : 'outline'}
@@ -1068,6 +1077,8 @@ export default function DashboardPage() {
             )}
             {view === 'calendar' && selectedProject ? (
               <CalendarView projectId={selectedProject.id} />
+            ) : view === 'daily' && selectedProject ? (
+              <DailyCalendarView projectId={selectedProject.id} />
             ) : view === 'gaps' && selectedProject ? (
               <GapFinder projectId={selectedProject.id} />
             ) : bookings.length === 0 ? (
