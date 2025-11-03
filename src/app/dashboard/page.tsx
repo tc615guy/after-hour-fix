@@ -242,12 +242,14 @@ export default function DashboardPage() {
     } else if (csvMapping.date && csvMapping.startTime) {
       const d = get(csvMapping.date)
       const t = get(csvMapping.startTime)
-      slotStart = parseDateFlexible(`${d} ${t}`)
+      // Use ISO format T separator for better compatibility
+      slotStart = parseDateFlexible(`${d}T${t}`)
     }
     if (csvMapping.date && csvMapping.endTime) {
       const d = get(csvMapping.date)
       const t = get(csvMapping.endTime)
-      slotEnd = parseDateFlexible(`${d} ${t}`)
+      // Use ISO format T separator for better compatibility
+      slotEnd = parseDateFlexible(`${d}T${t}`)
     }
     // Build address if components mapped
     const address = csvMapping.street ? [get(csvMapping.street), get(csvMapping.city), get(csvMapping.state), get(csvMapping.zip)].filter(Boolean).join(', ') : ''
