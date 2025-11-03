@@ -143,17 +143,33 @@ async function handleAvailabilityRequest(req: NextRequest) {
     // BUSINESS RULE: If it's after 4 PM in project timezone, filter out today's slots
     // (Unless it's an emergency, but AI will handle that separately)
     const tz = project.timezone || 'America/Chicago'
-    const nowInTz = new Date().toLocaleString('en-US', { timeZone: tz })
-    const currentHour = new Date(nowInTz).getHours()
+    const now = new Date()
+    const currentHour = parseInt(now.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: tz }))
     
     let filteredSlots = availableSlots
     if (currentHour >= 16) { // After 4 PM
-      const todayStr = new Date(nowInTz).toISOString().split('T')[0] // YYYY-MM-DD
+      // Get today's date in the project timezone (not UTC!)
+      const todayStr = now.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit',
+        timeZone: tz 
+      }).split('/').reverse().join('-') // Convert MM/DD/YYYY to YYYY-MM-DD
+      
+      console.log(`[Cal.com Availability] After 4 PM (${currentHour}:00) - filtering out slots for ${todayStr}`)
+      
       filteredSlots = availableSlots.filter(slot => {
-        const slotDate = new Date(slot.start).toISOString().split('T')[0]
+        // Convert slot time to project timezone date string
+        const slotDate = new Date(slot.start).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          timeZone: tz
+        }).split('/').reverse().join('-') // Convert MM/DD/YYYY to YYYY-MM-DD
+        
         return slotDate !== todayStr // Exclude today's slots
       })
-      console.log(`[Cal.com Availability] After 4 PM - filtered out today's slots. ${filteredSlots.length} slots remain`)
+      console.log(`[Cal.com Availability] Filtered out today's slots. ${filteredSlots.length} slots remain`)
     }
 
     // Limit to first 20 slots to avoid overwhelming the AI with too many options
