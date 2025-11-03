@@ -417,7 +417,7 @@ export function buildAssistantTools(appUrl: string, projectId?: string): VapiAss
         },
       },
       server: {
-        url: `${appUrl}/api/test-slots${q}`,
+        url: `${appUrl}/api/calcom/availability${q}`,
       },
     },
     {
