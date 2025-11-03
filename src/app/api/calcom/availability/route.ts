@@ -48,7 +48,7 @@ async function handleAvailabilityRequest(req: NextRequest) {
     console.log('[Cal.com Availability] Raw response:', JSON.stringify(data).substring(0, 500))
     
     // Normalize various possible shapes to a flat slots array
-    const slots: Array<{ start: string; end?: string }> = []
+    const calcomSlots: Array<{ start: string; end?: string }> = []
     // Common shapes: data.timeframes[].slots[] or data.data.timeframes[].slots[]
     const frames = (data?.timeframes || data?.data?.timeframes || data?.data || data) as any
     const arr = Array.isArray(frames) ? frames : []
@@ -60,12 +60,59 @@ async function handleAvailabilityRequest(req: NextRequest) {
       for (const slot of s) {
         const st = slot?.start || slot?.startTime || slot?.time || slot
         const en = slot?.end || slot?.endTime
-        if (st && !isNaN(new Date(st).getTime())) slots.push({ start: new Date(st).toISOString(), end: en ? new Date(en).toISOString() : undefined })
+        if (st && !isNaN(new Date(st).getTime())) calcomSlots.push({ start: new Date(st).toISOString(), end: en ? new Date(en).toISOString() : undefined })
       }
     }
 
-    console.log(`[Cal.com Availability] Returning ${slots.length} slots total`)
-    return NextResponse.json({ success: true, slots })
+    console.log(`[Cal.com Availability] Found ${calcomSlots.length} slots from Cal.com`)
+
+    // SMART ROUTING: Filter slots to only include those where at least one technician is available
+    // Get all active technicians and their bookings in the time range
+    const technicians = await prisma.technician.findMany({
+      where: { projectId, isActive: true, deletedAt: null },
+      include: {
+        bookings: {
+          where: {
+            slotStart: { gte: new Date(startIso), lte: new Date(endIso) },
+            status: { in: ['pending', 'booked', 'en_route'] },
+            deletedAt: null,
+          },
+        },
+      },
+    })
+
+    console.log(`[Cal.com Availability] Checking availability against ${technicians.length} technicians`)
+
+    // Filter slots to only those where at least one technician is free
+    const availableSlots: Array<{ start: string; end?: string }> = []
+    for (const slot of calcomSlots) {
+      const slotStart = new Date(slot.start)
+      const slotEnd = slot.end ? new Date(slot.end) : new Date(slotStart.getTime() + 60 * 60 * 1000) // Default 1 hour
+      
+      // Check if any technician is available for this slot
+      let hasAvailableTech = false
+      for (const tech of technicians) {
+        const isConflicted = tech.bookings.some((b) => {
+          if (!b.slotStart) return false
+          const bStart = new Date(b.slotStart)
+          const bEnd = b.slotEnd ? new Date(b.slotEnd) : new Date(bStart.getTime() + 60 * 60 * 1000)
+          // Check for overlap
+          return slotStart < bEnd && slotEnd > bStart
+        })
+        
+        if (!isConflicted) {
+          hasAvailableTech = true
+          break
+        }
+      }
+      
+      if (hasAvailableTech) {
+        availableSlots.push(slot)
+      }
+    }
+
+    console.log(`[Cal.com Availability] Returning ${availableSlots.length} available slots (filtered from ${calcomSlots.length} Cal.com slots)`)
+    return NextResponse.json({ success: true, slots: availableSlots })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to get availability' }, { status: 500 })
   }
