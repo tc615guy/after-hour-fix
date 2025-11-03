@@ -71,6 +71,7 @@ async function handleAvailabilityRequest(req: NextRequest) {
               }
             }
           }
+          console.log(`[Cal.com Availability] Parsed ${calcomSlots.length} slots from v2 response`)
         } else {
           const txt = await resp.text()
           console.log(`[Cal.com Availability] v2 failed (${resp.status}): ${txt.substring(0, 200)}`)
