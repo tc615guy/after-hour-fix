@@ -17,7 +17,8 @@ import {
   ExternalLink,
   LogIn,
   AlertCircle,
-  RefreshCcw
+  RefreshCcw,
+  Trash2
 } from 'lucide-react'
 
 interface CustomerMetrics {
@@ -150,6 +151,32 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleDeleteProjects = async () => {
+    const projectNames = prompt('Enter project names to delete (comma-separated):\n\nExample: JB Plumbing, Big Daddy Plumbing')
+    if (!projectNames) return
+    
+    const names = projectNames.split(',').map(n => n.trim()).filter(Boolean)
+    if (names.length === 0) return
+    
+    if (!confirm(`Delete ${names.length} project(s)?\n\n${names.join('\n')}\n\nThis will soft-delete them from the database.`)) return
+    
+    try {
+      const res = await fetch('/api/admin/delete-projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectNames: names }),
+      })
+      const data = await res.json()
+      
+      if (!res.ok) throw new Error(data.error || 'Delete failed')
+      
+      alert(`✅ Successfully deleted ${data.deleted}/${data.total} project(s)!`)
+      await loadAdminData()
+    } catch (error: any) {
+      alert(`Error: ${error.message}`)
+    }
+  }
+
   const filteredCustomers = customers.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -214,6 +241,14 @@ export default function AdminDashboard() {
               >
                 <RefreshCcw className={`w-4 h-4 mr-2 ${syncingAssistants ? 'animate-spin' : ''}`} />
                 {syncingAssistants ? 'Syncing...' : 'Sync All Assistants'}
+              </Button>
+              <Button 
+                variant="outline" 
+                className="bg-red-50 text-red-600 hover:bg-red-100 border-red-300"
+                onClick={handleDeleteProjects}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Projects
               </Button>
               <Link href="/dashboard">
                 <Button variant="outline" className="bg-white text-purple-600 hover:bg-purple-50">
