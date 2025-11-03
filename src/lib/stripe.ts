@@ -27,6 +27,7 @@ export const stripe = new Proxy({} as Stripe, {
 export const STARTER_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 'price_starter'
 export const PRO_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 'price_pro'
 export const PREMIUM_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || 'price_premium'
+export const SETUP_FEE_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_SETUP_FEE_PRICE_ID || null
 
 export async function createCheckoutSession(
   userId: string,
@@ -36,17 +37,27 @@ export async function createCheckoutSession(
   cancelUrl: string
 ): Promise<string> {
   try {
+    const lineItems: Array<{ price: string; quantity: number }> = [
+      {
+        price: priceId,
+        quantity: 1,
+      },
+    ]
+
+    // Add setup fee if configured
+    if (SETUP_FEE_PRICE_ID) {
+      lineItems.push({
+        price: SETUP_FEE_PRICE_ID,
+        quantity: 1,
+      })
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer_email: email,
       client_reference_id: userId,
       payment_method_types: ['card'],
       mode: 'subscription',
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       success_url: successUrl,
       cancel_url: cancelUrl,
       subscription_data: {
