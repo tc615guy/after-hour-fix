@@ -377,7 +377,9 @@ export function buildAssistantTools(appUrl: string, projectId?: string): VapiAss
     console.warn('Vapi tools disabled: non-secure appUrl detected', appUrl)
     return []
   }
-  const q = projectId ? `?projectId=${encodeURIComponent(projectId)}` : ''
+  // NOTE: We're using webhook-based function calling instead of server tools
+  // Vapi will send function-call events to our webhook, we'll process them and respond
+  // This is more reliable than server tools which weren't passing results back to the AI
   return [
     {
       type: 'function',
@@ -399,9 +401,7 @@ export function buildAssistantTools(appUrl: string, projectId?: string): VapiAss
           required: ['customerName', 'customerPhone', 'address', 'notes', 'startTime'],
         },
       },
-      server: {
-        url: `${appUrl}/api/book${q}`,
-      },
+      // No 'server' field = webhook-based function calling
     },
     {
       type: 'function',
@@ -416,9 +416,6 @@ export function buildAssistantTools(appUrl: string, projectId?: string): VapiAss
           },
         },
       },
-      server: {
-        url: `${appUrl}/api/calcom/availability${q}`,
-      },
     },
     {
       type: 'function',
@@ -429,9 +426,6 @@ export function buildAssistantTools(appUrl: string, projectId?: string): VapiAss
           type: 'object',
           properties: {},
         },
-      },
-      server: {
-        url: `${appUrl}/api/pricing/assistant${q}`,
       },
     },
     {
@@ -447,9 +441,6 @@ export function buildAssistantTools(appUrl: string, projectId?: string): VapiAss
           },
         },
       },
-      server: {
-        url: `${appUrl}/api/gaps${q}`,
-      },
     },
     {
       type: 'function',
@@ -463,9 +454,6 @@ export function buildAssistantTools(appUrl: string, projectId?: string): VapiAss
           },
           required: ['address'],
         },
-      },
-      server: {
-        url: `${appUrl}/api/service-area/check${q}`,
       },
     },
   ]

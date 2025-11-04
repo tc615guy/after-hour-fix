@@ -313,21 +313,116 @@ export async function POST(req: NextRequest) {
       }
 
       case 'function-call': {
-        // Tool invocation from assistant
-        const { functionCall } = message || {}
+        // Tool invocation from assistant - we need to process it and return the result
+        const { functionCall, call: callData } = message || {}
         if (!functionCall) break
 
-        console.log('Vapi function call:', functionCall.name, functionCall.parameters)
+        console.log('[Webhook] function-call received:', functionCall.name, functionCall.parameters)
 
-        // These are handled by the specific tool endpoints (/api/book, /api/notify)
-        // This webhook just logs them
+        // Log the function call
         await prisma.eventLog.create({
           data: {
             type: `vapi.function_call.${functionCall.name}`,
             payload: functionCall,
           },
         })
-        break
+
+        // Get projectId from the call's assistant
+        let projectId: string | null = null
+        if (callData?.assistantId) {
+          const agent = await prisma.agent.findFirst({
+            where: { vapiAssistantId: callData.assistantId },
+            select: { projectId: true }
+          })
+          projectId = agent?.projectId || null
+        }
+
+        console.log('[Webhook] Processing function call for projectId:', projectId)
+
+        // Process the function call and get the result
+        let result: string = 'Function executed successfully'
+        
+        try {
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://afterhourfix.com'
+          const params = functionCall.parameters || {}
+          
+          switch (functionCall.name) {
+            case 'get_slots': {
+              const start = params.start || new Date().toISOString()
+              const end = params.end || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+              const url = `${appUrl}/api/calcom/availability?projectId=${projectId}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
+              console.log('[Webhook] Calling get_slots:', url)
+              const res = await fetch(url)
+              const data = await res.json()
+              result = data.result || data.message || 'Available slots retrieved'
+              console.log('[Webhook] get_slots result:', result)
+              break
+            }
+            
+            case 'book_slot': {
+              const url = `${appUrl}/api/book?projectId=${projectId}`
+              console.log('[Webhook] Calling book_slot:', url, params)
+              const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params)
+              })
+              const data = await res.json()
+              result = data.result || data.message || 'Booking processed'
+              console.log('[Webhook] book_slot result:', result)
+              break
+            }
+            
+            case 'get_pricing': {
+              const url = `${appUrl}/api/pricing/assistant?projectId=${projectId}`
+              console.log('[Webhook] Calling get_pricing:', url)
+              const res = await fetch(url)
+              const data = await res.json()
+              result = data.result || data.message || 'Pricing retrieved'
+              console.log('[Webhook] get_pricing result:', result)
+              break
+            }
+            
+            case 'check_service_area': {
+              const address = params.address || ''
+              const url = `${appUrl}/api/service-area/check?projectId=${projectId}&address=${encodeURIComponent(address)}`
+              console.log('[Webhook] Calling check_service_area:', url)
+              const res = await fetch(url)
+              const data = await res.json()
+              result = data.result || data.message || 'Service area checked'
+              console.log('[Webhook] check_service_area result:', result)
+              break
+            }
+            
+            case 'find_gaps': {
+              const start = params.start || new Date().toISOString()
+              const end = params.end || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+              const url = `${appUrl}/api/gaps?projectId=${projectId}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
+              console.log('[Webhook] Calling find_gaps:', url)
+              const res = await fetch(url, { method: 'POST' })
+              const data = await res.json()
+              result = data.result || data.message || 'Gaps analyzed'
+              console.log('[Webhook] find_gaps result:', result)
+              break
+            }
+            
+            default:
+              result = `Unknown function: ${functionCall.name}`
+              console.warn('[Webhook] Unknown function call:', functionCall.name)
+          }
+        } catch (error: any) {
+          console.error('[Webhook] Function call error:', error)
+          result = `Error: ${error.message || 'Function execution failed'}`
+        }
+
+        // Return the result in the format Vapi expects
+        console.log('[Webhook] Returning function result:', result)
+        return NextResponse.json({
+          results: [{
+            toolCallId: functionCall.id || functionCall.name,
+            result: result
+          }]
+        })
       }
 
       case 'end-of-call-report': {
