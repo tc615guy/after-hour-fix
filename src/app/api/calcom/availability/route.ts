@@ -245,16 +245,21 @@ async function handleAvailabilityRequest(req: NextRequest) {
     timeZone: project.timezone || 'America/Chicago'
   })
   
-  // Double-check: Extract hour to verify AM/PM
-  const hour = firstSlotDate.getHours()
-  const ampm = hour >= 12 ? 'PM' : 'AM'
-  const displayHour = hour % 12 || 12
+  // Double-check: Extract hour in PROJECT TIMEZONE to verify AM/PM
+  // CRITICAL: getHours() returns UTC, we need the hour in the project timezone!
+  const hourInTimezone = parseInt(firstSlotDate.toLocaleString('en-US', { 
+    hour: 'numeric', 
+    hour12: false, 
+    timeZone: project.timezone || 'America/Chicago' 
+  }))
+  const ampm = hourInTimezone >= 12 ? 'PM' : 'AM'
+  const displayHour = hourInTimezone % 12 || 12
   const minute = firstSlotDate.getMinutes().toString().padStart(2, '0')
   const explicitTime = `${displayHour}:${minute} ${ampm}`
   
-  console.log(`[Cal.com Availability] First slot time verification: ${firstTime} (explicit: ${explicitTime}, hour: ${hour})`)
+  console.log(`[Cal.com Availability] First slot time verification: ${firstTime} (explicit: ${explicitTime}, hour in ${tz}: ${hourInTimezone})`)
   
-  const resultText = `SUCCESS: Found ${limitedSlots.length} available slots. The first available time is ${firstTime}. IMPORTANT: This is ${ampm} (${hour >= 12 ? 'afternoon/evening' : 'morning'}), NOT ${ampm === 'AM' ? 'PM' : 'AM'}. Say to customer: "I can get someone out there at ${firstTime}. Does that work?"`
+  const resultText = `SUCCESS: Found ${limitedSlots.length} available slots. The first available time is ${firstTime}. IMPORTANT: This is ${ampm} (${hourInTimezone >= 12 ? 'afternoon/evening' : 'morning'}), NOT ${ampm === 'AM' ? 'PM' : 'AM'}. Say to customer: "I can get someone out there at ${firstTime}. Does that work?"`
   
   const response = {
     result: resultText,
