@@ -115,7 +115,7 @@ export class AudioConverter {
     try {
       // Use dynamic import for WebAssembly module
       // speex-resampler uses default export
-      const SpeexResamplerModule = await import('speex-resampler')
+      const SpeexResamplerModule = await import('speex-resampler') as any
       const SpeexResampler = SpeexResamplerModule.default || SpeexResamplerModule.SpeexResampler
       
       // Wait for WASM to initialize

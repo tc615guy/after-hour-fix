@@ -12,19 +12,19 @@
   },
   "dependencies": {
     "@prisma/client": "^6.18.0",
-    "dotenv": "^16.6.1",
-    "express": "^4.21.1",
-    "openai": "^4.67.1",
-    "speex-resampler": "^3.0.1",
-    "twilio": "^5.10.4",
-    "ws": "^8.18.0"
-  },
-  "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "^22.10.2",
     "@types/ws": "^8.5.13",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.1",
+    "openai": "^4.67.1",
     "prisma": "^6.18.0",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "speex-resampler": "^3.0.1",
+    "twilio": "^5.10.4",
+    "typescript": "^5.7.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
   }
 }
