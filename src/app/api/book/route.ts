@@ -327,13 +327,15 @@ export async function POST(req: NextRequest) {
           const v1Booking = await calcomClient.createBooking({
             eventTypeId: eventTypeId,
             start: startTime.toISOString(),
-            responses: {
+            end: endTime.toISOString(),
+            attendee: {
               name: input.customerName,
               email: `${phoneDigits}@sms.afterhourfix.com`,
-              location: { value: input.address, optionValue: '' },
+              timeZone: project.timezone || 'America/Chicago',
+              phoneNumber: input.customerPhone,
             },
-            timeZone: project.timezone || 'America/Chicago',
-            language: 'en',
+            location: input.address,
+            description: input.notes,
             metadata: {
               customerPhone: input.customerPhone,
               address: input.address,
