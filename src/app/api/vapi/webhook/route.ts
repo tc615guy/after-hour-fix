@@ -314,8 +314,17 @@ export async function POST(req: NextRequest) {
 
       case 'tool-calls': {
         // Vapi sends tool-calls event with toolCallList array
+        console.log('[Webhook] tool-calls case triggered! Message keys:', Object.keys(message || {}))
+        console.log('[Webhook] Full message:', JSON.stringify(message, null, 2))
+        
         const { toolCallList, call: callData } = message || {}
-        if (!toolCallList || toolCallList.length === 0) break
+        console.log('[Webhook] toolCallList:', toolCallList)
+        console.log('[Webhook] toolCallList length:', toolCallList?.length)
+        
+        if (!toolCallList || toolCallList.length === 0) {
+          console.log('[Webhook] BREAKING: toolCallList is empty or undefined')
+          break
+        }
 
         console.log('[Webhook] tool-calls received:', toolCallList.length, 'calls')
 
