@@ -43,10 +43,13 @@ export async function POST(req: NextRequest) {
     // Parse payload after verification
     const payload = JSON.parse(rawBody.toString())
     const { type, call, message } = payload
+    
+    // CRITICAL: Vapi sends tool-calls with type INSIDE message, not at top level
+    const eventType = type || message?.type
 
-    console.log('Vapi webhook received:', type, payload)
+    console.log('Vapi webhook received:', eventType, payload)
 
-    switch (type) {
+    switch (eventType) {
       case 'assistant-request': {
         // Don't override - let the assistant use its configured model
         // The assistant is already configured with OpenAI gpt-4o-mini which has better function calling
