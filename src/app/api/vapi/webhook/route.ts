@@ -312,12 +312,121 @@ export async function POST(req: NextRequest) {
         break
       }
 
+      case 'tool-calls': {
+        // Vapi sends tool-calls event with toolCallList array
+        const { toolCallList, call: callData } = message || {}
+        if (!toolCallList || toolCallList.length === 0) break
+
+        console.log('[Webhook] tool-calls received:', toolCallList.length, 'calls')
+
+        // Process each tool call
+        const results = []
+        for (const toolCall of toolCallList) {
+          const functionCall = toolCall.function
+          if (!functionCall) continue
+
+          console.log('[Webhook] Processing tool call:', functionCall.name, functionCall.arguments)
+
+          // Log the function call
+          await prisma.eventLog.create({
+            data: {
+              type: `vapi.tool_call.${functionCall.name}`,
+              payload: { toolCallId: toolCall.id, function: functionCall },
+            },
+          })
+
+          // Get projectId from the call's assistant
+          let projectId: string | null = null
+          if (callData?.assistantId) {
+            const agent = await prisma.agent.findFirst({
+              where: { vapiAssistantId: callData.assistantId },
+              select: { projectId: true }
+            })
+            projectId = agent?.projectId || null
+          }
+
+          console.log('[Webhook] Processing tool call for projectId:', projectId)
+
+          // Process the function call and get the result
+          let result: string = 'Function executed successfully'
+          
+          try {
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://afterhourfix.com'
+            const params = JSON.parse(functionCall.arguments || '{}')
+            
+            switch (functionCall.name) {
+              case 'get_slots': {
+                const start = params.start || new Date().toISOString()
+                const end = params.end || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+                const url = `${appUrl}/api/calcom/availability?projectId=${projectId}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
+                console.log('[Webhook] Calling get_slots:', url)
+                const res = await fetch(url)
+                const data = await res.json()
+                result = data.result || data.message || 'Available slots retrieved'
+                console.log('[Webhook] get_slots result:', result)
+                break
+              }
+              
+              case 'book_slot': {
+                const url = `${appUrl}/api/book?projectId=${projectId}`
+                console.log('[Webhook] Calling book_slot:', url, params)
+                const res = await fetch(url, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(params)
+                })
+                const data = await res.json()
+                result = data.result || data.message || 'Booking created successfully'
+                console.log('[Webhook] book_slot result:', result)
+                break
+              }
+              
+              case 'get_pricing': {
+                const url = `${appUrl}/api/pricing/assistant?projectId=${projectId}`
+                console.log('[Webhook] Calling get_pricing:', url)
+                const res = await fetch(url)
+                const data = await res.json()
+                result = data.result || data.message || 'Pricing retrieved'
+                console.log('[Webhook] get_pricing result:', result)
+                break
+              }
+              
+              case 'check_service_area': {
+                const url = `${appUrl}/api/service-area/check?projectId=${projectId}&address=${encodeURIComponent(params.address || '')}`
+                console.log('[Webhook] Calling check_service_area:', url)
+                const res = await fetch(url)
+                const data = await res.json()
+                result = data.result || data.message || 'Service area checked'
+                console.log('[Webhook] check_service_area result:', result)
+                break
+              }
+              
+              default:
+                result = `Unknown function: ${functionCall.name}`
+            }
+          } catch (error: any) {
+            console.error('[Webhook] Error processing tool call:', error)
+            result = `Error: ${error.message}`
+          }
+
+          // Add result to response
+          results.push({
+            toolCallId: toolCall.id,
+            result: result
+          })
+        }
+
+        // Return results to Vapi
+        console.log('[Webhook] Returning tool call results:', results)
+        return NextResponse.json({ results })
+      }
+
       case 'function-call': {
-        // Tool invocation from assistant - we need to process it and return the result
+        // Legacy handler - keeping for backwards compatibility
         const { functionCall, call: callData } = message || {}
         if (!functionCall) break
 
-        console.log('[Webhook] function-call received:', functionCall.name, functionCall.parameters)
+        console.log('[Webhook] function-call received (legacy):', functionCall.name, functionCall.parameters)
 
         // Log the function call
         await prisma.eventLog.create({
