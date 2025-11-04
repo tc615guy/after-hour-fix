@@ -1,6 +1,5 @@
 import { WebSocketServer, WebSocket } from 'ws'
 import { RealtimeAgent } from './realtime-agent.js'
-import { AudioConverter } from './audio-converter.js'
 import { prisma } from './db.js'
 
 export interface CallSession {
@@ -10,7 +9,6 @@ export interface CallSession {
   realtimeAgent: RealtimeAgent | null
   twilioWs: WebSocket | null
   twilioStreamSid?: string // Store the stream SID from Twilio
-  audioConverter: AudioConverter | null // Audio format converter
   startTime: Date
   state: 'connecting' | 'active' | 'ending' | 'ended'
   callRecordId?: string // Day 8: Store database Call record ID
@@ -28,11 +26,6 @@ export class CallSessionManager {
 
   async createSession(callSid: string, agentId: string, projectId: string, fromNumber?: string, toNumber?: string): Promise<CallSession> {
     console.log(`[SessionManager] Creating session for call ${callSid}, agent ${agentId}`)
-
-    // Initialize audio converter for this session
-    const audioConverter = new AudioConverter()
-    await audioConverter.waitUntilReady()
-    console.log(`[SessionManager] Audio converter ready for call ${callSid}`)
 
     // Day 8: Create Call record in database
     let callRecordId: string | undefined
@@ -61,7 +54,6 @@ export class CallSessionManager {
       projectId,
       realtimeAgent: null,
       twilioWs: null,
-      audioConverter,
       startTime: new Date(),
       state: 'connecting',
       callRecordId,
