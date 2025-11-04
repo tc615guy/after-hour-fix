@@ -162,13 +162,28 @@ async function handleAvailabilityRequest(req: NextRequest) {
 
     console.log(`[Cal.com Availability] Returning ${availableSlots.length} available slots (filtered from ${calcomSlots.length} Cal.com slots)`)
 
-    // BUSINESS RULE: If it's after 4 PM in project timezone, filter out today's slots
-    // (Unless it's an emergency, but AI will handle that separately)
+    // BUSINESS RULE 1: Filter out slots outside business hours (7 AM - 7 PM in project timezone)
+    // This prevents 3 AM bookings and other unrealistic times
     const tz = project.timezone || 'America/Chicago'
+    const businessHoursFiltered = availableSlots.filter(slot => {
+      const slotTime = new Date(slot.start)
+      // Get hour in project timezone, not UTC
+      const hour = parseInt(slotTime.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: tz }))
+      const isWithinBusinessHours = hour >= 7 && hour < 19 // 7 AM to 7 PM
+      if (!isWithinBusinessHours) {
+        console.log(`[Cal.com Availability] Filtered out ${slot.start} - outside business hours (hour: ${hour} in ${tz})`)
+      }
+      return isWithinBusinessHours
+    })
+    
+    console.log(`[Cal.com Availability] After business hours filter: ${businessHoursFiltered.length} slots (from ${availableSlots.length})`)
+    
+    // BUSINESS RULE 2: If it's after 4 PM in project timezone, filter out today's slots
+    // (Unless it's an emergency, but AI will handle that separately)
     const currentTime = new Date()
     const currentHour = parseInt(currentTime.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: tz }))
     
-    let filteredSlots = availableSlots
+    let filteredSlots = businessHoursFiltered
     if (currentHour >= 16) { // After 4 PM
       // Get today's date in the project timezone (not UTC!)
       // toLocaleDateString returns MM/DD/YYYY, so we need to parse it correctly
@@ -217,17 +232,29 @@ async function handleAvailabilityRequest(req: NextRequest) {
 
   // Vapi expects a "result" field with human-readable text for the AI
   // Make it VERY explicit - tell the AI exactly what to say
+  // CRITICAL: Format time with explicit AM/PM to prevent AI from confusing 3 AM with 3 PM
   const firstSlot = limitedSlots[0]
-  const firstTime = new Date(firstSlot.start).toLocaleString('en-US', {
+  const firstSlotDate = new Date(firstSlot.start)
+  const firstTime = firstSlotDate.toLocaleString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    hour12: true, // Explicitly enable 12-hour format with AM/PM
     timeZone: project.timezone || 'America/Chicago'
   })
   
-  const resultText = `SUCCESS: Found ${limitedSlots.length} available slots. The first available time is ${firstTime}. Say to customer: "I can get someone out there at ${firstTime}. Does that work?"`
+  // Double-check: Extract hour to verify AM/PM
+  const hour = firstSlotDate.getHours()
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const displayHour = hour % 12 || 12
+  const minute = firstSlotDate.getMinutes().toString().padStart(2, '0')
+  const explicitTime = `${displayHour}:${minute} ${ampm}`
+  
+  console.log(`[Cal.com Availability] First slot time verification: ${firstTime} (explicit: ${explicitTime}, hour: ${hour})`)
+  
+  const resultText = `SUCCESS: Found ${limitedSlots.length} available slots. The first available time is ${firstTime}. IMPORTANT: This is ${ampm} (${hour >= 12 ? 'afternoon/evening' : 'morning'}), NOT ${ampm === 'AM' ? 'PM' : 'AM'}. Say to customer: "I can get someone out there at ${firstTime}. Does that work?"`
   
   const response = {
     result: resultText,
