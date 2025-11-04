@@ -162,16 +162,39 @@ async function handleAvailabilityRequest(req: NextRequest) {
 
     console.log(`[Cal.com Availability] Returning ${availableSlots.length} available slots (filtered from ${calcomSlots.length} Cal.com slots)`)
 
-    // BUSINESS RULE 1: Filter out slots outside business hours (7 AM - 7 PM in project timezone)
-    // This prevents 3 AM bookings and other unrealistic times
+    // BUSINESS RULE 1: Filter out slots outside configured business hours
+    // Read from project.businessHours to respect actual operating hours
     const tz = project.timezone || 'America/Chicago'
+    const businessHours: any = project.businessHours || {}
+    
+    // Determine earliest open and latest close across all days
+    const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+    let earliestOpen = 24
+    let latestClose = 0
+    
+    for (const day of days) {
+      const dayConfig = businessHours[day]
+      if (dayConfig?.enabled) {
+        const openHour = parseInt((dayConfig.open || '08:00').split(':')[0])
+        const closeHour = parseInt((dayConfig.close || '17:00').split(':')[0])
+        earliestOpen = Math.min(earliestOpen, openHour)
+        latestClose = Math.max(latestClose, closeHour)
+      }
+    }
+    
+    // Default to 8 AM - 5 PM if no business hours configured
+    if (earliestOpen === 24) earliestOpen = 8
+    if (latestClose === 0) latestClose = 17
+    
+    console.log(`[Cal.com Availability] Business hours filter: ${earliestOpen}:00 - ${latestClose}:00 in ${tz}`)
+    
     const businessHoursFiltered = availableSlots.filter(slot => {
       const slotTime = new Date(slot.start)
       // Get hour in project timezone, not UTC
       const hour = parseInt(slotTime.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: tz }))
-      const isWithinBusinessHours = hour >= 7 && hour < 19 // 7 AM to 7 PM
+      const isWithinBusinessHours = hour >= earliestOpen && hour < latestClose
       if (!isWithinBusinessHours) {
-        console.log(`[Cal.com Availability] Filtered out ${slot.start} - outside business hours (hour: ${hour} in ${tz})`)
+        console.log(`[Cal.com Availability] Filtered out ${slot.start} - outside business hours (hour: ${hour} in ${tz}, allowed: ${earliestOpen}-${latestClose})`)
       }
       return isWithinBusinessHours
     })
