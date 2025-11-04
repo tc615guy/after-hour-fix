@@ -279,21 +279,15 @@ export async function POST(req: NextRequest) {
       const bookingPayload = {
         eventTypeId: eventTypeId,
         start: startTime.toISOString(),
-        timeZone: project.timezone || 'America/Chicago', // Required: top-level timeZone
-        language: 'en', // ✅ ALSO required at root level by Cal.com v2
-        attendees: [  // Changed from 'attendee' to 'attendees' array
-          {
-            name: input.customerName,
-            email: `${phoneDigits}@sms.afterhourfix.com`,
-            timeZone: project.timezone || 'America/Chicago',
-            language: 'en',
-          }
-        ],
-        bookingFieldsResponses: {
+        responses: {  // Changed from bookingFieldsResponses to responses
+          name: input.customerName,
+          email: `${phoneDigits}@sms.afterhourfix.com`,
           phone: input.customerPhone,
-          address: input.address,
+          location: { value: input.address, optionValue: '' },
           notes: input.notes,
         },
+        timeZone: project.timezone || 'America/Chicago',
+        language: 'en',
         metadata: {
           customerPhone: input.customerPhone,
           address: input.address,
