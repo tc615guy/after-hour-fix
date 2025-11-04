@@ -320,13 +320,41 @@ export async function POST(req: NextRequest) {
       if (!bookingRes.ok) {
         const errorTxt = await bookingRes.text()
         console.error('[BOOK] Cal.com v2 booking failed:', errorTxt.substring(0, 500))
-        throw new Error(`Cal.com booking failed: ${bookingRes.status}`)
+        console.log('[BOOK] Falling back to Cal.com v1 API...')
+        
+        // FALLBACK: Use v1 API which we know works
+        try {
+          const v1Booking = await calcomClient.createBooking({
+            eventTypeId: eventTypeId,
+            start: startTime.toISOString(),
+            responses: {
+              name: input.customerName,
+              email: `${phoneDigits}@sms.afterhourfix.com`,
+              location: { value: input.address, optionValue: '' },
+            },
+            timeZone: project.timezone || 'America/Chicago',
+            language: 'en',
+            metadata: {
+              customerPhone: input.customerPhone,
+              address: input.address,
+              notes: input.notes,
+            },
+          })
+          
+          calcomBooking = v1Booking
+          bookingUid = v1Booking?.uid
+          console.log('[BOOK] Cal.com v1 fallback succeeded:', { id: calcomBooking?.id, uid: bookingUid })
+        } catch (v1Error: any) {
+          console.error('[BOOK] Cal.com v1 fallback also failed:', v1Error.message)
+          throw new Error(`Cal.com booking failed (v2 and v1): ${bookingRes.status}`)
+        }
+      } else {
+        // v2 succeeded
+        const bookingData = await bookingRes.json()
+        calcomBooking = bookingData?.booking || bookingData
+        bookingUid = calcomBooking?.uid
+        console.log('[BOOK] Cal.com v2 booking created:', { id: calcomBooking?.id, uid: bookingUid })
       }
-      
-      const bookingData = await bookingRes.json()
-      calcomBooking = bookingData?.booking || bookingData
-      bookingUid = calcomBooking?.uid
-      console.log('[BOOK] Cal.com v2 booking created:', { id: calcomBooking?.id, uid: bookingUid })
       
       // Confirm the booking immediately
       if (bookingUid) {
