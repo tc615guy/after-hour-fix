@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
 
     const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000)
 
-    // DEDUPE: If an upcoming booking exists within 7 days for same phone, don't create second—ask to reschedule
+    // DEDUPE: If an upcoming booking exists within 7 days for same phone, check if it's a reschedule request
     try {
       const phoneDigits = (input.customerPhone || '').replace(/\D/g, '')
       if (phoneDigits) {
@@ -210,11 +210,54 @@ export async function POST(req: NextRequest) {
           orderBy: { createdAt: 'desc' },
         })
         if (existing) {
-          const whenStr = existing.slotStart ? new Date(existing.slotStart).toLocaleString() : 'an existing time'
-          return NextResponse.json({ result: `You already have a booking for ${whenStr}. Want me to reschedule it to ${startTime.toLocaleString()}?`, error: 'Existing booking' }, { status: 200 })
+          const existingTime = existing.slotStart ? new Date(existing.slotStart) : null
+          const requestedTime = startTime
+          
+          // Check if they're requesting a DIFFERENT time (reschedule) or the SAME time (duplicate call)
+          const timeDiffMinutes = existingTime ? Math.abs(requestedTime.getTime() - existingTime.getTime()) / (1000 * 60) : 999
+          
+          if (timeDiffMinutes < 5) {
+            // Same time (within 5 minutes) - this is a duplicate call, not a reschedule
+            // Just confirm the existing booking
+            const whenStr = existingTime ? existingTime.toLocaleString() : 'your appointment'
+            console.log('[BOOK] Duplicate call detected - same time requested. Confirming existing booking.')
+            return NextResponse.json({ 
+              result: `Perfect! You're all set for ${whenStr}. We'll text you the details.`,
+              bookingId: existing.id,
+              success: true
+            }, { status: 200 })
+          } else {
+            // Different time - this is a reschedule request
+            // Update the existing booking to the new time
+            console.log(`[BOOK] Reschedule detected: ${existingTime?.toLocaleString()} → ${requestedTime.toLocaleString()}`)
+            
+            // Update the booking in our database
+            await prisma.booking.update({
+              where: { id: existing.id },
+              data: {
+                slotStart: startTime,
+                slotEnd: endTime,
+                customerName: input.customerName,
+                address: input.address,
+                notes: input.notes,
+                updatedAt: new Date(),
+              },
+            })
+            
+            const newWhenStr = startTime.toLocaleString()
+            console.log('[BOOK] Booking rescheduled successfully')
+            return NextResponse.json({ 
+              result: `Perfect! I've rescheduled your appointment to ${newWhenStr}. We'll text you the updated details.`,
+              bookingId: existing.id,
+              rescheduled: true,
+              success: true
+            }, { status: 200 })
+          }
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error('[BOOK] Error checking for duplicate:', err)
+    }
 
     // Synchronous creation: pending -> Cal.com -> booked
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
