@@ -197,7 +197,7 @@ async function handleAvailabilityRequest(req: NextRequest) {
       
       console.log(`[Cal.com Availability] After 4 PM (${currentHour}:00) - filtering out slots for ${todayStr}`)
       
-      filteredSlots = availableSlots.filter(slot => {
+      filteredSlots = businessHoursFiltered.filter(slot => {
         // Convert slot time to project timezone date string
         const slotParts = new Date(slot.start).toLocaleDateString('en-US', {
           year: 'numeric',

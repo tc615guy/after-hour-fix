@@ -17,7 +17,7 @@ function normalizeProjectId(req: NextRequest, bodyProjectId?: string) {
  * Check if a service address is within the configured service area
  * Uses zipcode/city matching or Google Maps Geocoding for radius-based validation
  */
-export async function POST(req: NextRequest) {
+async function handleServiceAreaCheck(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}))
     const { address } = z
@@ -226,5 +226,14 @@ function calculateDistance(
       Math.sin(dLon / 2)
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   return R * c
+}
+
+// Handle both GET and POST (Vapi webhook calls with GET)
+export async function GET(req: NextRequest) {
+  return handleServiceAreaCheck(req)
+}
+
+export async function POST(req: NextRequest) {
+  return handleServiceAreaCheck(req)
 }
 
