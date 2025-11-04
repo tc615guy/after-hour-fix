@@ -154,12 +154,34 @@ export async function POST(req: NextRequest) {
         // Update agent minutes if completed
         if (call.status === 'ended' && call.duration && agent) {
           const minutes = Math.ceil(call.duration / 60)
-          console.log(`[Webhook] Updating agent ${agent.id} minutes: +${minutes} (total will be ${(agent.minutesThisPeriod || 0) + minutes})`)
-          const updated = await prisma.agent.update({
-            where: { id: agent.id },
-            data: { minutesThisPeriod: { increment: minutes } },
+          
+          // Check if we already added minutes for this call (to prevent double-counting)
+          const alreadyAdded = await prisma.eventLog.findFirst({
+            where: {
+              type: 'minutes.added',
+              payload: { path: ['callId'], equals: call.id } as any
+            }
           })
-          console.log(`[Webhook] Agent ${agent.id} minutes updated to ${updated.minutesThisPeriod}`)
+          
+          if (alreadyAdded) {
+            console.log(`[Webhook] status-update: Minutes already added for call ${call.id}, skipping`)
+          } else {
+            console.log(`[Webhook] status-update: Updating agent ${agent.id} minutes: +${minutes} (total will be ${(agent.minutesThisPeriod || 0) + minutes})`)
+            const updated = await prisma.agent.update({
+              where: { id: agent.id },
+              data: { minutesThisPeriod: { increment: minutes } },
+            })
+            console.log(`[Webhook] status-update: Agent ${agent.id} minutes updated to ${updated.minutesThisPeriod}`)
+            
+            // Log that we added minutes to prevent double-counting
+            await prisma.eventLog.create({
+              data: {
+                type: 'minutes.added',
+                projectId: agent.projectId,
+                payload: { callId: call.id, agentId: agent.id, minutes }
+              }
+            })
+          }
 
           // Overage usage reporting (post-increment)
           try {
@@ -564,6 +586,8 @@ export async function POST(req: NextRequest) {
         const transcript = message?.transcript || call.transcript || ''
         const recordingUrl = call.recordingUrl || message?.recordingUrl || null
 
+        console.log(`[Webhook] end-of-call-report for call ${call.id}, duration=${call.duration}, assistantId=${call.assistantId}`)
+
         // Calculate voiceConfidence score from Vapi metadata or analyze transcript
         let voiceConfidence = call.analysis?.confidence || message?.confidence || 1.0
 
@@ -605,6 +629,48 @@ export async function POST(req: NextRequest) {
           : null
 
         const project = agent?.project
+
+        // CRITICAL: Update agent minutes if not already done in status-update event
+        // This ensures minutes are tracked even if status-update is missed or has no duration
+        // Check if minutes were already added by looking for a 'minutes.added' event log
+        if (call.duration && agent) {
+          const minutes = Math.ceil(call.duration / 60)
+          
+          // Check if we already added minutes for this call
+          const alreadyAdded = await prisma.eventLog.findFirst({
+            where: {
+              type: 'minutes.added',
+              payload: { path: ['callId'], equals: call.id } as any
+            }
+          })
+          
+          if (alreadyAdded) {
+            console.log(`[Webhook] end-of-call-report: Minutes already added for call ${call.id}, skipping`)
+          } else {
+            console.log(`[Webhook] end-of-call-report: Updating agent ${agent.id} minutes: +${minutes}`)
+            
+            try {
+              const updated = await prisma.agent.update({
+                where: { id: agent.id },
+                data: { minutesThisPeriod: { increment: minutes } },
+              })
+              console.log(`[Webhook] end-of-call-report: Agent ${agent.id} minutes updated to ${updated.minutesThisPeriod}`)
+              
+              // Log that we added minutes to prevent double-counting
+              await prisma.eventLog.create({
+                data: {
+                  type: 'minutes.added',
+                  projectId: agent.projectId,
+                  payload: { callId: call.id, agentId: agent.id, minutes }
+                }
+              })
+            } catch (minuteErr: any) {
+              console.error(`[Webhook] end-of-call-report: Failed to update minutes for agent ${agent.id}:`, minuteErr.message)
+            }
+          }
+        } else {
+          console.warn(`[Webhook] end-of-call-report: NOT updating minutes - duration=${call.duration}, agent=${agent?.id || 'null'}`)
+        }
 
         // Determine if should escalate based on confidence threshold
         const confidenceThreshold = project?.confidenceThreshold || 0.65
