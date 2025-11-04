@@ -274,25 +274,35 @@ export async function POST(req: NextRequest) {
       }
       
       // Step 2: Create booking with correct v2 format
-      // Cal.com v2 uses /v2/bookings endpoint (not /v2/events/{id}/bookings)
-      // Based on Cal.com v2 docs, attendees should be an array
-      const bookingPayload = {
+      // Cal.com v2 API: Minimal required fields based on documentation
+      // The error "expected object, received undefined at path []" suggests the entire body is undefined
+      // This could be a serialization issue or the API expects the data wrapped differently
+      const bookingPayload: any = {
         eventTypeId: eventTypeId,
         start: startTime.toISOString(),
-        responses: {  // Changed from bookingFieldsResponses to responses
+        attendee: {
           name: input.customerName,
           email: `${phoneDigits}@sms.afterhourfix.com`,
-          phone: input.customerPhone,
-          location: { value: input.address, optionValue: '' },
-          notes: input.notes,
+          timeZone: project.timezone || 'America/Chicago',
+          language: 'en',
+        },
+        bookingFieldsResponses: {
+          name: input.customerName,
+          email: `${phoneDigits}@sms.afterhourfix.com`,
         },
         timeZone: project.timezone || 'America/Chicago',
         language: 'en',
-        metadata: {
-          customerPhone: input.customerPhone,
-          address: input.address,
-          notes: input.notes,
-        },
+      }
+      
+      // Add optional fields if they exist
+      if (input.notes) {
+        bookingPayload.bookingFieldsResponses.notes = input.notes
+      }
+      if (input.customerPhone) {
+        bookingPayload.bookingFieldsResponses.phone = input.customerPhone
+      }
+      if (input.address) {
+        bookingPayload.bookingFieldsResponses.location = input.address
       }
 
       console.log('[BOOK] Creating Cal.com v2 booking:', JSON.stringify(bookingPayload, null, 2))
