@@ -6,6 +6,7 @@ import { createVapiClient } from '@/lib/vapi'
 
 export async function POST(req: NextRequest) {
   try {
+    console.log('🔥🔥🔥 [WEBHOOK] ===== NEW CODE DEPLOYED AT 2025-11-04 00:42 ===== 🔥🔥🔥')
     // Get raw body for signature verification
     const arrayBuf = await req.arrayBuffer()
     const rawBody = Buffer.from(arrayBuf)
@@ -314,8 +315,9 @@ export async function POST(req: NextRequest) {
 
       case 'tool-calls': {
         // Vapi sends tool-calls event with toolCallList array
-        console.log('[Webhook] tool-calls case triggered! Message keys:', Object.keys(message || {}))
-        console.log('[Webhook] Full message:', JSON.stringify(message, null, 2))
+        console.log('🚀🚀🚀 [WEBHOOK TOOL-CALLS] TRIGGERED AT:', new Date().toISOString())
+        console.log('🚀🚀🚀 [WEBHOOK TOOL-CALLS] Message keys:', Object.keys(message || {}))
+        console.log('🚀🚀🚀 [WEBHOOK TOOL-CALLS] Full message:', JSON.stringify(message, null, 2))
         
         const { toolCallList, call: callData } = message || {}
         console.log('[Webhook] toolCallList:', toolCallList)
