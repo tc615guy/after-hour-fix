@@ -366,7 +366,16 @@ export async function POST(req: NextRequest) {
           
           try {
             const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://afterhourfix.com'
-            const params = JSON.parse(functionCall.arguments || '{}')
+            
+            // Vapi can send arguments as either a JSON string or an already-parsed object
+            let params: any = {}
+            if (typeof functionCall.arguments === 'string') {
+              params = JSON.parse(functionCall.arguments || '{}')
+            } else if (typeof functionCall.arguments === 'object') {
+              params = functionCall.arguments || {}
+            }
+            
+            console.log('[Webhook] Parsed params:', params)
             
             switch (functionCall.name) {
               case 'get_slots': {
