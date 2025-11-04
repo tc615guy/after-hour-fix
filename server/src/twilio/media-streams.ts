@@ -104,22 +104,15 @@ export function setupMediaStreamHandler(wss: WebSocketServer, sessionManager: Ca
               // Decode base64 audio payload (μ-law 8kHz from Twilio)
               const mulawBuffer = Buffer.from(audioPayload, 'base64')
               
-              // Convert μ-law 8kHz → PCM16 24kHz for OpenAI
-              if (!session.audioConverter || !session.audioConverter.isReady()) {
-                console.warn(`[MediaStream] Audio converter not ready for call ${callSid}`)
-                return
-              }
-              
-              const pcm24kBuffer = session.audioConverter.convertTwilioToOpenAI(mulawBuffer)
-              
-              // Forward converted audio to Realtime agent
+              // NO CONVERSION NEEDED! OpenAI Realtime now accepts g711_ulaw directly
+              // Forward audio directly to Realtime agent
               if (session.realtimeAgent) {
-                session.realtimeAgent.sendAudio(pcm24kBuffer)
+                session.realtimeAgent.sendAudio(mulawBuffer)
               } else {
                 console.warn(`[MediaStream] Received audio but Realtime agent not initialized yet for call ${callSid}`)
               }
             } catch (error: any) {
-              console.error(`[MediaStream] Error converting audio for call ${callSid}:`, error)
+              console.error(`[MediaStream] Error processing audio for call ${callSid}:`, error)
             }
           }
         } else if (message.event === 'stop') {

@@ -195,7 +195,7 @@ export class RealtimeAgent {
         modalities: ['text', 'audio'], // Enable both text and audio
         instructions: systemPrompt,
         voice: 'alloy', // Default voice, can be customized
-        input_audio_format: 'pcm16', // Input audio format (24kHz from Twilio after conversion)
+        input_audio_format: 'g711_ulaw', // Input as μ-law directly from Twilio (8kHz, no conversion!)
         output_audio_format: 'g711_ulaw', // Output as μ-law directly (8kHz, no conversion needed!)
         input_audio_transcription: {
           model: 'whisper-1',
