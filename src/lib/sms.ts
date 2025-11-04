@@ -6,7 +6,7 @@ const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER
 
 let twilioClient: ReturnType<typeof twilio> | null = null
 
-function getTwilioClient() {
+export function getTwilioClient() {
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
     console.warn('[Twilio] Credentials not configured')
     return null

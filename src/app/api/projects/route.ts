@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { z } from 'zod'
 import { requireSession, rateLimit, captureException, getOrCreatePrismaUserByEmail } from '@/lib/api-guard'
 import { createCalComClient, createCalComClientWithToken } from '@/lib/calcom'
-import { createVapiClient, buildAssistantPrompt, buildAssistantTools } from '@/lib/vapi'
+import { buildAssistantPrompt } from '@/lib/vapi'
 
 const CreateProjectSchema = z.object({
   name: z.string(),
@@ -109,76 +109,36 @@ export async function POST(req: NextRequest) {
       console.warn('[Cal.com] Event type creation failed:', (e as any)?.message)
     }
 
-    // Create VAPI assistant by cloning from demo assistant based on trade
+    // Create OpenAI Realtime agent for the project
     try {
-      const vapiClient = createVapiClient()
       const systemPrompt = buildAssistantPrompt(project.name, project.trade)
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://afterhourfix.com'
-      const tools = buildAssistantTools(appUrl, project.id)
+      
+      console.log('[OpenAI Realtime] Creating agent for project:', project.name, 'trade:', project.trade)
 
-      // Map trade to demo assistant ID
-      const DEMO_ASSISTANTS: Record<string, string> = {
-        'Electrical': 'fc94b4f6-0a58-4478-8ba1-a81dd81bbaf5',
-        'HVAC': 'ee143a79-7d18-451f-ae8e-c1e78c83fa0f',
-        'Plumbing': '66ac9a80-cee3-4084-95fa-c51ede8ccf5c',
-      }
-
-      const trade = input.trade || 'Plumbing'
-      const demoAssistantId = DEMO_ASSISTANTS[trade]
-
-      console.log('[VAPI] Creating assistant for project:', project.name, 'trade:', trade)
-
-      if (demoAssistantId) {
-        // Fetch the demo assistant to get its configuration
-        console.log('[VAPI] Fetching demo assistant config:', demoAssistantId)
-        const demoAssistant = await vapiClient.getAssistant(demoAssistantId)
-
-        // Create new assistant with demo's settings but custom prompt/tools
-        const vapiAssistant = await vapiClient.createAssistant({
+      // Create OpenAI Realtime agent (just DB record, no Vapi assistant)
+      const agent = await prisma.agent.create({
+        data: {
+          projectId: project.id,
+          vapiAssistantId: `openai-realtime-${Date.now()}`, // Placeholder, not used for OpenAI Realtime
           name: `${project.name} AI Assistant`,
-          firstMessage: demoAssistant.firstMessage || "Hey there, thanks for calling! I can help you right away. What's going on?",
-          voice: demoAssistant.voice,
-          model: {
-            ...demoAssistant.model,
-            messages: [
-              {
-                role: 'system',
-                content: systemPrompt,
-              },
-            ],
-            tools,
-          },
-          recordingEnabled: demoAssistant.recordingEnabled ?? true,
-        })
+          voice: 'alloy', // Default OpenAI voice
+          basePrompt: systemPrompt,
+          systemType: 'openai-realtime', // Always OpenAI Realtime
+        },
+      })
 
-        console.log('[VAPI] Assistant created from demo template:', vapiAssistant.id)
+      console.log('[OpenAI Realtime] Agent record created in database:', agent.id)
 
-        // Create agent record in database
-        const agent = await prisma.agent.create({
-          data: {
-            projectId: project.id,
-            vapiAssistantId: vapiAssistant.id,
-            name: `${project.name} AI Assistant`,
-            voice: demoAssistant.voice?.voiceId || 'ariana',
-            basePrompt: systemPrompt,
-          },
-        })
-
-        console.log('[VAPI] Agent record created in database:', agent.id)
-
-        await prisma.eventLog.create({
-          data: {
-            projectId: project.id,
-            type: 'agent.created',
-            payload: { agentId: agent.id, vapiAssistantId: vapiAssistant.id, clonedFrom: demoAssistantId },
-          },
-        })
-      } else {
-        console.warn('[VAPI] No demo assistant found for trade:', trade)
-      }
+      await prisma.eventLog.create({
+        data: {
+          projectId: project.id,
+          type: 'agent.created',
+          payload: { agentId: agent.id, systemType: 'openai-realtime' },
+        },
+      })
     } catch (e) {
-      console.error('[VAPI] Failed to create assistant:', (e as any)?.message)
-      // Don't fail the whole request if VAPI creation fails
+      console.error('[OpenAI Realtime] Failed to create agent:', (e as any)?.message)
+      // Don't fail the whole request if agent creation fails
     }
 
     return NextResponse.json({ success: true, project })

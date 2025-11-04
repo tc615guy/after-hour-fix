@@ -66,6 +66,12 @@ export async function POST(req: NextRequest) {
           ? await prisma.agent.findFirst({ where: { vapiAssistantId: call.assistantId } })
           : null
 
+        // Day 25: Dual-mode support - only process Vapi calls
+        if (agent && (agent.systemType || 'vapi') !== 'vapi') {
+          console.log(`[Webhook] Skipping call ${call.id} - agent ${agent.id} is using ${agent.systemType || 'vapi'} system`)
+          return NextResponse.json({ success: true, skipped: true, reason: 'not_vapi_system' })
+        }
+
         console.log(`[Webhook] Found agent:`, agent ? { id: agent.id, name: agent.name, projectId: agent.projectId } : 'null')
 
         const projectId = agent?.projectId || null
@@ -105,7 +111,7 @@ export async function POST(req: NextRequest) {
               })
               const proId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
               const premiumId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM
-              const cap = subs && premiumId && subs.priceId === premiumId ? 500
+              const cap = subs && premiumId && subs.priceId === premiumId ? 2500
                 : subs && proId && subs.priceId === proId ? 1200
                 : 500
               const used = (project.agents || []).reduce((s, a) => s + (a.minutesThisPeriod || 0), 0)
@@ -376,8 +382,19 @@ export async function POST(req: NextRequest) {
           if (callData?.assistantId) {
             const agent = await prisma.agent.findFirst({
               where: { vapiAssistantId: callData.assistantId },
-              select: { projectId: true }
+              select: { projectId: true, systemType: true, id: true }
             })
+            
+            // Day 25: Dual-mode support - only process Vapi calls
+            if (agent && (agent.systemType || 'vapi') !== 'vapi') {
+              console.log(`[Webhook] Skipping tool call - agent ${agent.id} is using ${agent.systemType || 'vapi'} system`)
+              results.push({
+                id: toolCall.id,
+                result: 'Agent is using a different system. This tool call cannot be processed.',
+              })
+              continue
+            }
+            
             projectId = agent?.projectId || null
           }
 
@@ -627,6 +644,12 @@ export async function POST(req: NextRequest) {
               include: { project: true }
             })
           : null
+
+        // Day 25: Dual-mode support - only process Vapi calls
+        if (agent && (agent.systemType || 'vapi') !== 'vapi') {
+          console.log(`[Webhook] Skipping end-of-call-report for call ${call.id} - agent ${agent.id} is using ${agent.systemType || 'vapi'} system`)
+          return NextResponse.json({ success: true, skipped: true, reason: 'not_vapi_system' })
+        }
 
         const project = agent?.project
 

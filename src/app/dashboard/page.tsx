@@ -17,8 +17,10 @@ import FuelSavings from '@/components/FuelSavings'
 import FirstTimePopup from '@/components/FirstTimePopup'
 import MissedOpportunityCalculator from '@/components/MissedOpportunityCalculator'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { useRouter } from 'next/navigation'
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [projects, setProjects] = useState<any[]>([])
   const [selectedProject, setSelectedProject] = useState<any>(null)
   const [calls, setCalls] = useState<any[]>([])
@@ -35,6 +37,7 @@ export default function DashboardPage() {
   })
   const [subscription, setSubscription] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [csvPreview, setCsvPreview] = useState<null | { headers: string[]; rows: string[][] }>(null)
   const [csvMapping, setCsvMapping] = useState({
     name: '',
@@ -65,8 +68,25 @@ export default function DashboardPage() {
   const [purchasingNumber, setPurchasingNumber] = useState(false)
 
   useEffect(() => {
-    loadProjects()
+    checkAuth()
   }, [])
+
+  const checkAuth = async () => {
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'include' })
+      if (!res.ok) {
+        setIsAuthenticated(false)
+        setLoading(false)
+        return
+      }
+      setIsAuthenticated(true)
+      await loadProjects()
+    } catch (error) {
+      console.error('Auth check failed:', error)
+      setIsAuthenticated(false)
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (selectedProject) {
@@ -76,7 +96,15 @@ export default function DashboardPage() {
 
   const loadProjects = async () => {
     try {
-      const res = await fetch('/api/projects')
+      const res = await fetch('/api/projects', { credentials: 'include' })
+      if (!res.ok) {
+        if (res.status === 401) {
+          setIsAuthenticated(false)
+          setLoading(false)
+          return
+        }
+        throw new Error('Failed to load projects')
+      }
       const data = await res.json()
       setProjects(data.projects || [])
       if (data.projects?.length > 0) {
@@ -477,7 +505,7 @@ export default function DashboardPage() {
     handleImportCSVPreview(event)
   }
 
-  if (loading) {
+  if (loading || isAuthenticated === null) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -488,7 +516,28 @@ export default function DashboardPage() {
     )
   }
 
-  if (!selectedProject) {
+  if (isAuthenticated === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Sign In Required</CardTitle>
+            <CardDescription>Please sign in to access your dashboard</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Link href="/auth/login?redirect=/onboarding" className="block">
+              <Button className="w-full">Sign In</Button>
+            </Link>
+            <Link href="/auth/signup" className="block">
+              <Button variant="outline" className="w-full">Create Account</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!selectedProject && !loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -571,7 +620,7 @@ export default function DashboardPage() {
           <Card className="mb-2 sm:mb-3">
             <CardHeader className="pb-1 px-2 py-1.5">
               <CardTitle className="text-[10px] sm:text-xs font-medium">Plan Usage</CardTitle>
-              <CardDescription className="text-[9px] sm:text-xs">Minutes used this billing period</CardDescription>
+              <CardDescription className="text-[9px] sm:text-xs">Call minutes used this month</CardDescription>
             </CardHeader>
             <CardContent className="px-2 py-1.5">
               {(() => {
@@ -667,11 +716,15 @@ export default function DashboardPage() {
         {selectedProject?.numbers?.length > 0 && (
           <Card className="mb-3 sm:mb-4">
             <CardHeader className="pb-2 px-2 py-2">
-              <CardTitle className="flex items-center gap-1.5 text-xs sm:text-sm">
-                <Phone className="w-3 h-3 sm:w-4 sm:h-4" />
-                AI Assistant Phone Number
-              </CardTitle>
-              <CardDescription className="text-[10px] sm:text-xs">Your main business line answered by AI 24/7.</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                                      <CardTitle className="flex items-center gap-1.5 text-xs sm:text-sm">
+                      <Phone className="w-3 h-3 sm:w-4 sm:h-4" />
+                      Smart AI Receptionist Phone Number
+                    </CardTitle>
+                    <CardDescription className="text-[10px] sm:text-xs">Your main business line answered by your smart AI receptionist 24/7.</CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="flex items-center gap-2 px-2 py-2">
               <div className="font-mono text-lg">
@@ -685,8 +738,8 @@ export default function DashboardPage() {
               >
                 Copy
               </Button>
-              <Link href={`/projects/${selectedProject.id}/settings`}>
-                <Button variant="ghost" size="sm">Manage Numbers</Button>
+              <Link href={`/projects/${selectedProject.id}/settings?tab=numbers`}>
+                <Button variant="ghost" size="sm">Manage</Button>
               </Link>
             </CardContent>
           </Card>
@@ -798,7 +851,10 @@ export default function DashboardPage() {
         {selectedProject && (
           (() => {
             const proId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
-            const cap = subscription && proId && subscription.priceId === proId ? 1200 : 500
+            const premiumId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM
+            const cap = subscription && premiumId && subscription.priceId === premiumId ? 2500
+              : subscription && proId && subscription.priceId === proId ? 1200
+              : 500
             const used = stats.minutesUsed || 0
             const pct = cap > 0 ? used / cap : 0
             if (pct >= 1) {

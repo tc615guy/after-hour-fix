@@ -23,6 +23,7 @@ import FirstTimeSettingsChecklist from '@/components/FirstTimeSettingsChecklist'
 import PricingResponseTemplates from '@/components/PricingResponseTemplates'
 import PhoneSetup from '@/components/PhoneSetup'
 
+
 export default function SettingsPage() {
   const params = useParams()
   const router = useRouter()
@@ -338,7 +339,7 @@ export default function SettingsPage() {
                     <li><strong>Appointment Booking:</strong> Collects customer info and books via Cal.com automatically</li>
                     <li><strong>Pricing Responses:</strong> Uses your pricing sheet from the Pricing & Costs tab</li>
                     <li><strong>Business Hours Forwarding:</strong> Forwards calls to your phone during business hours, AI handles after-hours</li>
-                    <li><strong>Professional Voice:</strong> Uses Cartesia Sonic 3 (FREE) for natural, clear communication</li>
+                    <li><strong>Ultra-Low Latency:</strong> Powered by OpenAI Realtime API for natural, real-time conversations with minimal delay</li>
                   </ul>
                 </div>
               </CardContent>
@@ -368,11 +369,39 @@ export default function SettingsPage() {
               </Card>
             )}
 
+
+
             {(!project.agents || project.agents.length === 0) && (
               <Card>
-                <CardContent className="py-12 text-center text-gray-500">
-                  <p>No AI assistant configured yet.</p>
-                  <p className="text-sm mt-2">Your assistant will be created during onboarding.</p>
+                <CardContent className="py-12 text-center">
+                  <p className="text-gray-600 mb-2">No AI assistant configured yet.</p>
+                  <p className="text-sm text-gray-500 mb-6">Create an AI assistant to start answering calls.</p>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        setLoading(true)
+                        const res = await fetch('/api/agents', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            projectId: project.id,
+                            name: `${project.name} AI Assistant`,
+                            voice: 'alloy',
+                          }),
+                        })
+                        const data = await res.json()
+                        if (!res.ok) throw new Error(data.error || 'Failed to create agent')
+                        await loadProject()
+                      } catch (error: any) {
+                        alert(error.message || 'Failed to create agent')
+                      } finally {
+                        setLoading(false)
+                      }
+                    }}
+                    disabled={loading}
+                  >
+                    {loading ? 'Creating...' : 'Create AI Assistant'}
+                  </Button>
                 </CardContent>
               </Card>
             )}
@@ -409,29 +438,13 @@ export default function SettingsPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>AI Assistant Phone Number</CardTitle>
-                    <CardDescription>This number is answered by your AI 24/7</CardDescription>
+                    <CardTitle className="flex items-center gap-2">
+                      AI Assistant Phone Number
+                      <Badge variant="default" className="bg-blue-600">OpenAI Realtime</Badge>
+                    </CardTitle>
+                    <CardDescription>This number is answered by your OpenAI Realtime AI assistant 24/7</CardDescription>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        try {
-                          const res = await fetch(`/api/projects/${projectId}/numbers/sync`, { method: 'POST' })
-                          const data = await res.json()
-                          if (!res.ok) throw new Error(data.error || 'Failed to sync numbers')
-                          alert(`Synced ${data.upserts || 0} number(s).`)
-                          await loadProject()
-                        } catch (e: any) {
-                          alert(e.message)
-                        }
-                      }}
-                    >
-                      Sync from Vapi
-                    </Button>
-                    <Badge className="bg-green-600 text-white">Active</Badge>
-                  </div>
+                  <Badge className="bg-green-600 text-white">Active</Badge>
                 </div>
               </CardHeader>
               <CardContent>

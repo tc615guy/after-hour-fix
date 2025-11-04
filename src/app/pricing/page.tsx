@@ -16,7 +16,7 @@ export default function PricingPage() {
         'Cal.com integration',
         'Email & SMS confirmations',
         'Call transcripts',
-        'Weekly ROI reports',
+        'Smart reports & tracking',
       ],
     },
     {
@@ -30,9 +30,9 @@ export default function PricingPage() {
         'Cal.com integration',
         'Email & SMS confirmations',
         'Call transcripts',
-        'Weekly ROI reports',
+        'Smart reports & tracking',
         'Priority support',
-        'Custom voice prompts',
+        'Custom conversation scripts',
       ],
       popular: true,
     },
@@ -42,15 +42,15 @@ export default function PricingPage() {
       priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM,
       description: 'Best-in-class AI experience',
       features: [
-        '500 AI minutes/month',
-        'GPT-4o AI model (premium)',
-        'ElevenLabs voice (most natural)',
-        'Deepgram Nova 2 transcription',
+        '2,500 AI minutes/month',
+        'Premium AI model',
+        'Most natural voice options',
+        'Enhanced transcription',
         '1 phone number',
         'Cal.com integration',
         'Email & SMS confirmations',
         'Call transcripts',
-        'Weekly ROI reports',
+        'Smart reports & tracking',
         'Priority support',
       ],
     },
@@ -121,7 +121,7 @@ export default function PricingPage() {
               </div>
               <CardTitle className="text-3xl mb-2">One-Time Setup Fee: $449</CardTitle>
               <CardDescription className="text-base">
-                Professional setup by our team to ensure your AI receptionist is configured perfectly
+                Professional setup by our team to ensure your smart AI receptionist is configured perfectly for your business
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -130,12 +130,12 @@ export default function PricingPage() {
                   <h4 className="font-semibold text-gray-900 mb-3">What's Included:</h4>
                   <div className="space-y-2">
                     {[
-                      'Custom AI voice training & optimization',
-                      'Business hours & scheduling configuration',
-                      'Cal.com calendar integration setup',
+                      'Smart AI receptionist configuration & optimization',
+                      'Business hours & scheduling setup',
+                      'Cal.com calendar integration',
                       'Pricing sheet upload & configuration',
-                      'On-call technician setup',
-                      'Phone number provisioning & testing'
+                      'On-call technician routing setup',
+                      'Phone number setup & testing'
                     ].map((item, idx) => (
                       <div key={idx} className="flex items-start gap-2">
                         <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
@@ -148,9 +148,9 @@ export default function PricingPage() {
                   <h4 className="font-semibold text-gray-900 mb-3">Additional Value:</h4>
                   <div className="space-y-2">
                     {[
-                      'Response templates & conversation scripts',
+                      'Custom conversation scripts & templates',
                       'Knowledge base setup (FAQs & services)',
-                      'Emergency routing configuration',
+                      'Smart emergency routing configuration',
                       'SMS & email template customization',
                       'Dedicated onboarding specialist',
                       '1-hour training session & documentation'
@@ -166,7 +166,7 @@ export default function PricingPage() {
               <div className="mt-6 p-4 bg-white rounded-lg border border-blue-200">
                 <p className="text-sm text-center text-gray-700">
                   <strong className="text-blue-600">Setup typically takes 2-3 business days</strong> after payment. 
-                  You'll receive a dedicated onboarding specialist to guide you through every step.
+                  You'll receive a dedicated onboarding specialist to guide you through every step and ensure everything works perfectly.
                 </p>
               </div>
             </CardContent>

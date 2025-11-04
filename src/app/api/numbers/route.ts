@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { createVapiClient } from '@/lib/vapi'
-import { searchAvailableNumbers, purchaseTwilioNumber } from '@/lib/sms'
+import { searchAvailableNumbers, purchaseTwilioNumber, getTwilioClient } from '@/lib/sms'
 import { z } from 'zod'
 
 const PurchaseNumberSchema = z.object({
@@ -74,49 +73,60 @@ export async function POST(req: NextRequest) {
     const twilioSid = await purchaseTwilioNumber(numberToPurchase)
     console.log(`[B2B Provision] Twilio purchase complete: ${twilioSid}`)
 
-    // Step 2: Add to Vapi (BYO)
-    const vapiClient = createVapiClient()
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const serverUrl = `${appUrl}/api/vapi/webhook`
-    const serverUrlSecret = process.env.VAPI_WEBHOOK_SECRET
-
-    const vapiNumber = await vapiClient.purchasePhoneNumber(numberToPurchase, agent.vapiAssistantId, {
-      serverUrl,
-      serverUrlSecret,
-      fallbackDestination: project?.forwardingNumber || undefined,
-    })
-    console.log(`[B2B Provision] Vapi integration complete: ${vapiNumber.id}`)
-    console.log(`[B2B Provision] Vapi number response:`, JSON.stringify(vapiNumber, null, 2))
-    
-    // If assistantId is missing from response, explicitly attach it
-    if (!vapiNumber.assistantId) {
-      console.log(`[B2B Provision] Assistant ID missing from response, attaching to assistant: ${agent.vapiAssistantId}`)
-      await vapiClient.attachNumberToAssistant(vapiNumber.id, agent.vapiAssistantId)
+    // Step 2: Configure Twilio number for OpenAI Realtime server
+    const twilioClient = getTwilioClient()
+    if (!twilioClient) {
+      throw new Error('Twilio credentials not configured')
     }
+
+    // Get OpenAI Realtime server URL from environment
+    const openaiRealtimeServerUrl = process.env.OPENAI_REALTIME_SERVER_URL || process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, 'https://') || 'http://localhost:8080'
+    const voiceUrl = `${openaiRealtimeServerUrl}/twilio/voice`
+    const statusCallbackUrl = `${openaiRealtimeServerUrl}/twilio/status`
+
+    console.log(`[B2B Provision] Configuring Twilio number for OpenAI Realtime server: ${voiceUrl}`)
+
+    // Update Twilio number to point to OpenAI Realtime server
+    await twilioClient.incomingPhoneNumbers(twilioSid).update({
+      voiceUrl: voiceUrl,
+      voiceMethod: 'POST',
+      statusCallback: statusCallbackUrl,
+      statusCallbackMethod: 'POST',
+    })
+
+    console.log(`[B2B Provision] Twilio number configured for OpenAI Realtime server`)
 
     // Check if number already exists
     const existingNumber = await prisma.phoneNumber.findUnique({
-      where: { e164: vapiNumber.number },
+      where: { e164: numberToPurchase },
     })
 
     if (existingNumber) {
-      // Number already purchased, just return success
+      // Update existing number to OpenAI Realtime
+      const updated = await prisma.phoneNumber.update({
+        where: { e164: numberToPurchase },
+        data: {
+          systemType: 'openai-realtime',
+          serverUrl: voiceUrl,
+        },
+      })
       return NextResponse.json({
         success: true,
-        phoneNumber: existingNumber,
-        vapiNumberId: existingNumber.vapiNumberId,
-        message: 'Number already purchased',
+        phoneNumber: updated,
+        message: 'Number already purchased and reconfigured for OpenAI Realtime',
       })
     }
 
+    // Create phone number record for OpenAI Realtime
     const phoneNumber = await prisma.phoneNumber.create({
       data: {
         projectId: input.projectId,
-        e164: vapiNumber.number,
-        vapiNumberId: vapiNumber.id,
+        e164: numberToPurchase,
+        vapiNumberId: twilioSid, // Store Twilio SID for reference
         label: 'Main',
-        serverUrl,
-        serverUrlSecret,
+        serverUrl: voiceUrl,
+        serverUrlSecret: undefined, // Not needed for OpenAI Realtime
+        systemType: 'openai-realtime', // Always OpenAI Realtime
       },
     })
 
@@ -124,14 +134,13 @@ export async function POST(req: NextRequest) {
       data: {
         projectId: input.projectId,
         type: 'number.purchased',
-        payload: { numberId: phoneNumber.id, e164: vapiNumber.number },
+        payload: { numberId: phoneNumber.id, e164: numberToPurchase },
       },
     })
 
     return NextResponse.json({
       success: true,
       phoneNumber,
-      vapiNumberId: vapiNumber.id,
     })
   } catch (error: any) {
     console.error('Purchase number error:', error)

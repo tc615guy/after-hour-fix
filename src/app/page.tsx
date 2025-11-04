@@ -1,13 +1,14 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Phone, Calendar, MessageSquare, TrendingUp, CheckCircle, Shield, Users, Navigation, DollarSign } from 'lucide-react'
+import { Phone, Calendar, MessageSquare, TrendingUp, CheckCircle, Shield, Users, Navigation, DollarSign, Zap, Lock, Mic, AlertTriangle } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import AuthRedirect from '@/components/AuthRedirect'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'AI Receptionist for Plumbers, HVAC & Electricians | AfterHourFix',
-  description: '24/7 AI voice receptionist that answers emergency calls, books jobs instantly, and never misses after-hours calls. Built for plumbers, HVAC companies, and electrical contractors. Book $1000+ jobs automatically.',
+  description: '24/7 smart AI receptionist that answers emergency calls, books jobs instantly, and never misses after-hours calls. Built for plumbers, HVAC companies, and electrical contractors. Book $1000+ jobs automatically.',
   keywords: [
     'AI receptionist for plumbers',
     '24/7 call answering for HVAC companies',
@@ -55,11 +56,16 @@ export default function HomePage() {
     },
     featureList: [
       '24/7 call answering',
+      'Smart AI receptionist',
+      'Instant response time',
       'Automatic job booking',
-      'Voice AI receptionist',
+      'Call recording and transcription',
+      'Smart emergency routing',
+      'Smart tech routing systems',
       'Emergency call handling',
       'Cal.com integration',
-      'SMS and email confirmations'
+      'SMS and email confirmations',
+      'Complete customization and control'
     ]
   }
 
@@ -139,14 +145,22 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="container mx-auto px-4 py-20 text-center">
+        <div className="mb-4">
+          <Badge className="bg-blue-100 text-blue-700 border-blue-200 px-4 py-1">
+            ⚡ Smart AI Receptionist - Answers in Seconds
+          </Badge>
+        </div>
         <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
           AI Receptionist for Plumbers, HVAC & Electricians
         </h1>
         <p className="text-xl text-gray-600 mb-4 max-w-3xl mx-auto">
-          <strong>Never miss a job call again.</strong> Our 24/7 AI voice receptionist answers emergency calls, books $1000+ jobs instantly, and handles after-hours calls while you sleep.
+          <strong>Never miss a job call again.</strong> Our smart AI receptionist answers calls instantly, books $1000+ jobs automatically, and handles after-hours emergencies while you sleep.
         </p>
-        <p className="text-lg text-gray-500 mb-8 max-w-2xl mx-auto">
-          Voice AI that sounds human, books jobs automatically into your calendar, and sends confirmations. Built specifically for plumbing, HVAC, and electrical contractors.
+        <p className="text-lg text-gray-500 mb-4 max-w-2xl mx-auto">
+          Built specifically for your trade with smart routing systems that understand emergency calls, schedule appointments, and book jobs into your calendar automatically.
+        </p>
+        <p className="text-sm text-blue-600 font-medium mb-8 max-w-2xl mx-auto">
+          ✨ Intelligent call handling that works exactly how you want it—faster, smarter, and always reliable
         </p>
         <div className="flex gap-4 justify-center">
           <Link href="/auth/signup">
@@ -293,9 +307,112 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Smart Features */}
+      <section className="container mx-auto px-4 py-20 bg-gradient-to-b from-blue-50 to-white">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <Badge className="bg-green-100 text-green-700 border-green-200 px-4 py-1 mb-4">
+              🚀 Smart Technology Built for Trades
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything You Need. Nothing You Don't.</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Smart systems that understand your business, handle emergencies intelligently, and book jobs automatically—all while you focus on the work.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 mb-12">
+            <Card className="border-2 border-blue-200">
+              <CardHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Zap className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <CardTitle>Instant Response</CardTitle>
+                </div>
+                <CardDescription className="text-base">
+                  Calls answered in seconds, not minutes. Customers hear a real person (AI) immediately—no waiting, no hold music, no missed opportunities.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-2 border-green-200">
+              <CardHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="w-6 h-6 text-green-600" />
+                  </div>
+                  <CardTitle>Smart Emergency Routing</CardTitle>
+                </div>
+                <CardDescription className="text-base">
+                  Automatically recognizes urgent calls (burst pipes, no heat, sparking) and routes them immediately. Regular maintenance calls get scheduled smartly.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-2 border-purple-200">
+              <CardHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                    <Mic className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <CardTitle>Every Call Recorded</CardTitle>
+                </div>
+                <CardDescription className="text-base">
+                  Every conversation automatically saved and transcribed. Review what customers said, track your bookings, and see exactly how jobs are being handled.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-2 border-orange-200">
+              <CardHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                    <Lock className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <CardTitle>Works Your Way</CardTitle>
+                </div>
+                <CardDescription className="text-base">
+                  Customize how calls are handled, what questions are asked, and how jobs get booked. Set your business hours, pricing, and routing exactly how you want.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
+            <h3 className="font-bold text-lg mb-3 text-blue-900">Why Smart Technology Beats Everything Else</h3>
+            <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-800">
+              <div className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong>Built for Your Business:</strong> Understands plumbing, HVAC, and electrical work like an expert
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong>Fair Pricing:</strong> Simple monthly cost—no hidden fees or surprise charges
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong>Your Data is Private:</strong> Customer information stays secure and never gets shared
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong>Grows With You:</strong> Add features as you need them, connect new tools anytime
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Features */}
       <section id="features" className="container mx-auto px-4 py-20">
-        <h2 className="text-3xl font-bold text-center mb-4">Automated Call Answering Service for Trade Professionals</h2>
+        <h2 className="text-3xl font-bold text-center mb-4">Complete Call Management for Trade Professionals</h2>
         <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
           Best answering service for trades companies. Voice AI booking system that reduces missed job calls and books emergency work automatically.
         </p>
@@ -305,7 +422,7 @@ export default function HomePage() {
               <Phone className="w-10 h-10 text-blue-600 mb-2" />
               <CardTitle>24/7 Call Answering</CardTitle>
               <CardDescription>
-                After-hours answering service for trades. AI answers emergency calls instantly, even at 3am. Never miss a job call again.
+                Smart answering service that works around the clock. Handles emergency calls instantly, even at 3am. Never miss a job call again.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -330,9 +447,9 @@ export default function HomePage() {
           <Card>
             <CardHeader>
               <TrendingUp className="w-10 h-10 text-blue-600 mb-2" />
-              <CardTitle>ROI Tracking</CardTitle>
+              <CardTitle>Smart Reports & Tracking</CardTitle>
               <CardDescription>
-                See exactly how many calls missed cost your plumbing business. Weekly reports show revenue generated.
+                See exactly what's happening with every call. Track jobs booked, revenue generated, and how your receptionist is performing.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -404,6 +521,38 @@ export default function HomePage() {
                   <td className="text-center p-4 text-gray-400">Limited</td>
                 </tr>
                 <tr className="border-b bg-gray-50">
+                  <td className="p-4 font-semibold flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-yellow-600" />
+                    Instant Response Time
+                  </td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                  <td className="text-center p-4 text-gray-400">─</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-4 font-semibold flex items-center gap-2">
+                    <Mic className="w-4 h-4 text-purple-600" />
+                    Call Recording & Transcription
+                  </td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                  <td className="text-center p-4 text-gray-400">Limited</td>
+                </tr>
+                <tr className="border-b bg-gray-50">
+                  <td className="p-4 font-semibold flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-600" />
+                    Smart Emergency Routing
+                  </td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                  <td className="text-center p-4 text-gray-400">─</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-4 font-semibold flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-blue-600" />
+                    Smart Tech Routing Systems
+                  </td>
+                  <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
+                  <td className="text-center p-4 text-gray-400">─</td>
+                </tr>
+                <tr className="border-b bg-gray-50">
                   <td className="p-4 font-semibold">CSV Import/Export</td>
                   <td className="text-center p-4"><CheckCircle className="w-6 h-6 text-green-600 mx-auto" /></td>
                   <td className="text-center p-4 text-gray-400">✗</td>
@@ -429,10 +578,13 @@ export default function HomePage() {
 
           <div className="mt-8 text-center">
             <div className="inline-block bg-blue-50 border-2 border-blue-200 rounded-lg p-6 max-w-2xl">
-              <p className="text-blue-900 font-semibold text-lg mb-2">🏆 The Only Platform With Enterprise Scheduling Intelligence</p>
-              <p className="text-blue-800">
-                While competitors only answer calls, AfterHourFix optimizes your entire operation with smart routing, 
-                fuel savings tracking, and technician management.
+              <p className="text-blue-900 font-semibold text-lg mb-2">🚀 The Only Platform Built Specifically for Trades</p>
+              <p className="text-blue-800 mb-2">
+                While competitors use generic solutions, AfterHourFix provides smart technology built specifically for your trade 
+                with intelligent routing, instant responses, and complete control over how your business handles calls.
+              </p>
+              <p className="text-blue-700 text-sm">
+                Plus smart scheduling systems, intelligent routing, fuel savings tracking, and technician management tools.
               </p>
             </div>
           </div>

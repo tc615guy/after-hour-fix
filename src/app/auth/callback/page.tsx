@@ -73,7 +73,11 @@ export default function AuthCallbackPage() {
           setStatus('ok')
 
           // Check if user has any projects - if not, send to onboarding
-          let redirectTo = url.searchParams.get('redirect')
+          // First check URL params, then localStorage (from login page redirect)
+          let redirectTo = url.searchParams.get('redirect') || (typeof window !== 'undefined' ? localStorage.getItem('authRedirect') : null)
+          if (redirectTo && typeof window !== 'undefined') {
+            localStorage.removeItem('authRedirect') // Clear it after use
+          }
           if (!redirectTo) {
             try {
               // Wait a bit for cookies to be set

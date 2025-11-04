@@ -193,10 +193,10 @@ export default function OnboardingPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
                 <h4 className="font-semibold text-blue-900 mb-2">What happens next?</h4>
                 <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Your AI assistant will be created automatically</li>
+                  <li>• Your OpenAI Realtime AI assistant will be created automatically</li>
                   <li>• You can configure pricing, hours, and calendar integration</li>
                   <li>• Get a new number or forward your existing one</li>
-                  <li>• Start receiving calls immediately</li>
+                  <li>• Start receiving calls immediately with ultra-low latency</li>
                 </ul>
               </div>
 

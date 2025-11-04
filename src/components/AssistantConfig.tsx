@@ -12,7 +12,7 @@ type Agent = {
   basePrompt?: string
   minutesThisPeriod?: number
   updatedAt?: string
-  vapiAssistantId: string
+  id: string
 }
 
 export default function AssistantConfig({
@@ -45,14 +45,14 @@ export default function AssistantConfig({
         <div className="mt-2 p-3 bg-gray-50 rounded-lg border max-w-md">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">Cartesia Sonic 3 - Ariana</p>
-              <p className="text-xs text-gray-600">Professional female voice (FREE)</p>
+              <p className="font-medium">OpenAI Alloy</p>
+              <p className="text-xs text-gray-600">Natural, professional voice optimized for customer service</p>
             </div>
             <Badge variant="outline">Active</Badge>
           </div>
         </div>
         <p className="text-xs text-gray-500 mt-2">
-          This voice is optimized for service businesses and provides natural, expressive communication.
+          Using OpenAI Realtime API with natural voice synthesis for real-time conversations.
         </p>
       </div>
 
@@ -62,8 +62,8 @@ export default function AssistantConfig({
         <div className="mt-2 p-3 bg-gray-50 rounded-lg border max-w-md">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">OpenAI GPT-4o Mini</p>
-              <p className="text-xs text-gray-600">Fast, cost-effective responses</p>
+              <p className="font-medium">OpenAI GPT-4o Realtime</p>
+              <p className="text-xs text-gray-600">Real-time AI with ultra-low latency and natural conversation</p>
             </div>
             <Badge variant="outline">Active</Badge>
           </div>
@@ -84,12 +84,13 @@ export default function AssistantConfig({
         <Label className="text-base font-semibold">Usage Statistics</Label>
         <div className="mt-3 grid grid-cols-2 gap-4">
           <div className="p-4 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600">Minutes Used This Period</p>
+            <p className="text-sm text-gray-600">Total Calls</p>
             <p className="text-3xl font-bold mt-1">{activeAgent?.minutesThisPeriod || 0}</p>
+            <p className="text-xs text-gray-500 mt-1">Tracked via OpenAI Realtime</p>
           </div>
           <div className="p-4 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-600">Last Updated</p>
-            <p className="text-sm font-medium mt-1">{activeAgent?.updatedAt ? new Date(activeAgent.updatedAt).toLocaleString() : ''}</p>
+            <p className="text-sm font-medium mt-1">{activeAgent?.updatedAt ? new Date(activeAgent.updatedAt).toLocaleString() : 'Never'}</p>
           </div>
         </div>
       </div>
@@ -99,8 +100,12 @@ export default function AssistantConfig({
         <Label className="text-base font-semibold">Advanced</Label>
         <div className="mt-3 space-y-2">
           <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-            <span className="text-sm text-gray-600">Assistant ID</span>
-            <code className="text-xs bg-white px-2 py-1 rounded border">{activeAgent?.vapiAssistantId}</code>
+            <span className="text-sm text-gray-600">Agent ID</span>
+            <code className="text-xs bg-white px-2 py-1 rounded border">{activeAgent?.id}</code>
+          </div>
+          <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+            <span className="text-sm text-gray-600">System Type</span>
+            <Badge variant="default" className="bg-blue-600">OpenAI Realtime</Badge>
           </div>
         </div>
       </div>

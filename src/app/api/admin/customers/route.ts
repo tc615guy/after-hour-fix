@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
         orderBy: { updatedAt: 'desc' },
       })
       const premiumId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM
-      const cap = sub && premiumId && sub.priceId === premiumId ? 500
+      const cap = sub && premiumId && sub.priceId === premiumId ? 2500
         : sub && proId && sub.priceId === proId ? 1200
         : 500
       const minutesLeft = Math.max(0, cap - aiMinutesUsed)

@@ -114,6 +114,7 @@ model Agent {
   basePrompt        String   @db.Text
   minutesThisPeriod Int      @default(0)
   demoRecordingUrl  String? // Public demo recording for marketing
+  systemType        String   @default("vapi") // "vapi" | "openai-realtime"
   createdAt         DateTime @default(now())
   updatedAt         DateTime @default(now()) @updatedAt
   calls             Call[]
@@ -131,6 +132,7 @@ model PhoneNumber {
   label            String? // "Main", "Emergency"
   serverUrl        String? // Webhook URL for this specific number
   serverUrlSecret  String? // Auth secret for webhook
+  systemType       String   @default("vapi") // "vapi" | "openai-realtime"
   createdAt        DateTime @default(now())
   deletedAt        DateTime?
 

@@ -1,0 +1,273 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  image         String?
+  phone         String?
+  role          String         @default("user") // "user" | "admin"
+  createdAt     DateTime       @default(now())
+  projects      Project[]
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId String    @unique
+  stripeSubId      String    @unique
+  priceId          String
+  status           String
+  currentPeriodEnd DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Project {
+  id                     String        @id @default(cuid())
+  ownerId                String
+  owner                  User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name                   String
+  trade                  String // 'plumbing' | 'hvac' | 'locksmith' | 'tow' | 'electrician'
+  plan                   String        @default("Starter") // 'Starter' | 'Pro'
+  timezone               String        @default("America/Chicago")
+  ownerPhone             String? // For off-hours forwarding
+
+  // Business Hours (when AI handles calls vs forwarding)
+  businessHours          Json? // { mon: {open: "08:00", close: "17:00", enabled: true}, ... }
+  holidays               Json? // Array of holiday dates [{date: "2024-12-25", name: "Christmas"}]
+
+  // Business Info
+  businessAddress        String? // Business base address for service area calculation
+  warrantyInfo           Json? // { period: "1 year", coverage: "...", exclusions: [...] }
+  
+  // Service Area
+  serviceArea            Json? // { type: "radius|zipcodes|cities", value: [...], address: "..." }
+  serviceRadius          Int? // Miles from business address
+
+  // Pricing & Cost Sheet
+  pricingSheet           Json? // { items: [], tripFee: 0, enabled: true, notes: "" }
+  emergencyMultiplier    Float         @default(1.5) // After-hours price multiplier
+
+  // Cal.com Integration (OAuth-based, automatic)
+  calcomApiKey           String? // tenant-provided, encrypted
+  calcomUser             String? // optional: cal.com username for bookings
+  calcomUserId           Int? // Cal.com user ID from OAuth
+  calcomAccessToken      String? @db.Text // OAuth access token (encrypted)
+  calcomRefreshToken     String? @db.Text // OAuth refresh token (encrypted)
+  calcomTokenExpiry      DateTime? // When access token expires
+  calcomEventTypeId      Int? // Auto-created event type ID
+  calcomConnectedAt      DateTime? // When Cal.com was connected
+
+  // Phone Forwarding (OFF-HOURS ONLY)
+  forwardingEnabled      Boolean       @default(true) // Forward calls during off-hours
+  forwardingNumber       String? // Number to forward to after hours (e164 format)
+
+  confidenceThreshold    Float         @default(0.65) // Auto-escalate if voiceConfidence < this
+  autoForwardEnabled     Boolean       @default(true) // Toggle confidence-based forwarding
+  // Weekend booking policy
+  allowWeekendBooking    Boolean       @default(true)
+  requireOnCallForWeekend Boolean      @default(false)
+
+  // Overage and membership controls
+  allowOverage           Boolean       @default(false) // If true, report metered overage to Stripe
+  membershipActive       Boolean       @default(true)  // If false, suspend AI features
+  notificationsEmail     String?                     // Optional ops/billing notifications email
+  minutesAlert80Sent     Boolean       @default(false)
+  minutesAlert100Sent    Boolean       @default(false)
+
+  // Admin Notes
+  adminNotes             String?       @db.Text // Internal notes for admin use
+
+  agents                 Agent[]
+  numbers                PhoneNumber[]
+  calls                  Call[]
+  bookings               Booking[]
+  technicians            Technician[]
+  featureFlags           FeatureFlag[]
+  importJobs             ImportJob[]
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  deletedAt              DateTime?
+
+  @@index([ownerId])
+}
+
+model Agent {
+  id                String   @id @default(cuid())
+  projectId         String
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  vapiAssistantId   String
+  name              String
+  voice             String // e.g. "burt" (ElevenLabs)
+  basePrompt        String   @db.Text
+  minutesThisPeriod Int      @default(0)
+  demoRecordingUrl  String? // Public demo recording for marketing
+  systemType        String   @default("vapi") // "vapi" | "openai-realtime"
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
+  calls             Call[]
+  deletedAt         DateTime?
+
+  @@index([projectId])
+}
+
+model PhoneNumber {
+  id               String   @id @default(cuid())
+  projectId        String
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  e164             String   @unique
+  vapiNumberId     String
+  label            String? // "Main", "Emergency"
+  serverUrl        String? // Webhook URL for this specific number
+  serverUrlSecret  String? // Auth secret for webhook
+  systemType       String   @default("vapi") // "vapi" | "openai-realtime"
+  createdAt        DateTime @default(now())
+  deletedAt        DateTime?
+
+  @@index([projectId])
+}
+
+model Call {
+  id               String    @id @default(cuid())
+  projectId        String
+  project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  agentId          String?
+  agent            Agent?    @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  vapiCallId       String?   @unique
+  direction        String // inbound|outbound
+  fromNumber       String
+  toNumber         String
+  status           String // completed|failed|missed
+  durationSec      Int?
+  transcript       String?   @db.Text
+  intent           String? // emergency|quote|callback
+  recordingUrl     String? // Vapi recording URL
+  voiceConfidence  Float?    @default(1.0) // Voice recognition confidence (0-1)
+  escalated        Boolean   @default(false) // Whether call was escalated to owner
+  escalationReason String? // Reason for escalation (low_confidence|customer_request|panic_detected)
+  isDemo           Boolean   @default(false) // Flag for marketing demo recordings
+  createdAt        DateTime  @default(now())
+  bookings         Booking[]
+  deletedAt        DateTime?
+
+  @@index([voiceConfidence])
+  @@index([escalated])
+  @@index([isDemo])
+  @@index([projectId, createdAt])
+}
+
+model Technician {
+  id               String    @id @default(cuid())
+  projectId        String
+  project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name             String
+  phone            String    // Direct line for emergency routing
+  email            String?
+  address          String?   // Technician home/start address for routing
+  isActive         Boolean   @default(true)
+
+  // On-Call / Emergency Availability
+  isOnCall         Boolean   @default(false) // Currently available for emergencies RIGHT NOW
+  onCallSchedule   Json?     // When they're on-call { days: [], hours: {} }
+  emergencyOnly    Boolean   @default(false) // Only call for true emergencies
+  priority         Int       @default(0) // 0=lowest, higher=check first
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  bookings         Booking[]
+  deletedAt        DateTime?
+
+  @@index([projectId])
+  @@index([projectId, isOnCall, priority])
+}
+
+model Booking {
+  id               String       @id @default(cuid())
+  projectId        String
+  project          Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  callId           String?
+  call             Call?        @relation(fields: [callId], references: [id], onDelete: SetNull)
+  technicianId     String?
+  technician       Technician?  @relation(fields: [technicianId], references: [id], onDelete: SetNull)
+  customerName     String?
+  customerPhone    String?
+  customerEmail    String?
+  address          String?
+  notes            String?      @db.Text
+  slotStart        DateTime?
+  slotEnd          DateTime?
+  priceCents       Int?
+  isEmergency      Boolean      @default(false) // After-hours/emergency booking
+  status           String // pending|booked|en_route|completed|canceled|failed
+  calcomBookingId  Int? // Cal.com booking ID for syncing
+  calcomBookingUid String? // Cal.com booking UID for calendar links
+
+  // Payment tracking
+  paymentStatus    String       @default("pending") // pending|sent|paid|refunded
+  paymentLink      String? // Stripe payment link
+  paidAt           DateTime?
+
+  // Communication tracking
+  confirmationSent Boolean      @default(false)
+  costSheetSent    Boolean      @default(false)
+
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @default(now()) @updatedAt
+  deletedAt        DateTime?
+
+  @@index([projectId])
+  @@index([projectId, slotStart])
+  @@index([projectId, createdAt])
+}
+
+model EventLog {
+  id        String   @id @default(cuid())
+  projectId String?
+  type      String
+  payload   Json
+  createdAt DateTime @default(now())
+
+  @@index([projectId, createdAt])
+}
+
+model FeatureFlag {
+  id        String   @id @default(cuid())
+  key       String
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([key, projectId])
+  @@index([projectId])
+}
+
+model ImportJob {
+  id         String   @id @default(cuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type       String   // e.g. 'bookings.import', 'bookings.importBatch', 'numbers.sync'
+  status     String   @default("queued") // queued | processing | completed | failed
+  total      Int?
+  processed  Int      @default(0)
+  error      String?
+  result     Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([projectId, createdAt])
+}

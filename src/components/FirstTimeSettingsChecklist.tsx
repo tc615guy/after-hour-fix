@@ -118,12 +118,12 @@ export default function FirstTimeSettingsChecklist({
     {
       id: 'assistant',
       title: 'Configure AI Assistant',
-      description: 'Customize your AI receptionist voice, tone, and behavior',
+      description: 'Customize your OpenAI Realtime AI receptionist voice, tone, and behavior',
       completed: true, // Always available
       icon: Sparkles,
       tab: 'assistant',
       category: 'Advanced',
-      details: ['Review voice settings', 'Customize greeting message'],
+      details: ['Review OpenAI Realtime voice settings', 'Customize greeting message'],
     },
     {
       id: 'templates',
