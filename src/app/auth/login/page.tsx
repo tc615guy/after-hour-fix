@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { signInWithEmail } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
 
-export default function LoginPage() {
+function LoginForm() {
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
@@ -101,5 +101,13 @@ export default function LoginPage() {
         )}
       </Card>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center"><div className="text-gray-500">Loading...</div></div>}>
+      <LoginForm />
+    </Suspense>
   )
 }
