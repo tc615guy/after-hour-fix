@@ -275,17 +275,20 @@ export async function POST(req: NextRequest) {
       
       // Step 2: Create booking with correct v2 format
       // Cal.com v2 uses /v2/bookings endpoint (not /v2/events/{id}/bookings)
+      // Based on Cal.com v2 docs, attendees should be an array
       const bookingPayload = {
         eventTypeId: eventTypeId,
         start: startTime.toISOString(),
         timeZone: project.timezone || 'America/Chicago', // Required: top-level timeZone
         language: 'en', // ✅ ALSO required at root level by Cal.com v2
-        attendee: {
-          name: input.customerName,
-          email: `${phoneDigits}@sms.afterhourfix.com`,
-          timeZone: project.timezone || 'America/Chicago',
-          language: 'en',
-        },
+        attendees: [  // Changed from 'attendee' to 'attendees' array
+          {
+            name: input.customerName,
+            email: `${phoneDigits}@sms.afterhourfix.com`,
+            timeZone: project.timezone || 'America/Chicago',
+            language: 'en',
+          }
+        ],
         bookingFieldsResponses: {
           phone: input.customerPhone,
           address: input.address,
