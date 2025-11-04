@@ -1,0 +1,10 @@
+# Ignore the server directory - it's deployed separately to Render
+server/
+
+# Ignore other build artifacts
+node_modules/
+.next/
+dist/
+*.log
+.env.local
+
