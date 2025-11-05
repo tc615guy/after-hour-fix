@@ -22,6 +22,7 @@ import KnowledgeManager from '@/components/KnowledgeManager'
 import FirstTimeSettingsChecklist from '@/components/FirstTimeSettingsChecklist'
 import PricingResponseTemplates from '@/components/PricingResponseTemplates'
 import PhoneSetup from '@/components/PhoneSetup'
+import AdvancedAISettings from '@/components/AdvancedAISettings'
 
 
 export default function SettingsPage() {
@@ -360,14 +361,15 @@ export default function SettingsPage() {
             </Card>
 
             {project.agents && project.agents.length > 0 && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Assistant Configuration</CardTitle>
-                      <CardDescription>
-                        Customize your AI assistant settings below. Changes take effect immediately.
-                      </CardDescription>
+              <>
+                <Card className="mb-6">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>Assistant Configuration</CardTitle>
+                        <CardDescription>
+                          Customize your AI assistant settings below. Changes take effect immediately.
+                        </CardDescription>
                     </div>
                     <Badge className="bg-green-600">Active</Badge>
                   </div>
@@ -381,6 +383,13 @@ export default function SettingsPage() {
                   />
                 </CardContent>
               </Card>
+
+              {/* Advanced AI Settings */}
+              <AdvancedAISettings 
+                projectId={project.id}
+                agentId={project.agents?.[0]?.id}
+              />
+              </>
             )}
 
 

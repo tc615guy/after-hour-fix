@@ -90,6 +90,9 @@ model Project {
   // Admin Notes
   adminNotes             String?       @db.Text // Internal notes for admin use
 
+  // AI Settings
+  aiSettings             Json? // Advanced AI configuration (conversation style, behavior, etc.)
+
   agents                 Agent[]
   numbers                PhoneNumber[]
   calls                  Call[]
