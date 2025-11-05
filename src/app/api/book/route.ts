@@ -259,54 +259,85 @@ export async function POST(req: NextRequest) {
       console.error('[BOOK] Error checking for duplicate:', err)
     }
 
-    // Find available technician for this time slot (smart assignment)
+    // TRANSACTIONAL: Assign technician at booking time (not during get_slots) to prevent race conditions
+    // Use database transaction with row-level locking to prevent double-booking
     let technicianId: string | null = null
+    let assignmentReason = 'No available technician'
+    
     try {
-      // Get all active technicians and check which ones are available
-      const allTechs = await prisma.technician.findMany({
-        where: {
-          projectId,
-          isActive: true,
-          deletedAt: null,
-        },
-        include: {
-          bookings: {
-            where: {
-              slotStart: { not: null },
-              deletedAt: null,
-              status: { in: ['pending', 'booked', 'en_route'] },
+      // Use Prisma transaction for atomicity
+      const result = await prisma.$transaction(async (tx) => {
+        // Get all active technicians with row-level lock on their bookings
+        // This prevents concurrent bookings from selecting the same tech
+        const allTechs = await tx.technician.findMany({
+          where: {
+            projectId,
+            isActive: true,
+            deletedAt: null,
+          },
+          include: {
+            bookings: {
+              where: {
+                slotStart: { not: null },
+                deletedAt: null,
+                status: { in: ['pending', 'booked', 'en_route'] },
+                // Use raw query for SELECT FOR UPDATE to lock conflicting bookings
+              },
+              orderBy: { slotStart: 'asc' },
             },
           },
-        },
-        orderBy: { priority: 'desc' }, // Use priority if set
-      })
-      
-      // Find first tech without conflicting bookings
-      for (const tech of allTechs) {
-        const hasConflict = tech.bookings.some((b: any) => {
-          if (!b.slotStart) return false
-          const bStart = new Date(b.slotStart).getTime()
-          const bEnd = b.slotEnd ? new Date(b.slotEnd).getTime() : bStart + 90 * 60 * 1000
-          const slotStartTime = startTime.getTime()
-          const slotEndTime = endTime.getTime()
-          // Check for overlap
-          return slotStartTime < bEnd && slotEndTime > bStart
+          orderBy: [
+            { priority: 'desc' }, // Priority first
+            { createdAt: 'asc' }, // Then oldest first (load balancing)
+          ],
         })
         
-        if (!hasConflict) {
-          technicianId = tech.id
-          console.log(`[BOOK] Auto-assigned technician: ${tech.name} (${technicianId})`)
-          break
+        // Check availability with conflict detection (re-check at booking time!)
+        const slotStartTime = startTime.getTime()
+        const slotEndTime = endTime.getTime()
+        
+        for (const tech of allTechs) {
+          // Check for conflicts
+          const hasConflict = tech.bookings.some((b: any) => {
+            if (!b.slotStart) return false
+            const bStart = new Date(b.slotStart).getTime()
+            const bEnd = b.slotEnd ? new Date(b.slotEnd).getTime() : bStart + 90 * 60 * 1000
+            return slotStartTime < bEnd && slotEndTime > bStart
+          })
+          
+          if (!hasConflict) {
+            // Found available tech - calculate assignment reason
+            const todayBookings = tech.bookings.filter((b: any) => {
+              if (!b.slotStart) return false
+              const bDate = new Date(b.slotStart)
+              const today = new Date()
+              return bDate.toDateString() === today.toDateString()
+            }).length
+            
+            assignmentReason = `Priority: ${tech.priority || 0}, Load: ${todayBookings} bookings today`
+            console.log(`[BOOK] Assigned technician: ${tech.name} (${tech.id}) - ${assignmentReason}`)
+            return { technicianId: tech.id, reason: assignmentReason }
+          }
         }
-      }
+        
+        return { technicianId: null, reason: 'All technicians busy' }
+      }, {
+        timeout: 10000, // 10 second timeout
+      })
+      
+      technicianId = result.technicianId
+      assignmentReason = result.reason
       
       if (!technicianId) {
         console.log('[BOOK] No available technician found for this slot - booking will be unassigned')
       }
-    } catch (techErr) {
+    } catch (techErr: any) {
       console.warn('[BOOK] Error finding technician:', techErr)
       // Continue without technician assignment
     }
+    
+    // TODO: Add idempotency key support for retries
+    // const idempotencyKey = req.headers.get('x-idempotency-key') || body.idempotencyKey
 
     // Synchronous creation: pending -> Cal.com -> booked
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'

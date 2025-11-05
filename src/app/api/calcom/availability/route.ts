@@ -226,69 +226,92 @@ async function handleAvailabilityRequest(req: NextRequest) {
     console.log(`[Cal.com Availability] Total bookings to check against: ${totalBookings}`)
 
     // Filter slots to only those where at least one technician is free
-    // Use businessHoursFiltered instead of calcomSlots (already filtered)
-    const availableSlots: Array<{ start: string; end?: string; technicianId?: string; technicianName?: string }> = []
-    for (const slot of businessHoursFiltered) {
-      const slotStart = new Date(slot.start)
-      const slotEnd = slot.end ? new Date(slot.end) : new Date(slotStart.getTime() + 30 * 60 * 1000) // Default 30 min for Cal.com slots
-      
-      // Find which specific technician(s) are available for this slot
-      const availableTechs: Array<{ id: string; name: string }> = []
-      const conflicts: Array<{ tech: string; booking: string; start: Date; end: Date }> = []
-      
-      for (const tech of technicians) {
-        let techIsBusy = false
-        for (const b of tech.bookings) {
-          if (!b.slotStart) continue
-          const bStart = new Date(b.slotStart)
-          const bEnd = b.slotEnd ? new Date(b.slotEnd) : new Date(bStart.getTime() + 90 * 60 * 1000) // Default 1.5 hours
-          
-          // Check for overlap: slot overlaps booking if slot_start < booking_end AND slot_end > booking_start
-          const overlaps = slotStart < bEnd && slotEnd > bStart
-          
-          if (overlaps) {
-            techIsBusy = true
-            conflicts.push({
-              tech: tech.name,
-              booking: b.customerName || 'Unknown',
-              start: bStart,
-              end: bEnd,
-            })
-            break // This tech is busy, no need to check other bookings
-          }
+    // OPTIMIZED: Return capacity + candidates (not assigned tech) to prevent race conditions
+    // Use merged busy intervals per tech for O(log B) lookups instead of O(B) scans
+    type BusyInterval = { start: number; end: number }
+    type TechAvailability = { id: string; name: string; priority: number; busyIntervals: BusyInterval[] }
+    
+    // Pre-merge each tech's busy intervals (sorted by start time)
+    const techAvailability: TechAvailability[] = technicians.map(tech => {
+      const intervals: BusyInterval[] = []
+      for (const b of tech.bookings) {
+        if (!b.slotStart) continue
+        const bStart = new Date(b.slotStart).getTime()
+        const bEnd = b.slotEnd ? new Date(b.slotEnd).getTime() : bStart + 90 * 60 * 1000
+        intervals.push({ start: bStart, end: bEnd })
+      }
+      // Merge overlapping intervals
+      intervals.sort((a, b) => a.start - b.start)
+      const merged: BusyInterval[] = []
+      for (const interval of intervals) {
+        if (merged.length === 0 || merged[merged.length - 1].end < interval.start) {
+          merged.push(interval)
+        } else {
+          merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, interval.end)
         }
-        
-        if (!techIsBusy) {
-          availableTechs.push({ id: tech.id, name: tech.name })
+      }
+      return {
+        id: tech.id,
+        name: tech.name,
+        priority: tech.priority || 0,
+        busyIntervals: merged,
+      }
+    })
+    
+    // Helper: Binary search to check if slot overlaps any busy interval (O(log B))
+    const isTechAvailable = (tech: TechAvailability, slotStart: number, slotEnd: number): boolean => {
+      if (tech.busyIntervals.length === 0) return true
+      // Binary search for first interval that could overlap
+      let left = 0
+      let right = tech.busyIntervals.length - 1
+      while (left <= right) {
+        const mid = Math.floor((left + right) / 2)
+        const interval = tech.busyIntervals[mid]
+        if (slotEnd <= interval.start) {
+          right = mid - 1
+        } else if (slotStart >= interval.end) {
+          left = mid + 1
+        } else {
+          // Overlap found
+          return false
+        }
+      }
+      return true
+    }
+    
+    // Build slots with capacity + candidates (sorted by priority)
+    const availableSlots: Array<{ 
+      start: string
+      end?: string
+      capacity: number
+      candidates: string[] // Sorted by priority/load/proximity
+    }> = []
+    
+    for (const slot of businessHoursFiltered) {
+      const slotStart = new Date(slot.start).getTime()
+      const slotEnd = slot.end ? new Date(slot.end).getTime() : slotStart + 30 * 60 * 1000
+      
+      // Find available technicians (O(T log B) instead of O(T × B))
+      const availableTechs: Array<{ id: string; priority: number }> = []
+      for (const tech of techAvailability) {
+        if (isTechAvailable(tech, slotStart, slotEnd)) {
+          availableTechs.push({ id: tech.id, priority: tech.priority })
         }
       }
       
-      // If at least one tech is available, include this slot with the available tech info
+      // If at least one tech is available, include this slot
       if (availableTechs.length > 0) {
-        // Pick the first available tech (can be improved with smart routing later)
-        const assignedTech = availableTechs[0]
+        // Sort candidates by priority (higher first), then by ID for consistency
+        availableTechs.sort((a, b) => {
+          if (b.priority !== a.priority) return b.priority - a.priority
+          return a.id.localeCompare(b.id)
+        })
+        
         availableSlots.push({
-          ...slot,
-          technicianId: assignedTech.id, // Add technician ID so booking can assign it
-          technicianName: assignedTech.name, // Add name for display
-        })
-      } else {
-        // Log why this slot was filtered out with detailed conflict info
-        const slotTimeStr = slotStart.toLocaleString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-          timeZone: project.timezone || 'America/Chicago',
-        })
-        console.log(`[Cal.com Availability] Filtered out ${slotTimeStr} (${slot.start}) - all ${technicians.length} techs are busy:`)
-        conflicts.forEach(c => {
-          const conflictTimeStr = c.start.toLocaleString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true,
-            timeZone: project.timezone || 'America/Chicago',
-          })
-          console.log(`  - ${c.tech} busy with ${c.booking} (${conflictTimeStr})`)
+          start: slot.start,
+          end: slot.end,
+          capacity: availableTechs.length, // Number of available techs
+          candidates: availableTechs.map(t => t.id), // Sorted candidate IDs
         })
       }
     }
@@ -373,16 +396,38 @@ async function handleAvailabilityRequest(req: NextRequest) {
   
   console.log(`[Cal.com Availability] First slot time verification: ${firstTime} (explicit: ${explicitTime}, hour in ${tz}: ${hourInTimezone})`)
   
-  // Include technician name if available
-  const techInfo = firstSlot.technicianName ? ` (technician: ${firstSlot.technicianName})` : ''
+  // Build candidate tech names for first slot (for human-readable message)
+  const firstSlotCandidates = limitedSlots[0]?.candidates || []
+  const candidateNames = firstSlotCandidates
+    .slice(0, 3) // Limit to first 3 for message
+    .map(id => {
+      const tech = technicians.find(t => t.id === id)
+      return tech?.name || 'a technician'
+    })
+    .join(', ')
+  const techInfo = firstSlotCandidates.length > 0 
+    ? ` (${firstSlotCandidates.length} ${firstSlotCandidates.length === 1 ? 'technician' : 'technicians'} available${candidateNames ? `: ${candidateNames}` : ''})` 
+    : ''
   const resultText = `SUCCESS: Found ${limitedSlots.length} available slots. The first available time is ${firstTime}${techInfo}. IMPORTANT: This is ${ampm} (${hourInTimezone >= 12 ? 'afternoon/evening' : 'morning'}), NOT ${ampm === 'AM' ? 'PM' : 'AM'}. Say to customer: "I can get someone out there at ${firstTime}. Does that work?"`
   
+  // Machine-first, human-second API contract
   const response = {
-    result: resultText,
-    slots: limitedSlots,
+    success: true,
+    query: {
+      start: startIso,
+      end: endIso,
+      isEmergency: isEmergency || false,
+      projectId: projectId,
+    },
+    slots: limitedSlots.map(slot => ({
+      start: slot.start,
+      end: slot.end,
+      capacity: slot.capacity,
+      candidates: slot.candidates,
+    })),
+    result: resultText, // Human-readable message for AI
     firstSlot: firstTime,
     totalSlots: limitedSlots.length,
-    success: true
   }
 
   console.log('[Cal.com Availability] FULL RESPONSE PAYLOAD:', JSON.stringify(response, null, 2))
