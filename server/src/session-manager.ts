@@ -131,13 +131,20 @@ export class CallSessionManager {
             switch (functionName) {
               case 'get_slots': {
                 // Handle emergency-aware slot fetching
-                const start = params.isEmergency 
-                  ? new Date().toISOString() // Emergency: start from now
-                  : (params.start || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()) // Routine: default to tomorrow
-                const end = params.end || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+                // The API will handle smart date range based on isEmergency
+                const isEmergency = params.isEmergency === true || params.isEmergency === 'true'
+                const start = params.start || undefined // Let API decide if not provided
+                const end = params.end || undefined
                 
-                const url = `${appUrl}/api/calcom/availability?projectId=${session.projectId}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
-                console.log(`[SessionManager] Calling get_slots: ${url} (emergency: ${params.isEmergency || false}) [attempt ${attempt}/${maxRetries}]`)
+                const urlParams = new URLSearchParams({
+                  projectId: session.projectId,
+                  ...(start && { start }),
+                  ...(end && { end }),
+                  ...(isEmergency && { isEmergency: 'true' }),
+                })
+                
+                const url = `${appUrl}/api/calcom/availability?${urlParams.toString()}`
+                console.log(`[SessionManager] Calling get_slots: ${url} (emergency: ${isEmergency}) [attempt ${attempt}/${maxRetries}]`)
                 
                 const res = await fetch(url, {
                   signal: AbortSignal.timeout(10000), // 10 second timeout

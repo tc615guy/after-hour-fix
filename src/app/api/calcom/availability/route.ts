@@ -24,14 +24,58 @@ async function handleAvailabilityRequest(req: NextRequest) {
 
     const start = url.searchParams.get('start')
     const end = url.searchParams.get('end')
-    // Default: next 7 days
+    const isEmergency = url.searchParams.get('isEmergency') === 'true'
+    
     const now = new Date()
-    const startDate = start && !isNaN(new Date(start).getTime()) ? new Date(start) : now
-    const endDefault = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-    const endDate = end && !isNaN(new Date(end).getTime()) ? new Date(end) : endDefault
+    const tz = project.timezone || 'America/Chicago'
+    const currentHour = parseInt(now.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: tz }))
+    
+    // SMART DATE RANGE: Only query what we need
+    let startDate: Date
+    let endDate: Date
+    
+    const tomorrow = new Date(now)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow.setHours(0, 0, 0, 0)
+    
+    if (start && !isNaN(new Date(start).getTime())) {
+      // Explicit start date provided
+      startDate = new Date(start)
+    } else if (isEmergency) {
+      // Emergency: Start from now
+      startDate = now
+    } else {
+      // Routine: Next business day (or later today if it's early morning)
+      // If it's before 2 PM, check if there are openings later today
+      // Otherwise, default to tomorrow
+      startDate = currentHour < 14 ? now : tomorrow
+    }
+    
+    if (end && !isNaN(new Date(end).getTime())) {
+      endDate = new Date(end)
+    } else if (isEmergency) {
+      // Emergency: Only today
+      endDate = new Date(now)
+      endDate.setHours(23, 59, 59, 999)
+    } else {
+      // Routine: Only query the next business day (not 7 days!)
+      // If we're checking today (early morning), end at end of today
+      // Otherwise, end at end of tomorrow
+      if (currentHour < 14 && startDate.getTime() < tomorrow.getTime()) {
+        // Checking today
+        endDate = new Date(now)
+        endDate.setHours(23, 59, 59, 999)
+      } else {
+        // Checking tomorrow
+        endDate = new Date(startDate)
+        endDate.setHours(23, 59, 59, 999)
+      }
+    }
     
     const startIso = startDate.toISOString()
     const endIso = endDate.toISOString()
+    
+    console.log(`[Cal.com Availability] Smart date range - Emergency: ${isEmergency}, Start: ${startIso}, End: ${endIso}, Current hour: ${currentHour}`)
 
     // Try Cal.com v2 slots API first, fallback to v1 via CalComClient
     console.log(`[Cal.com Availability] Querying v2 slots for projectId=${projectId}, eventTypeId=${project.calcomEventTypeId}, start=${startIso}, end=${endIso}`)
@@ -92,27 +136,64 @@ async function handleAvailabilityRequest(req: NextRequest) {
     }
     
     console.log(`[Cal.com Availability] Found ${calcomSlots.length} slots from Cal.com`)
+    
+    // BUSINESS HOURS FILTER FIRST (before checking technician conflicts - much faster!)
+    // Read from project.businessHours to respect actual operating hours
+    const businessHours: any = project.businessHours || {}
+    
+    // Determine earliest open and latest close across all days
+    const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+    let earliestOpen = 24
+    let latestClose = 0
+    
+    for (const day of days) {
+      const dayConfig = businessHours[day]
+      if (dayConfig?.enabled) {
+        const openHour = parseInt((dayConfig.open || '08:00').split(':')[0])
+        const closeHour = parseInt((dayConfig.close || '17:00').split(':')[0])
+        earliestOpen = Math.min(earliestOpen, openHour)
+        latestClose = Math.max(latestClose, closeHour)
+      }
+    }
+    
+    // Default to 8 AM - 5 PM if no business hours configured
+    if (earliestOpen === 24) earliestOpen = 8
+    if (latestClose === 0) latestClose = 17
+    
+    console.log(`[Cal.com Availability] Business hours filter: ${earliestOpen}:00 - ${latestClose}:00 in ${tz}`)
+    
+    // Filter by business hours FIRST (reduces slots to check significantly)
+    const businessHoursFiltered = calcomSlots.filter(slot => {
+      const slotTime = new Date(slot.start)
+      // Get hour in project timezone, not UTC
+      const hour = parseInt(slotTime.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: tz }))
+      return hour >= earliestOpen && hour < latestClose
+    })
+    
+    console.log(`[Cal.com Availability] After business hours filter: ${businessHoursFiltered.length} slots (from ${calcomSlots.length})`)
 
     // SMART ROUTING: Filter slots to only include those where at least one technician is available
     // Get all active technicians and their bookings that could overlap with our time range
     // Note: startDate and endDate are already defined above from query params
+    
+    // OPTIMIZED: Only fetch bookings for the specific day(s) we're querying
+    // This dramatically reduces the number of bookings to check
+    const dayStart = new Date(startDate)
+    dayStart.setHours(0, 0, 0, 0)
+    const dayEnd = new Date(endDate)
+    dayEnd.setHours(23, 59, 59, 999)
     
     const technicians = await prisma.technician.findMany({
       where: { projectId, isActive: true, deletedAt: null },
       include: {
         bookings: {
           where: {
-            // Get bookings that overlap with our time range
-            // A booking overlaps if: booking_start < range_end AND booking_end > range_start
+            // OPTIMIZED: Only fetch bookings for the specific day range we're checking
+            // This is much faster than querying 7 days worth of bookings
             AND: [
               { slotStart: { not: null } },
-              { slotStart: { lt: endDate } },
-              {
-                OR: [
-                  { slotEnd: { gt: startDate } },
-                  { slotEnd: null }, // If no end time, assume it extends beyond start
-                ],
-              },
+              { slotStart: { gte: dayStart } }, // Only bookings on or after our start day
+              { slotStart: { lte: dayEnd } },   // Only bookings on or before our end day
               // Exclude only canceled/failed bookings - include ALL other statuses (including 'TN' from CSV imports)
               { status: { notIn: ['canceled', 'failed'] } },
             ],
@@ -145,8 +226,9 @@ async function handleAvailabilityRequest(req: NextRequest) {
     console.log(`[Cal.com Availability] Total bookings to check against: ${totalBookings}`)
 
     // Filter slots to only those where at least one technician is free
+    // Use businessHoursFiltered instead of calcomSlots (already filtered)
     const availableSlots: Array<{ start: string; end?: string }> = []
-    for (const slot of calcomSlots) {
+    for (const slot of businessHoursFiltered) {
       const slotStart = new Date(slot.start)
       const slotEnd = slot.end ? new Date(slot.end) : new Date(slotStart.getTime() + 30 * 60 * 1000) // Default 30 min for Cal.com slots
       
@@ -206,53 +288,11 @@ async function handleAvailabilityRequest(req: NextRequest) {
     }
 
     console.log(`[Cal.com Availability] Returning ${availableSlots.length} available slots (filtered from ${calcomSlots.length} Cal.com slots)`)
-
-    // BUSINESS RULE 1: Filter out slots outside configured business hours
-    // Read from project.businessHours to respect actual operating hours
-    const tz = project.timezone || 'America/Chicago'
-    const businessHours: any = project.businessHours || {}
     
-    // Determine earliest open and latest close across all days
-    const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
-    let earliestOpen = 24
-    let latestClose = 0
-    
-    for (const day of days) {
-      const dayConfig = businessHours[day]
-      if (dayConfig?.enabled) {
-        const openHour = parseInt((dayConfig.open || '08:00').split(':')[0])
-        const closeHour = parseInt((dayConfig.close || '17:00').split(':')[0])
-        earliestOpen = Math.min(earliestOpen, openHour)
-        latestClose = Math.max(latestClose, closeHour)
-      }
-    }
-    
-    // Default to 8 AM - 5 PM if no business hours configured
-    if (earliestOpen === 24) earliestOpen = 8
-    if (latestClose === 0) latestClose = 17
-    
-    console.log(`[Cal.com Availability] Business hours filter: ${earliestOpen}:00 - ${latestClose}:00 in ${tz}`)
-    
-    const businessHoursFiltered = availableSlots.filter(slot => {
-      const slotTime = new Date(slot.start)
-      // Get hour in project timezone, not UTC
-      const hour = parseInt(slotTime.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: tz }))
-      const isWithinBusinessHours = hour >= earliestOpen && hour < latestClose
-      if (!isWithinBusinessHours) {
-        console.log(`[Cal.com Availability] Filtered out ${slot.start} - outside business hours (hour: ${hour} in ${tz}, allowed: ${earliestOpen}-${latestClose})`)
-      }
-      return isWithinBusinessHours
-    })
-    
-    console.log(`[Cal.com Availability] After business hours filter: ${businessHoursFiltered.length} slots (from ${availableSlots.length})`)
-    
-    // BUSINESS RULE 2: If it's after 4 PM in project timezone, filter out today's slots
+    // BUSINESS RULE: If it's after 4 PM in project timezone, filter out today's slots
     // (Unless it's an emergency, but AI will handle that separately)
-    const currentTime = new Date()
-    const currentHour = parseInt(currentTime.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: tz }))
-    
-    let filteredSlots = businessHoursFiltered
-    if (currentHour >= 16) { // After 4 PM
+    let filteredSlots = availableSlots
+    if (currentHour >= 16 && !isEmergency) { // After 4 PM and not emergency
       // Get today's date in the project timezone (not UTC!)
       // toLocaleDateString returns MM/DD/YYYY, so we need to parse it correctly
       const dateParts = currentTime.toLocaleDateString('en-US', { 
