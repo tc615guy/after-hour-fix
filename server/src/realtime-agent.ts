@@ -249,17 +249,7 @@ export class RealtimeAgent {
 
       case 'session.updated':
         console.log('[RealtimeAgent] Session updated')
-        
-        // TEMPORARY: Force OpenAI to respond immediately after session is configured
-        // This tests if OpenAI can speak at all
-        console.log('[RealtimeAgent] 🧪 Forcing immediate response to test audio...')
-        this.ws?.send(JSON.stringify({
-          type: 'response.create',
-          response: {
-            modalities: ['audio', 'text'],
-            instructions: 'Say "Hello, this is Big Turd Plumbing. How can I help you today?"'
-          }
-        }))
+        // Session is ready - OpenAI will respond naturally based on system prompt
         break
 
       case 'response.audio_transcript.delta':
@@ -594,12 +584,13 @@ export class RealtimeAgent {
       },
       hvac: {
         context: 'heating and cooling issues, AC repair, furnace problems, and HVAC maintenance',
-        emergencyKeywords: ['no heat', 'freezing', 'carbon monoxide', 'furnace not working', 'burning smell', 'system off for days', 'no AC in heat wave', 'children elderly'],
+        emergencyKeywords: ['no heat', 'furnace down', 'furnace not working', 'furnace broke', 'heat not working', 'freezing', 'carbon monoxide', 'burning smell', 'system off for days', 'no AC in heat wave', 'children elderly'],
         emergencyQuestions: [
-          'Is there no heat and are there young children or elderly people in the home?',
+          'Is there no heat or is the furnace completely not working?',
+          'Is your home currently freezing or dangerously hot?',
+          'Are there young children or elderly people in the home?',
           'Has the system been completely off for more than 24 hours?',
           'Do you smell gas or a burning odor coming from the system?',
-          'Is your home currently freezing or dangerously hot?',
           'Is this a carbon monoxide concern?'
         ],
         routineIndicators: ['not cooling well', 'strange noises', 'want maintenance', 'filter replacement', 'routine tune-up'],
@@ -683,31 +674,38 @@ If someone mentions an unrelated service, politely clarify: "Just to confirm, yo
 
 ${emergencyTriageSection}
 
-**CONVERSATION FLOW:**
+**CONVERSATION FLOW - MUST FOLLOW EXACTLY:**
 1. **Listen First** - Let customer explain the issue fully. Don't interrupt.
+
 2. **Triage the Issue** - Use emergency triage process above to classify as EMERGENCY or ROUTINE
+   - For HVAC: "furnace down", "no heat", "furnace not working" = EMERGENCY (especially in winter)
+   - Ask 1-2 clarifying questions from emergency list if needed
+
 3. **Show Empathy** - Brief acknowledgment: "Oh man, that sounds stressful" or "I understand, let's get this sorted"
-4. **Gather Info ONE AT A TIME** - NEVER ask multiple questions in one turn:
-   - Name: "Who am I speaking with?"
-   - Phone: "What's the best number to reach you?" (10 digits, no country code)
-   - Address: "Where are you located?" (ask for unit/apartment if needed)
-   - Issue: If not mentioned, ask: "What's going on?"
-5. **Check Availability & Book**:
-   - For ROUTINE calls, ask: "Do you prefer morning or afternoon?"
-   - Call get_slots with appropriate time window (TODAY for emergency, TOMORROW+ for routine)
-   - Filter slots based on customer's time preference (morning = before 12pm, afternoon = 12pm or later)
-   - Propose ONLY times from get_slots result that match their preference - NEVER invent availability
-   - If no slots match preference, offer closest alternative: "I don't have any morning slots, but I have 2pm available. Does that work?"
-   - When customer agrees, call book_slot with confirm=true
+
+4. **Gather ALL REQUIRED INFO BEFORE BOOKING** - You MUST collect ALL of these before calling get_slots or book_slot:
+   - **Name**: "Who am I speaking with?" → WAIT for answer
+   - **Phone**: "What's the best number to reach you?" (10 digits, no country code) → WAIT for answer
+   - **Address**: "Where are you located?" (must include street number, street name, city) → WAIT for answer
+     * If address incomplete: "What's the street number and city?"
+     * Ask for apartment/unit if needed
+   - **Issue**: If not mentioned, ask: "What's going on?" → WAIT for answer
+
+5. **ONLY AFTER YOU HAVE: name, phone, address, and issue** → Check Availability & Book:
+   - For EMERGENCY calls: Call get_slots with isEmergency=true for TODAY
+   - For ROUTINE calls: Ask "Do you prefer morning or afternoon?" → WAIT → Then call get_slots for TOMORROW+
+   - Propose ONLY times from get_slots result - NEVER invent availability
+   - When customer agrees to a time, call book_slot with ALL collected info: customerName, customerPhone, address, notes (issue), startTime
    - Wait for booking confirmation before continuing
 
-**CRITICAL RULES:**
+**CRITICAL RULES - NEVER VIOLATE:**
+- **NEVER call get_slots or book_slot until you have: name, phone, address, and issue**
 - Ask ONE question at a time - wait for answer before next question
 - Never invent availability - only use times from get_slots
 - Keep responses SHORT (1-2 sentences max)
 - Never ask for credit card info - say "We'll send a secure payment link"
-- EMERGENCY calls get priority booking, ROUTINE calls get next-day slots
-- If customer wants emergency service but issue is routine, explain: "This sounds like something we can schedule for tomorrow. Does that work?"
+- EMERGENCY calls get priority booking (TODAY), ROUTINE calls get next-day slots
+- If customer says "furnace down" or "no heat" = EMERGENCY for HVAC (book today)
 
 **AFTER BOOKING:**
 Say: "Perfect! You're all set for [time]. We'll text you the details."`

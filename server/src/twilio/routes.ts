@@ -93,6 +93,18 @@ export function setupTwilioRoutes(app: express.Application, sessionManager: Call
 
       console.log(`[Twilio] Found project: ${project.name}, agent: ${agent.name} (OpenAI Realtime)`)
 
+      // REQUIRE Cal.com connection before phone number is accessible
+      if (!project.calcomApiKey || !project.calcomUser) {
+        console.error(`[Twilio] Phone number ${To} is not accessible - Cal.com not connected for project ${project.name}`)
+        res.type('text/xml')
+        res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say>Sorry, this number is not yet configured. Please contact support to complete setup.</Say>
+  <Hangup/>
+</Response>`)
+        return
+      }
+
       // Create session with real agent/project IDs
       await sessionManager.createSession(CallSid, agent.id, project.id, From, To)
 
