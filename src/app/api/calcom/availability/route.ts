@@ -26,9 +26,12 @@ async function handleAvailabilityRequest(req: NextRequest) {
     const end = url.searchParams.get('end')
     const isEmergency = url.searchParams.get('isEmergency') === 'true'
     
+    // STRONG TIMEZONE HANDLING: Normalize everything to UTC internally
     const now = new Date()
     const tz = project.timezone || 'America/Chicago'
+    // Get current hour in project timezone for business rules
     const currentHour = parseInt(now.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: tz }))
+    decisionTrace.push(`Current time: ${now.toISOString()} (UTC), ${currentHour}:00 in ${tz}`)
     
     // SMART DATE RANGE: Only query what we need
     let startDate: Date
@@ -287,9 +290,13 @@ async function handleAvailabilityRequest(req: NextRequest) {
       candidates: string[] // Sorted by priority/load/proximity
     }> = []
     
+    // Use requested duration (or default 60 min) instead of slot duration
+    const requestedDurationMs = durationMinutes * 60 * 1000
+    
     for (const slot of businessHoursFiltered) {
+      // Use requested duration, not slot duration
       const slotStart = new Date(slot.start).getTime()
-      const slotEnd = slot.end ? new Date(slot.end).getTime() : slotStart + 30 * 60 * 1000
+      const slotEnd = slot.end ? new Date(slot.end).getTime() : slotStart + requestedDurationMs
       
       // Find available technicians (O(T log B) instead of O(T × B))
       const availableTechs: Array<{ id: string; priority: number }> = []
@@ -307,14 +314,21 @@ async function handleAvailabilityRequest(req: NextRequest) {
           return a.id.localeCompare(b.id)
         })
         
+        // TODO: Filter by serviceType/skills if provided
+        // For now, include all available techs
+        
         availableSlots.push({
           start: slot.start,
-          end: slot.end,
+          end: slot.end || new Date(slotStart + requestedDurationMs).toISOString(),
           capacity: availableTechs.length, // Number of available techs
           candidates: availableTechs.map(t => t.id), // Sorted candidate IDs
         })
+      } else {
+        decisionTrace.push(`Slot ${slot.start} filtered: no available technicians`)
       }
     }
+    
+    decisionTrace.push(`Found ${availableSlots.length} available slots after filtering`)
 
     console.log(`[Cal.com Availability] Returning ${availableSlots.length} available slots (filtered from ${calcomSlots.length} Cal.com slots)`)
     
@@ -411,6 +425,10 @@ async function handleAvailabilityRequest(req: NextRequest) {
   const resultText = `SUCCESS: Found ${limitedSlots.length} available slots. The first available time is ${firstTime}${techInfo}. IMPORTANT: This is ${ampm} (${hourInTimezone >= 12 ? 'afternoon/evening' : 'morning'}), NOT ${ampm === 'AM' ? 'PM' : 'AM'}. Say to customer: "I can get someone out there at ${firstTime}. Does that work?"`
   
   // Machine-first, human-second API contract
+  // OBSERVABILITY: Log decision trace and metrics
+  const responseTime = Date.now() - startTime
+  decisionTrace.push(`Response time: ${responseTime}ms`)
+  
   const response = {
     success: true,
     query: {
@@ -418,6 +436,8 @@ async function handleAvailabilityRequest(req: NextRequest) {
       end: endIso,
       isEmergency: isEmergency || false,
       projectId: projectId,
+      durationMinutes: durationMinutes,
+      serviceType: serviceType || null,
     },
     slots: limitedSlots.map(slot => ({
       start: slot.start,
@@ -428,12 +448,19 @@ async function handleAvailabilityRequest(req: NextRequest) {
     result: resultText, // Human-readable message for AI
     firstSlot: firstTime,
     totalSlots: limitedSlots.length,
+    // Observability fields
+    _metrics: {
+      responseTimeMs: responseTime,
+      slotsChecked: businessHoursFiltered.length,
+      slotsAvailable: availableSlots.length,
+      techniciansChecked: technicians.length,
+    },
+    _trace: decisionTrace, // Decision trace for debugging (can be removed in production if needed)
   }
 
   console.log('[Cal.com Availability] FULL RESPONSE PAYLOAD:', JSON.stringify(response, null, 2))
-  console.log('[Cal.com Availability] Response keys:', Object.keys(response))
-  console.log('[Cal.com Availability] Result field type:', typeof response.result)
-  console.log('[Cal.com Availability] Result field value:', response.result)
+  console.log('[Cal.com Availability] Decision trace:', decisionTrace.join(' | '))
+  console.log('[Cal.com Availability] Metrics:', response._metrics)
 
   return NextResponse.json(response)
   } catch (error: any) {

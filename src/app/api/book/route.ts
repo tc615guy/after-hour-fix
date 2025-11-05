@@ -16,6 +16,9 @@ const BookingSchema = z.object({
   priorityUpsell: z.boolean().optional(),
   confirm: z.boolean().optional(),
   service: z.string().optional(),
+  durationMinutes: z.number().optional(), // Duration for service
+  serviceType: z.string().optional(), // Service type for skill matching
+  idempotencyKey: z.string().optional(), // Prevent duplicate bookings on retries
 })
 
 export async function POST(req: NextRequest) {
@@ -49,6 +52,32 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('[BOOK] Final extracted parameters:', JSON.stringify(params, null, 2))
+
+    // IDEMPOTENCY: Check for existing booking with same idempotency key
+    const idempotencyKey = params.idempotencyKey || req.headers.get('x-idempotency-key') || undefined
+    if (idempotencyKey) {
+      const url = new URL(req.url)
+      const projectId = params.projectId || req.headers.get('x-project-id') || url.searchParams.get('projectId')
+      if (projectId) {
+        const existing = await prisma.booking.findFirst({
+          where: {
+            projectId,
+            notes: { contains: `[IDEMPOTENCY:${idempotencyKey}]` },
+            deletedAt: null,
+          },
+        })
+        if (existing) {
+          console.log('[BOOK] Idempotency key match - returning existing booking:', existing.id)
+          const whenStr = existing.slotStart ? new Date(existing.slotStart).toLocaleString() : 'your appointment'
+          return NextResponse.json({
+            result: `Perfect! You're all set for ${whenStr}. We'll text you the details.`,
+            bookingId: existing.id,
+            success: true,
+            idempotent: true,
+          }, { status: 200 })
+        }
+      }
+    }
 
     // Validate input and return helpful message if missing required fields
     const result = BookingSchema.safeParse(params)
@@ -330,17 +359,28 @@ export async function POST(req: NextRequest) {
       
       if (!technicianId) {
         console.log('[BOOK] No available technician found for this slot - booking will be unassigned')
+        bookingTrace.push('No technician assigned (all busy)')
+      } else {
+        bookingTrace.push(`Technician assigned: ${technicianId} (${assignmentReason})`)
       }
     } catch (techErr: any) {
       console.warn('[BOOK] Error finding technician:', techErr)
+      bookingTrace.push(`Technician assignment error: ${techErr.message}`)
       // Continue without technician assignment
     }
     
-    // TODO: Add idempotency key support for retries
-    // const idempotencyKey = req.headers.get('x-idempotency-key') || body.idempotencyKey
+    // Log booking attempt with observability
+    const bookingStartTime = Date.now()
 
     // Synchronous creation: pending -> Cal.com -> booked
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    
+    // Add idempotency key to notes if provided
+    let notesWithIdempotency = input.notes
+    if (idempotencyKey) {
+      notesWithIdempotency = `${input.notes || ''} [IDEMPOTENCY:${idempotencyKey}]`.trim()
+    }
+    
     const createRes = await fetch(`${appUrl}/api/projects/${projectId}/bookings/quick-create`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -348,7 +388,7 @@ export async function POST(req: NextRequest) {
             customerName: input.customerName,
             customerPhone: input.customerPhone,
             address: input.address,
-            notes: input.notes,
+            notes: notesWithIdempotency,
             slotStart: startTime.toISOString(),
             slotEnd: endTime.toISOString(),
             status: 'pending',
@@ -515,9 +555,46 @@ export async function POST(req: NextRequest) {
 
     const smsMessage = buildBookingConfirmationSMS(project.name, input.customerName, startTime, input.address, input.notes)
     await sendSMS({ to: input.customerPhone, message: smsMessage }).catch(() => {})
-    await prisma.eventLog.create({ data: { projectId, type: 'booking.created', payload: { bookingId: newBooking.id, calcomBookingId: calcomBooking.id } } })
+    
+    // OBSERVABILITY: Log booking with full trace
+    const bookingTime = Date.now() - bookingStartTime
+    bookingTrace.push(`Booking created: ${newBooking.id} in ${bookingTime}ms`)
+    
+    await prisma.eventLog.create({ 
+      data: { 
+        projectId, 
+        type: 'booking.created', 
+        payload: { 
+          bookingId: newBooking.id, 
+          calcomBookingId: calcomBooking.id,
+          technicianId: technicianId,
+          assignmentReason: assignmentReason,
+          durationMs: bookingTime,
+          trace: bookingTrace,
+        } 
+      } 
+    })
 
-    return NextResponse.json({ result: `You are booked for ${startTime.toLocaleString()}. You'll receive a text confirmation.`, success: true })
+    // Format time in project timezone for customer message
+    const timeInTz = startTime.toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: project.timezone || 'America/Chicago',
+    })
+    
+    return NextResponse.json({ 
+      result: `You are booked for ${timeInTz}. You'll receive a text confirmation.`, 
+      success: true,
+      bookingId: newBooking.id,
+      _metrics: {
+        bookingTimeMs: bookingTime,
+        technicianAssigned: !!technicianId,
+      },
+    })
   } catch (error: any) {
     console.error('[BOOK] ERROR:', error)
     console.error('[BOOK] Error details:', {
