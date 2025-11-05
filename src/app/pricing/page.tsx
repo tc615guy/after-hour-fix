@@ -28,6 +28,8 @@ export default function PricingPage() {
       features: [
         '800 AI minutes/month',
         '3 phone numbers',
+        'OpenAI Realtime AI assistant',
+        'Auto-syncs business data (pricing, hours, technicians)',
         'Cal.com integration',
         'Email & SMS confirmations',
         'Call transcripts',
@@ -46,6 +48,8 @@ export default function PricingPage() {
       features: [
         '1,200 AI minutes/month',
         'Unlimited phone numbers',
+        'OpenAI Realtime AI assistant',
+        'Auto-syncs business data (pricing, hours, technicians)',
         'Cal.com integration',
         'Email & SMS confirmations',
         'Call transcripts',
@@ -123,7 +127,7 @@ export default function PricingPage() {
               </div>
               <CardTitle className="text-3xl mb-2">One-Time Setup Fee: $299</CardTitle>
               <CardDescription className="text-base">
-                Professional setup by our team to ensure your smart AI receptionist is configured perfectly for your business
+                Professional setup by our team to ensure your OpenAI Realtime AI assistant is configured perfectly and automatically receives all your business data
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -132,12 +136,13 @@ export default function PricingPage() {
                   <h4 className="font-semibold text-gray-900 mb-3">What's Included:</h4>
                   <div className="space-y-2">
                     {[
-                      'Smart AI receptionist configuration & optimization',
-                      'Business hours & scheduling setup',
-                      'Cal.com calendar integration',
-                      'Pricing sheet upload & configuration',
-                      'On-call technician routing setup',
-                      'Phone number setup & testing'
+                      'OpenAI Realtime AI assistant configuration & optimization',
+                      'Business hours & scheduling setup (automatically synced to assistant)',
+                      'Cal.com calendar integration (real-time availability)',
+                      'Pricing sheet upload & configuration (automatically loaded)',
+                      'On-call technician routing setup (proximity-based)',
+                      'Phone number setup & testing',
+                      'Real-time data synchronization - assistant always has latest info'
                     ].map((item, idx) => (
                       <div key={idx} className="flex items-start gap-2">
                         <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
