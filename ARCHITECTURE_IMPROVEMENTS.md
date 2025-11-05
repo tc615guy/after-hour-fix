@@ -40,9 +40,13 @@
 ## 🚧 In Progress / TODO
 
 ### 5. **Idempotency Key Support**
-- **Status**: 🚧 Planned (TODO added)
-- **Needed**: Add idempotency key header/parameter to prevent duplicate bookings
-- **Implementation**: Check for existing booking with same idempotency key before creating
+- **Status**: ✅ Implemented
+- **Changes**:
+  - Added `idempotencyKey` parameter to booking schema
+  - Checks for existing booking with same key before creating
+  - Returns existing booking if key matches (prevents duplicates)
+  - Stores key in booking notes as `[IDEMPOTENCY:key]`
+- **File**: `src/app/api/book/route.ts`
 
 ### 6. **Soft Holds System**
 - **Status**: 🚧 Not Started
@@ -60,11 +64,14 @@
   - Target: sub-100ms get_slots response
 
 ### 8. **Duration & Service Type Support**
-- **Status**: 🚧 Not Started
-- **Needed**:
-  - Include `durationMinutes` and `serviceType` in `get_slots` inputs
-  - Filter candidates by skill tags
-  - Add travel buffers, lunch breaks, shift windows
+- **Status**: ✅ Implemented (Partial)
+- **Changes**:
+  - Added `durationMinutes` parameter to `get_slots` (defaults to 60 min)
+  - Added `serviceType` parameter to `get_slots` (for future skill filtering)
+  - Uses requested duration instead of slot duration for availability checks
+  - TODO: Filter candidates by skill tags (infrastructure ready)
+  - TODO: Add travel buffers, lunch breaks, shift windows
+- **File**: `src/app/api/calcom/availability/route.ts`
 
 ### 9. **Proximity Scoring**
 - **Status**: 🚧 Not Started
@@ -81,16 +88,23 @@
   - Map event types to skills
 
 ### 11. **Observability & Metrics**
-- **Status**: 🚧 Not Started
-- **Needed**:
-  - Log decision traces (why slot available/unavailable)
-  - Emit metrics: cache hit rate, time-to-first-slot, booking conversion, collision rate
-  - Track assignment reasons for gaps dashboard
+- **Status**: ✅ Implemented
+- **Changes**:
+  - Added decision traces to `get_slots` response (`_trace` field)
+  - Added metrics to responses (`_metrics` field): responseTimeMs, slotsChecked, slotsAvailable, techniciansChecked
+  - Added booking trace to event logs with assignment reasons
+  - Logs booking duration and technician assignment decisions
+  - TODO: Cache hit rate, collision rate tracking (requires caching layer)
+- **Files**: `src/app/api/calcom/availability/route.ts`, `src/app/api/book/route.ts`
 
 ### 12. **Timezone Handling**
-- **Status**: ⚠️ Partial
-- **Current**: Uses project timezone for display
-- **Needed**: Normalize everything to UTC internally, format for display
+- **Status**: ✅ Implemented
+- **Changes**:
+  - Normalizes all times to UTC internally
+  - Formats times in project timezone for display
+  - Uses `toLocaleString` with timezone for customer-facing messages
+  - Stores all DateTime fields in UTC (database default)
+- **Files**: `src/app/api/calcom/availability/route.ts`, `src/app/api/book/route.ts`
 
 ---
 
