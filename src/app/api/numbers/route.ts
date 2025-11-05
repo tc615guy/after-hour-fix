@@ -96,39 +96,16 @@ export async function POST(req: NextRequest) {
 
     console.log(`[B2B Provision] Twilio number configured for OpenAI Realtime server`)
 
-    // Check if number already exists
-    const existingNumber = await prisma.phoneNumber.findUnique({
-      where: { e164: numberToPurchase },
+    // Use safe assignment to handle conflicts and cleanup orphaned numbers
+    const { safeAssignPhoneNumber } = await import('@/lib/phone-number-utils')
+    const assignment = await safeAssignPhoneNumber(numberToPurchase, input.projectId, {
+      vapiNumberId: twilioSid,
+      label: 'Main',
+      serverUrl: voiceUrl,
+      systemType: 'openai-realtime',
     })
 
-    if (existingNumber) {
-      // Update existing number to OpenAI Realtime
-      const updated = await prisma.phoneNumber.update({
-        where: { e164: numberToPurchase },
-        data: {
-          systemType: 'openai-realtime',
-          serverUrl: voiceUrl,
-        },
-      })
-      return NextResponse.json({
-        success: true,
-        phoneNumber: updated,
-        message: 'Number already purchased and reconfigured for OpenAI Realtime',
-      })
-    }
-
-    // Create phone number record for OpenAI Realtime
-    const phoneNumber = await prisma.phoneNumber.create({
-      data: {
-        projectId: input.projectId,
-        e164: numberToPurchase,
-        vapiNumberId: twilioSid, // Store Twilio SID for reference
-        label: 'Main',
-        serverUrl: voiceUrl,
-        serverUrlSecret: undefined, // Not needed for OpenAI Realtime
-        systemType: 'openai-realtime', // Always OpenAI Realtime
-      },
-    })
+    const phoneNumber = assignment.phoneNumber
 
     await prisma.eventLog.create({
       data: {

@@ -106,17 +106,19 @@ export async function POST(req: NextRequest) {
           statusCallbackMethod: 'POST',
         })
 
-        // Create phone number record for the forwarding number
-        twilioNumber = await prisma.phoneNumber.create({
-          data: {
-            projectId: input.projectId,
-            e164: numberToPurchase,
-            vapiNumberId: twilioSid,
-            label: 'AI Assistant (Forwarding)',
-            serverUrl: voiceUrl,
-            systemType: 'openai-realtime',
-          },
-        })
+                        // Use safe assignment for the forwarding number
+                const { safeAssignPhoneNumber } = await import('@/lib/phone-number-utils')
+                const assignment = await safeAssignPhoneNumber(numberToPurchase, input.projectId, {
+                  vapiNumberId: twilioSid,
+                  label: 'AI Assistant (Forwarding)',
+                  serverUrl: voiceUrl,
+                  systemType: 'openai-realtime',
+                })
+                twilioNumber = assignment.phoneNumber
+
+                if (!twilioNumber) {
+                  throw new Error('Failed to assign forwarding number')
+                }
 
         await prisma.eventLog.create({
           data: {

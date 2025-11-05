@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAdmin } from '@/lib/api-guard'
+import { cleanupPhoneNumbersForDeletedProject } from '@/lib/phone-number-utils'
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,13 +35,17 @@ export async function POST(req: NextRequest) {
         }
 
         for (const project of projects) {
+          // Soft-delete project
           await prisma.project.update({
             where: { id: project.id },
             data: { deletedAt: new Date() },
           })
           
+          // CRITICAL: Clean up phone numbers to prevent routing to deleted projects
+          await cleanupPhoneNumbersForDeletedProject(project.id)
+          
           results.push({ name: project.name, id: project.id, success: true })
-          console.log(`[Admin] Soft-deleted project: ${project.name} (${project.id})`)
+          console.log(`[Admin] Soft-deleted project: ${project.name} (${project.id}) and cleaned up phone numbers`)
         }
       } catch (error: any) {
         console.error(`[Admin] Failed to delete ${name}:`, error.message)

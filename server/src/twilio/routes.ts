@@ -11,9 +11,16 @@ export function setupTwilioRoutes(app: express.Application, sessionManager: Call
     console.log(`[Twilio] Incoming call: ${CallSid} from ${From} to ${To}`)
 
     // Look up agent/project by phone number (To)
+    // CRITICAL: Only find phone numbers assigned to ACTIVE (non-deleted) projects
     try {
-      const phoneNumber = await prisma.phoneNumber.findUnique({
-        where: { e164: To },
+      const phoneNumber = await prisma.phoneNumber.findFirst({
+        where: { 
+          e164: To,
+          deletedAt: null, // Phone number must not be deleted
+          project: {
+            deletedAt: null, // Project must not be deleted
+          },
+        },
         include: {
           project: {
             include: {
@@ -28,7 +35,7 @@ export function setupTwilioRoutes(app: express.Application, sessionManager: Call
       })
 
       if (!phoneNumber) {
-        console.error(`[Twilio] Phone number not found: ${To}`)
+        console.error(`[Twilio] Phone number not found or assigned to deleted project: ${To}`)
         res.type('text/xml')
         res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -39,6 +46,19 @@ export function setupTwilioRoutes(app: express.Application, sessionManager: Call
       }
 
       const project = phoneNumber.project
+      
+      // Double-check project is not deleted (defensive check)
+      if (project.deletedAt) {
+        console.error(`[Twilio] Phone number ${To} is assigned to deleted project: ${project.name} (${project.id})`)
+        res.type('text/xml')
+        res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say>Sorry, this number is not configured.</Say>
+  <Hangup/>
+</Response>`)
+        return
+      }
+
       const agent = project.agents[0]
 
       if (!agent) {
@@ -117,13 +137,19 @@ export function setupTwilioRoutes(app: express.Application, sessionManager: Call
       console.log(`[Twilio] Missed call detected: ${CallSid} from ${From}`)
       
       try {
-        // Look up project by phone number
-        const phoneNumber = await prisma.phoneNumber.findUnique({
-          where: { e164: To },
+        // Look up project by phone number - only active projects
+        const phoneNumber = await prisma.phoneNumber.findFirst({
+          where: { 
+            e164: To,
+            deletedAt: null,
+            project: {
+              deletedAt: null,
+            },
+          },
           include: { project: true },
         })
 
-        if (phoneNumber?.project) {
+        if (phoneNumber?.project && !phoneNumber.project.deletedAt) {
           // Update Call record to 'missed'
           await prisma.call.updateMany({
             where: { vapiCallId: CallSid },
