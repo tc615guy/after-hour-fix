@@ -133,7 +133,7 @@ export async function makePhoneCall({
 }): Promise<string | null> {
   const client = getTwilioClient()
 
-  if (!client) {
+  if (!client || !TWILIO_PHONE_NUMBER) {
     console.warn('[Phone Call] Skipping call - Twilio not configured')
     return null
   }
