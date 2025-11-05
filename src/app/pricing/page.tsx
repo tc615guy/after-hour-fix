@@ -39,7 +39,7 @@ export default function PricingPage() {
       popular: true,
     },
     {
-      name: 'Ultra',
+      name: 'Premium',
       price: 599,
       priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ULTRA,
       description: 'For high-volume operations',
