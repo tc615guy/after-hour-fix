@@ -8,9 +8,20 @@ import { createCalComClient } from '@/lib/calcom'
  * Vapi server functions use POST, but we accept both
  */
 async function handleAvailabilityRequest(req: NextRequest) {
+  const startTime = Date.now()
+  const decisionTrace: string[] = []
+  
   try {
     const url = new URL(req.url)
     const projectId = url.searchParams.get('projectId') || undefined
+    const start = url.searchParams.get('start')
+    const end = url.searchParams.get('end')
+    const isEmergency = url.searchParams.get('isEmergency') === 'true'
+    const durationMinutes = parseInt(url.searchParams.get('durationMinutes') || '60', 10) // Default 60 min
+    const serviceType = url.searchParams.get('serviceType') || undefined
+    
+    decisionTrace.push(`Query: projectId=${projectId}, start=${start}, end=${end}, emergency=${isEmergency}, duration=${durationMinutes}min, service=${serviceType || 'any'}`)
+    
     if (!projectId) return NextResponse.json({ error: 'Missing projectId' }, { status: 400 })
 
     const project = await prisma.project.findUnique({ where: { id: projectId } })
@@ -21,10 +32,6 @@ async function handleAvailabilityRequest(req: NextRequest) {
     if (!apiKey || !calcomUser) {
       return NextResponse.json({ error: 'Cal.com not connected' }, { status: 400 })
     }
-
-    const start = url.searchParams.get('start')
-    const end = url.searchParams.get('end')
-    const isEmergency = url.searchParams.get('isEmergency') === 'true'
     
     // STRONG TIMEZONE HANDLING: Normalize everything to UTC internally
     const now = new Date()
