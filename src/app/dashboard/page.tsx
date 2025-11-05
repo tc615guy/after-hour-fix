@@ -73,6 +73,15 @@ export default function DashboardPage() {
     checkAuth()
   }, [])
 
+  // Reload projects when returning from onboarding
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('welcome') === 'true' && isAuthenticated) {
+      // Force reload projects after onboarding
+      loadProjects()
+    }
+  }, [isAuthenticated])
+
   const checkAuth = async () => {
     try {
       const res = await fetch('/api/auth/me', { credentials: 'include' })
@@ -98,22 +107,30 @@ export default function DashboardPage() {
 
   const loadProjects = async () => {
     try {
+      console.log('[Dashboard] Loading projects...')
       const res = await fetch('/api/projects', { credentials: 'include' })
       if (!res.ok) {
         if (res.status === 401) {
+          console.log('[Dashboard] Unauthorized, redirecting to login')
           setIsAuthenticated(false)
           setLoading(false)
           return
         }
+        const errorText = await res.text()
+        console.error('[Dashboard] Failed to load projects:', res.status, errorText)
         throw new Error('Failed to load projects')
       }
       const data = await res.json()
+      console.log('[Dashboard] Loaded projects:', data.projects?.length || 0, 'projects')
       setProjects(data.projects || [])
       if (data.projects?.length > 0) {
         setSelectedProject(data.projects[0])
+        console.log('[Dashboard] Selected first project:', data.projects[0].name)
+      } else {
+        console.log('[Dashboard] No projects found')
       }
     } catch (error) {
-      console.error('Failed to load projects:', error)
+      console.error('[Dashboard] Failed to load projects:', error)
     } finally {
       setLoading(false)
     }
