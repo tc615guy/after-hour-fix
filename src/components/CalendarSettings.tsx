@@ -90,7 +90,7 @@ export default function CalendarSettings({ projectId }: Props) {
             <CalendarDays className="w-5 h-5" /> Calendar Integration
           </CardTitle>
           <CardDescription>
-            Connect your Cal.com account for automated appointment booking
+            Connect YOUR Cal.com account to allow the AI to book appointments into YOUR calendar
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -104,28 +104,33 @@ export default function CalendarSettings({ projectId }: Props) {
               )}
             </div>
             <div className="text-sm text-gray-600 mt-1">
-              {username ? `User: ${username}` : 'Paste API key to connect'}
+              {username ? `Connected as: ${username}` : 'You need your own Cal.com account to connect'}
             </div>
 
             {!connected ? (
               <div className="mt-4 space-y-4">
+                {/* Important Notice */}
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm">
+                  <strong>📅 Important:</strong> You need to create your own FREE Cal.com account first. Appointments will be booked into YOUR calendar, not ours!
+                </div>
+
                 {/* OAuth Option - One Click */}
                 {oauthAvailable && (
                   <div className="border-b pb-4">
-                    <p className="text-sm font-medium mb-2">Quick Connect</p>
+                    <p className="text-sm font-medium mb-2">Quick Connect (Recommended)</p>
                     <Button 
                       onClick={() => window.location.href = `/api/calcom/oauth/authorize?projectId=${projectId}`}
                       className="w-full"
                     >
-                      Connect with Cal.com OAuth
+                      Connect Your Cal.com Account
                     </Button>
-                    <p className="text-xs text-gray-500 mt-2">One-click authorization</p>
+                    <p className="text-xs text-gray-500 mt-2">One-click authorization - you'll be redirected to Cal.com to sign in</p>
                   </div>
                 )}
                 
                 {/* API Key Option - Manual */}
                 <div>
-                  <p className="text-sm font-medium mb-2">{oauthAvailable ? 'Or use API Key' : 'Connect with API Key'}</p>
+                  <p className="text-sm font-medium mb-2">{oauthAvailable ? 'Or use API Key (Manual)' : 'Connect with API Key'}</p>
                   <Label htmlFor="calkey">Cal.com API Key</Label>
                   <Input
                     id="calkey"
@@ -155,8 +160,19 @@ export default function CalendarSettings({ projectId }: Props) {
                 </div>
               </div>
             ) : (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-800">
-                Calendar integration is active. Your AI assistant can now book appointments automatically.
+              <div className="mt-4 space-y-3">
+                <div className="p-3 bg-green-50 border border-green-200 rounded text-sm text-green-800">
+                  ✅ Calendar integration is active! Your AI assistant can now book appointments directly into your Cal.com calendar.
+                </div>
+                <div className="text-xs text-gray-600">
+                  <strong>What happens now:</strong>
+                  <ul className="list-disc ml-4 mt-1 space-y-1">
+                    <li>Customers call your AI receptionist</li>
+                    <li>AI checks YOUR real-time availability from Cal.com</li>
+                    <li>AI books appointments into YOUR calendar</li>
+                    <li>YOU receive booking notifications from Cal.com</li>
+                  </ul>
+                </div>
               </div>
             )}
           </div>
@@ -168,30 +184,51 @@ export default function CalendarSettings({ projectId }: Props) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ExternalLink className="w-5 h-5" />
-            How to get your API key
+            Setup Instructions
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3 text-sm">
-            <ol className="list-decimal space-y-2 ml-4 text-gray-700">
-              <li>Go to <a href="https://app.cal.com" target="_blank" className="text-blue-600 underline">app.cal.com</a> and sign up for an account (or sign in if you already have one)</li>
-              <li>Complete your profile setup (if this is your first time)</li>
-              <li>Scroll down to the bottom of the left sidebar and click on "Settings" (gear icon)</li>
-              <li>In the left sidebar, scroll down to find the "Developer" section</li>
-              <li>Click on "API keys" under the Developer section</li>
-              <li>Click the "+ Add" button to create your first API key</li>
-              <li>Name the key your business name (e.g., "Best Plumber")</li>
-              <li>Toggle "Never expires" to ON (recommended)</li>
-              <li>Click "Save"</li>
-              <li>Click "Copy" to copy the API key to your clipboard</li>
-              <li>Click "Done" to close the modal</li>
-              <li>Return to this page and paste your API key in the "Cal.com API Key" field above</li>
-              <li>Click "Verify" to test your key (optional but recommended)</li>
-              <li>Click "Connect" to activate calendar integration</li>
-            </ol>
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
-              <strong>💡 Tip:</strong> Make sure to save your API key securely - you won't be able to view it again after closing the modal on Cal.com!
+          <div className="space-y-4 text-sm">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+              <strong>📅 Step 1: Create Your Cal.com Account (FREE)</strong>
+              <p className="text-xs text-gray-700 mt-1">
+                Go to <a href="https://app.cal.com" target="_blank" className="text-blue-600 underline">app.cal.com</a> and sign up for a free account. This is YOUR calendar where appointments will be booked.
+              </p>
             </div>
+
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+              <strong>🔗 Step 2: Connect to AfterHourFix</strong>
+              <p className="text-xs text-gray-700 mt-1">
+                Click "Connect Your Cal.com Account" above and authorize AfterHourFix to access your calendar.
+              </p>
+            </div>
+
+            <div className="p-3 bg-green-50 border border-green-200 rounded">
+              <strong>✅ Step 3: Done!</strong>
+              <p className="text-xs text-gray-700 mt-1">
+                Your AI receptionist can now book appointments into YOUR Cal.com calendar automatically!
+              </p>
+            </div>
+
+            <hr className="my-4" />
+
+            <details className="text-xs">
+              <summary className="cursor-pointer font-medium">Alternative: Manual API Key Setup (Advanced)</summary>
+              <ol className="list-decimal space-y-2 ml-4 mt-3 text-gray-700">
+                <li>Go to <a href="https://app.cal.com" target="_blank" className="text-blue-600 underline">app.cal.com</a> and sign in to YOUR account</li>
+                <li>Click "Settings" (gear icon) in the left sidebar</li>
+                <li>Find "Developer" section → Click "API keys"</li>
+                <li>Click "+ Add" to create a new API key</li>
+                <li>Name it after your business (e.g., "Big Turd Plumbing")</li>
+                <li>Toggle "Never expires" to ON</li>
+                <li>Click "Save" → Click "Copy" → Click "Done"</li>
+                <li>Return here and paste your API key above</li>
+                <li>Click "Verify" then "Connect"</li>
+              </ol>
+              <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                <strong>⚠️ Warning:</strong> Save your API key securely - you can't view it again after closing Cal.com!
+              </div>
+            </details>
           </div>
         </CardContent>
       </Card>
