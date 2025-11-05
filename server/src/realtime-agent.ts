@@ -248,8 +248,19 @@ export class RealtimeAgent {
         break
 
       case 'session.updated':
-        console.log('[RealtimeAgent] Session updated')
-        // Session is ready - OpenAI will respond naturally based on system prompt
+        console.log('[RealtimeAgent] Session updated - triggering initial greeting')
+        // Session is ready - trigger initial greeting so assistant speaks first
+        // The system prompt instructs the assistant to greet, but we need to trigger a response
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          this.ws.send(JSON.stringify({
+            type: 'response.create',
+            response: {
+              modalities: ['audio', 'text'],
+              instructions: 'Greet the caller with a friendly welcome. Say something like "Hey there, thanks for calling! I can help you right away. What\'s going on?" Keep it brief and natural.',
+            }
+          }))
+          console.log('[RealtimeAgent] Initial greeting triggered')
+        }
         break
 
       case 'response.audio_transcript.delta':
