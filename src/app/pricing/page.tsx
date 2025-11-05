@@ -13,6 +13,8 @@ export default function PricingPage() {
       features: [
         '300 AI minutes/month',
         '1 phone number',
+        'OpenAI Realtime AI assistant',
+        'Auto-syncs business data (pricing, hours, technicians)',
         'Cal.com integration',
         'Email & SMS confirmations',
         'Call transcripts',
