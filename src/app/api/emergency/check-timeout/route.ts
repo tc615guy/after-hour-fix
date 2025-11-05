@@ -40,19 +40,138 @@ export async function POST(req: NextRequest) {
     const results = []
 
     for (const booking of unacknowledged) {
-      if (!booking.technician) continue
+      if (!booking.technician || !booking.address) continue
 
-      // Check if there's a next available tech (lower priority or fallback)
-      const nextTech = await prisma.technician.findFirst({
+      // Get all available backup techs (exclude the original tech)
+      const availableBackupTechs = await prisma.technician.findMany({
         where: {
           projectId: booking.projectId,
           isActive: true,
           isOnCall: true,
           id: { not: booking.technicianId },
-          priority: { lt: booking.technician.priority || 0 }, // Lower priority (backup)
         },
         orderBy: { priority: 'desc' },
       })
+
+      if (availableBackupTechs.length === 0) {
+        // No backup tech available - log and continue
+        await prisma.eventLog.create({
+          data: {
+            projectId: booking.projectId,
+            type: 'emergency.timeout_no_backup',
+            payload: {
+              bookingId: booking.id,
+              technicianId: booking.technicianId,
+              message: 'No backup technician available for escalation',
+            },
+          },
+        })
+
+        results.push({
+          bookingId: booking.id,
+          action: 'no_backup',
+          technician: booking.technician.name,
+        })
+        continue
+      }
+
+      // PROXIMITY-BASED ESCALATION: Score backup techs by priority + distance
+      const googleApiKey = process.env.GOOGLE_MAPS_API_KEY
+      let nextTech: typeof availableBackupTechs[0] | null = null
+
+      if (googleApiKey && booking.address) {
+        // Helper to calculate distance (Haversine formula)
+        const calculateDistance = (
+          coord1: { lat: number; lng: number },
+          coord2: { lat: number; lng: number }
+        ): number => {
+          const R = 3959 // Earth's radius in miles
+          const dLat = ((coord2.lat - coord1.lat) * Math.PI) / 180
+          const dLon = ((coord2.lng - coord1.lng) * Math.PI) / 180
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos((coord1.lat * Math.PI) / 180) *
+              Math.cos((coord2.lat * Math.PI) / 180) *
+              Math.sin(dLon / 2) *
+              Math.sin(dLon / 2)
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+          return R * c
+        }
+
+        // Helper to geocode address
+        const geocodeAddress = async (addressStr: string): Promise<{ lat: number; lng: number } | null> => {
+          try {
+            const encoded = encodeURIComponent(addressStr)
+            const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encoded}&key=${googleApiKey}`
+            const response = await fetch(url)
+            const data = await response.json()
+            if (data.status === 'OK' && data.results && data.results.length > 0) {
+              const location = data.results[0].geometry.location
+              return { lat: location.lat, lng: location.lng }
+            }
+            return null
+          } catch {
+            return null
+          }
+        }
+
+        // Geocode emergency address
+        const emergencyCoords = await geocodeAddress(booking.address)
+
+        if (emergencyCoords) {
+          // Score each backup tech: priority + proximity
+          const scoredTechs: Array<{ tech: typeof availableBackupTechs[0]; score: number; distance?: number }> = []
+
+          for (const candidateTech of availableBackupTechs) {
+            let score = (candidateTech.priority || 0) * 10 // Priority score
+
+            // Calculate distance from tech's home address to emergency
+            if (candidateTech.address) {
+              const techHomeCoords = await geocodeAddress(candidateTech.address)
+              if (techHomeCoords) {
+                const distance = calculateDistance(techHomeCoords, emergencyCoords)
+                
+                // Proximity bonus: closer = higher score
+                if (distance < 2) {
+                  score += 30
+                } else if (distance < 5) {
+                  score += 25
+                } else if (distance < 10) {
+                  score += 20
+                } else if (distance < 15) {
+                  score += 15
+                } else {
+                  score += 10
+                }
+
+                scoredTechs.push({ tech: candidateTech, score, distance })
+              } else {
+                scoredTechs.push({ tech: candidateTech, score })
+              }
+            } else {
+              scoredTechs.push({ tech: candidateTech, score })
+            }
+          }
+
+          // Sort by score (highest first), then by priority, then by distance
+          scoredTechs.sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score
+            if (b.tech.priority !== a.tech.priority) return (b.tech.priority || 0) - (a.tech.priority || 0)
+            if (a.distance !== undefined && b.distance !== undefined) return a.distance - b.distance
+            return 0
+          })
+
+          if (scoredTechs.length > 0) {
+            nextTech = scoredTechs[0].tech
+          }
+        } else {
+          // Geocoding failed - use priority only
+          nextTech = availableBackupTechs[0]
+        }
+      } else {
+        // No Google API key or no address - use priority only
+        nextTech = availableBackupTechs[0]
+      }
 
       if (nextTech) {
         // Escalate to next tech

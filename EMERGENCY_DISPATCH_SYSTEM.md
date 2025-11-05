@@ -9,7 +9,9 @@ The emergency dispatch system automatically notifies technicians via **SMS and p
 ✅ **Dual Notification**: SMS + Phone Call  
 ✅ **Required Acknowledgment**: Tech must reply "1" to confirm  
 ✅ **Automatic Status Update**: Booking status changes to "en_route" when acknowledged  
-✅ **Timeout & Escalation**: If no response within 5 minutes, escalates to backup tech  
+✅ **Proximity-Based Routing**: Routes to closest tech based on home address distance (for companies with multiple on-call techs)  
+✅ **Smart Priority**: Combines priority + proximity for optimal routing  
+✅ **Timeout & Escalation**: If no response within 5 minutes, escalates to backup tech (also uses proximity)  
 ✅ **Full Tracking**: All events logged in EventLog for audit trail  
 
 ## How It Works
@@ -18,9 +20,16 @@ The emergency dispatch system automatically notifies technicians via **SMS and p
 
 When `dispatch_emergency` function is called (via AI assistant):
 
-1. **Finds highest-priority on-call technician**
-2. **Creates/updates emergency booking** (assigns technician)
-3. **Sends SMS** with full details:
+1. **Finds all on-call technicians** and scores them by:
+   - **Priority** (higher priority = higher score)
+   - **Proximity** (distance from tech's home address to emergency location)
+   - **Combined score** = Priority × 10 + Proximity bonus (0-30 points)
+   
+2. **Selects best tech** based on combined score (closest tech with good priority wins)
+
+3. **Creates/updates emergency booking** (assigns technician)
+
+4. **Sends SMS** with full details:
    ```
    🚨 EMERGENCY DISPATCH - [Business Name]
    
@@ -48,12 +57,16 @@ Technician receives both SMS and phone call. They reply via SMS:
 
 If technician doesn't respond within **5 minutes**:
 
-1. **Check for backup tech**: Finds next available on-call tech (lower priority)
-2. **Escalate**: Reassigns booking to backup tech
-3. **Notify backup**: Sends SMS + phone call to backup tech
-4. **Log escalation**: Records in EventLog
+1. **Find all available backup techs** (exclude original tech)
+2. **Score backup techs** by priority + proximity (same scoring as initial dispatch)
+3. **Select best backup** based on combined score
+4. **Escalate**: Reassigns booking to backup tech
+5. **Notify backup**: Sends SMS + phone call to backup tech
+6. **Log escalation**: Records in EventLog
 
 If no backup available, logs event for manual review.
+
+**Note**: Escalation now considers proximity, not just priority, so the closest backup tech will be selected.
 
 ## API Endpoints
 
