@@ -435,8 +435,8 @@ export async function POST(req: NextRequest) {
             }
           }
           
-          // Fallback: Check if tech's home address is close
-          if (bookingCoords && !bookingCoords && tech.address) {
+          // Fallback: Check if tech's home address is close (if no recent jobs)
+          if (bookingCoords && tech.address && tech.bookings.length === 0) {
             const techHomeCoords = await geocodeAddress(tech.address)
             if (techHomeCoords) {
               const distance = calculateDistance(techHomeCoords, bookingCoords)
