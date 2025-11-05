@@ -5,6 +5,7 @@ import { createCalComClient } from '@/lib/calcom'
 import { sendEmailAsync as sendEmail, buildConfirmationEmail } from '@/lib/email'
 import { sendSMS, buildBookingConfirmationSMS } from '@/lib/sms'
 import { z } from 'zod'
+import { releaseHold } from '@/lib/soft-holds'
 
 const BookingSchema = z.object({
   projectId: z.string().optional(),
