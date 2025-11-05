@@ -355,7 +355,8 @@ async function handleAvailabilityRequest(req: NextRequest) {
       
       console.log(`[Cal.com Availability] After 4 PM (${currentHour}:00) - filtering out slots for ${todayStr}`)
       
-      filteredSlots = businessHoursFiltered.filter(slot => {
+      // Filter availableSlots (not businessHoursFiltered) to preserve capacity/candidates
+      filteredSlots = availableSlots.filter(slot => {
         // Convert slot time to project timezone date string
         const slotParts = new Date(slot.start).toLocaleDateString('en-US', {
           year: 'numeric',
@@ -368,6 +369,7 @@ async function handleAvailabilityRequest(req: NextRequest) {
         return slotDate !== todayStr // Exclude today's slots
       })
       console.log(`[Cal.com Availability] Filtered out today's slots. ${filteredSlots.length} slots remain`)
+      decisionTrace.push(`After 4 PM filter: ${filteredSlots.length} slots remain (removed ${availableSlots.length - filteredSlots.length} today slots)`)
     }
 
     // Limit to first 20 slots to avoid overwhelming the AI with too many options

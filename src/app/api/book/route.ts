@@ -292,6 +292,8 @@ export async function POST(req: NextRequest) {
     // Use database transaction with row-level locking to prevent double-booking
     let technicianId: string | null = null
     let assignmentReason = 'No available technician'
+    const bookingTrace: string[] = []
+    bookingTrace.push(`Booking attempt: ${input.customerName}, ${startTime.toISOString()}`)
     
     try {
       // Use Prisma transaction for atomicity
@@ -371,6 +373,7 @@ export async function POST(req: NextRequest) {
     
     // Log booking attempt with observability
     const bookingStartTime = Date.now()
+    bookingTrace.push(`Booking creation started at ${new Date().toISOString()}`)
 
     // Synchronous creation: pending -> Cal.com -> booked
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
