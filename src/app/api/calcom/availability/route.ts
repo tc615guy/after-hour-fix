@@ -324,11 +324,20 @@ async function handleAvailabilityRequest(req: NextRequest) {
         // TODO: Filter by serviceType/skills if provided
         // For now, include all available techs
         
+        // PROXIMITY SCORING: If we have an address, score candidates by proximity
+        // (This is optional - if no address provided, just use priority/load balancing)
+        const candidateAddress = req.headers.get('x-booking-address') || undefined
+        if (candidateAddress && availableTechs.length > 1) {
+          // Note: Proximity scoring requires geocoding, which is async
+          // For now, we'll keep priority-based sorting and add proximity as enhancement
+          // Full proximity scoring happens at booking time when we have the address
+        }
+        
         availableSlots.push({
           start: slot.start,
           end: slot.end || new Date(slotStart + requestedDurationMs).toISOString(),
           capacity: availableTechs.length, // Number of available techs
-          candidates: availableTechs.map(t => t.id), // Sorted candidate IDs
+          candidates: availableTechs.map(t => t.id), // Sorted candidate IDs (priority-based)
         })
       } else {
         decisionTrace.push(`Slot ${slot.start} filtered: no available technicians`)

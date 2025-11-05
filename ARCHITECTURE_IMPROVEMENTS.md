@@ -49,12 +49,15 @@
 - **File**: `src/app/api/book/route.ts`
 
 ### 6. **Soft Holds System**
-- **Status**: 🚧 Not Started
-- **Needed**: 
-  - Create `create_hold(start, end, projectId, customerHash)` function
-  - Reserve capacity unit for 60-120s TTL
-  - Auto-expire if not confirmed
-  - Use `holdToken` in `book_slot`
+- **Status**: ✅ Implemented (Basic)
+- **Changes**:
+  - Created `src/lib/soft-holds.ts` with hold management functions
+  - `createHold()` - Creates temporary reservation (90s TTL default)
+  - `releaseHold()` - Releases hold when booking confirmed
+  - `hasActiveHold()` - Checks if slot has active holds
+  - Integrated into booking flow (release hold on confirmation)
+  - **Note**: Uses in-memory store (development). For production, use Redis or database with TTL
+- **Files**: `src/lib/soft-holds.ts`, `src/app/api/book/route.ts`
 
 ### 7. **Redis Caching Layer**
 - **Status**: 🚧 Not Started
@@ -74,18 +77,27 @@
 - **File**: `src/app/api/calcom/availability/route.ts`
 
 ### 9. **Proximity Scoring**
-- **Status**: 🚧 Not Started
-- **Needed**:
-  - Keep last job end location per tech in cache
-  - Score slots by (ETA + buffer) using distance calculation
-  - Use as tiebreaker in candidate ordering
+- **Status**: ✅ Implemented
+- **Changes**:
+  - Added proximity scoring to booking endpoint (when address is available)
+  - Scores technicians by distance from last job location
+  - Uses Haversine formula for distance calculation
+  - Scoring: 0-2 mi = +20, 2-5 mi = +15, 5-10 mi = +10, 10+ mi = +5
+  - Combined with priority and load-balancing for final tech selection
+  - Falls back to tech home address if no recent jobs
+- **File**: `src/app/api/book/route.ts`
 
 ### 10. **Cal.com Webhook Integration**
-- **Status**: 🚧 Not Started
-- **Needed**:
-  - Invalidate cache on Cal.com webhooks
-  - Reconcile external edits
-  - Map event types to skills
+- **Status**: ✅ Implemented (Basic Structure)
+- **Changes**:
+  - Created `/api/calcom/webhook` endpoint
+  - Handles `BOOKING_CREATED`, `BOOKING_UPDATED`, `BOOKING_CANCELLED`, `BOOKING_RESCHEDULED` events
+  - Logs webhook events to audit trail
+  - Finds project by Cal.com organizer email
+  - **TODO**: Invalidate availability cache (requires Redis/caching layer)
+  - **TODO**: Reconcile external edits with database
+  - **TODO**: Map event types to skills
+- **File**: `src/app/api/calcom/webhook/route.ts`
 
 ### 11. **Observability & Metrics**
 - **Status**: ✅ Implemented

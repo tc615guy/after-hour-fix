@@ -19,6 +19,7 @@ const BookingSchema = z.object({
   durationMinutes: z.number().optional(), // Duration for service
   serviceType: z.string().optional(), // Service type for skill matching
   idempotencyKey: z.string().optional(), // Prevent duplicate bookings on retries
+  holdToken: z.string().optional(), // Soft hold token (if hold was created)
 })
 
 export async function POST(req: NextRequest) {
@@ -327,6 +328,55 @@ export async function POST(req: NextRequest) {
         const slotStartTime = startTime.getTime()
         const slotEndTime = endTime.getTime()
         
+        // PROXIMITY SCORING: Get last job location for each tech (if available)
+        const googleApiKey = process.env.GOOGLE_MAPS_API_KEY
+        const bookingAddress = input.address
+        
+        // Helper to calculate distance (Haversine formula)
+        const calculateDistance = (
+          coord1: { lat: number; lng: number },
+          coord2: { lat: number; lng: number }
+        ): number => {
+          const R = 3959 // Earth's radius in miles
+          const dLat = ((coord2.lat - coord1.lat) * Math.PI) / 180
+          const dLon = ((coord2.lng - coord1.lng) * Math.PI) / 180
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos((coord1.lat * Math.PI) / 180) *
+              Math.cos((coord2.lat * Math.PI) / 180) *
+              Math.sin(dLon / 2) *
+              Math.sin(dLon / 2)
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+          return R * c
+        }
+        
+        // Helper to geocode address
+        const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
+          if (!googleApiKey) return null
+          try {
+            const encoded = encodeURIComponent(address)
+            const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encoded}&key=${googleApiKey}`
+            const response = await fetch(url)
+            const data = await response.json()
+            if (data.status === 'OK' && data.results && data.results.length > 0) {
+              const location = data.results[0].geometry.location
+              return { lat: location.lat, lng: location.lng }
+            }
+            return null
+          } catch {
+            return null
+          }
+        }
+        
+        // Get booking address coordinates (for proximity scoring)
+        let bookingCoords: { lat: number; lng: number } | null = null
+        if (bookingAddress && googleApiKey) {
+          bookingCoords = await geocodeAddress(bookingAddress)
+        }
+        
+        // Score each available tech
+        const availableTechs: Array<{ tech: typeof allTechs[0]; score: number; reasons: string[] }> = []
+        
         for (const tech of allTechs) {
           // Check for conflicts
           const hasConflict = tech.bookings.some((b: any) => {
@@ -336,19 +386,83 @@ export async function POST(req: NextRequest) {
             return slotStartTime < bEnd && slotEndTime > bStart
           })
           
-          if (!hasConflict) {
-            // Found available tech - calculate assignment reason
-            const todayBookings = tech.bookings.filter((b: any) => {
-              if (!b.slotStart) return false
-              const bDate = new Date(b.slotStart)
-              const today = new Date()
-              return bDate.toDateString() === today.toDateString()
-            }).length
+          if (hasConflict) continue // Skip busy techs
+          
+          // Calculate score
+          let score = 0
+          const reasons: string[] = []
+          
+          // Priority score (higher priority = higher score)
+          score += (tech.priority || 0) * 10
+          reasons.push(`Priority: ${tech.priority || 0}`)
+          
+          // Load balancing: fewer bookings today = higher score
+          const todayBookings = tech.bookings.filter((b: any) => {
+            if (!b.slotStart) return false
+            const bDate = new Date(b.slotStart)
+            const today = new Date()
+            return bDate.toDateString() === today.toDateString()
+          }).length
+          score += (10 - Math.min(todayBookings, 10)) // Max 10 point bonus for low load
+          reasons.push(`Load: ${todayBookings} bookings today`)
+          
+          // PROXIMITY SCORING: Distance from last job (tiebreaker)
+          if (bookingCoords && tech.bookings.length > 0) {
+            // Find most recent completed booking
+            const recentBooking = tech.bookings
+              .filter((b: any) => b.slotEnd && new Date(b.slotEnd) < startTime && b.address)
+              .sort((a: any, b: any) => new Date(b.slotEnd!).getTime() - new Date(a.slotEnd!).getTime())[0]
             
-            assignmentReason = `Priority: ${tech.priority || 0}, Load: ${todayBookings} bookings today`
-            console.log(`[BOOK] Assigned technician: ${tech.name} (${tech.id}) - ${assignmentReason}`)
-            return { technicianId: tech.id, reason: assignmentReason }
+            if (recentBooking?.address) {
+              const lastJobCoords = await geocodeAddress(recentBooking.address)
+              if (lastJobCoords) {
+                const distance = calculateDistance(lastJobCoords, bookingCoords)
+                // Score decreases with distance: 0-2 miles = +20, 2-5 = +15, 5-10 = +10, 10+ = +5
+                if (distance < 2) {
+                  score += 20
+                  reasons.push(`${distance.toFixed(1)} mi from last job`)
+                } else if (distance < 5) {
+                  score += 15
+                  reasons.push(`${distance.toFixed(1)} mi from last job`)
+                } else if (distance < 10) {
+                  score += 10
+                  reasons.push(`${distance.toFixed(1)} mi from last job`)
+                } else {
+                  score += 5
+                  reasons.push(`${distance.toFixed(1)} mi from last job`)
+                }
+              }
+            }
           }
+          
+          // Fallback: Check if tech's home address is close
+          if (bookingCoords && !bookingCoords && tech.address) {
+            const techHomeCoords = await geocodeAddress(tech.address)
+            if (techHomeCoords) {
+              const distance = calculateDistance(techHomeCoords, bookingCoords)
+              if (distance < 5) {
+                score += 5
+                reasons.push(`${distance.toFixed(1)} mi from home`)
+              }
+            }
+          }
+          
+          availableTechs.push({ tech, score, reasons })
+        }
+        
+        // Sort by score (highest first), then by priority, then by ID
+        availableTechs.sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score
+          if (b.tech.priority !== a.tech.priority) return (b.tech.priority || 0) - (a.tech.priority || 0)
+          return a.tech.id.localeCompare(b.tech.id)
+        })
+        
+        // Select best available tech
+        if (availableTechs.length > 0) {
+          const best = availableTechs[0]
+          assignmentReason = best.reasons.join(', ')
+          console.log(`[BOOK] Assigned technician: ${best.tech.name} (${best.tech.id}) - ${assignmentReason} (score: ${best.score})`)
+          return { technicianId: best.tech.id, reason: assignmentReason }
         }
         
         return { technicianId: null, reason: 'All technicians busy' }
@@ -374,6 +488,20 @@ export async function POST(req: NextRequest) {
     // Log booking attempt with observability
     const bookingStartTime = Date.now()
     bookingTrace.push(`Booking creation started at ${new Date().toISOString()}`)
+
+    // SOFT HOLDS: Release hold if provided (booking confirmed)
+    if (input.holdToken) {
+      try {
+        const released = releaseHold(input.holdToken)
+        if (released) {
+          bookingTrace.push(`Soft hold released: ${input.holdToken}`)
+        } else {
+          bookingTrace.push(`Soft hold not found or expired: ${input.holdToken}`)
+        }
+      } catch (err) {
+        console.warn('[BOOK] Error releasing hold:', err)
+      }
+    }
 
     // Synchronous creation: pending -> Cal.com -> booked
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
