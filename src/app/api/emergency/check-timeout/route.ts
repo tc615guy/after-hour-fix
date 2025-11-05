@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const results = []
 
     for (const booking of unacknowledged) {
-      if (!booking.technician || !booking.address) continue
+      if (!booking.technician || !booking.address || !booking.technicianId) continue
 
       // Get all available backup techs (exclude the original tech)
       const availableBackupTechs = await prisma.technician.findMany({
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
           projectId: booking.projectId,
           isActive: true,
           isOnCall: true,
-          id: { not: booking.technicianId },
+          id: { not: booking.technicianId }, // Now guaranteed to be non-null
         },
         orderBy: { priority: 'desc' },
       })
