@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { sendSMS } from '@/lib/sms'
+import { sendSMS, makePhoneCall } from '@/lib/sms'
 import { createVapiClient } from '@/lib/vapi'
 import { z } from 'zod'
 
@@ -59,17 +59,57 @@ export async function POST(req: NextRequest) {
           slotEnd,
           status: 'pending',
           isEmergency: true,
+          technicianId: tech.id, // Assign technician to booking
         },
       })
       booking = { id: created.id, slotStart: created.slotStart }
+    } else {
+      // Update existing booking to assign technician
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { technicianId: tech.id },
+      })
     }
 
-    // Notify the technician by SMS
+    // Notify the technician by SMS AND phone call
     const apptTime = booking?.slotStart
       ? new Date(booking.slotStart).toLocaleString()
       : 'ASAP (within 30–60 minutes)'
-    const message = `EMERGENCY DISPATCH - ${project.name}\n\nCustomer: ${customerName}\nPhone: ${customerPhone}\nAddress: ${address}\nIssue: ${notes || 'N/A'}\nAppointment: ${apptTime}\n\nPlease call the customer and head over. Reply 1 if en route.`
+    const message = `🚨 EMERGENCY DISPATCH - ${project.name}\n\nCustomer: ${customerName}\nPhone: ${customerPhone}\nAddress: ${address}\nIssue: ${notes || 'N/A'}\nAppointment: ${apptTime}\n\nPlease call the customer and head over. Reply 1 if en route.`
+    
+    // Send SMS
     await sendSMS({ to: tech.phone, message })
+
+    // Make phone call with emergency notification
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'https://afterhourfix.com'
+    const twimlUrl = `${appUrl}/api/emergency/notify-call?bookingId=${booking.id}&technicianId=${tech.id}`
+    const callStatusUrl = `${appUrl}/api/emergency/call-status`
+    
+    const callSid = await makePhoneCall({
+      to: tech.phone,
+      twimlUrl,
+      statusCallback: callStatusUrl,
+    })
+
+    // Log the dispatch
+    await prisma.eventLog.create({
+      data: {
+        projectId,
+        type: 'emergency.dispatched',
+        payload: {
+          bookingId: booking.id,
+          technicianId: tech.id,
+          technicianName: tech.name,
+          technicianPhone: tech.phone,
+          customerName,
+          customerPhone,
+          address,
+          callSid,
+          smsSent: true,
+          callInitiated: !!callSid,
+        },
+      },
+    })
 
     // Attempt live transfer of active call, if provided
     if (callId) {

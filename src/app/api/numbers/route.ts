@@ -83,15 +83,22 @@ export async function POST(req: NextRequest) {
     const openaiRealtimeServerUrl = process.env.OPENAI_REALTIME_SERVER_URL || process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, 'https://') || 'http://localhost:8080'
     const voiceUrl = `${openaiRealtimeServerUrl}/twilio/voice`
     const statusCallbackUrl = `${openaiRealtimeServerUrl}/twilio/status`
+    
+    // Get app URL for SMS webhook (use Next.js app URL, not server URL)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://afterhourfix.com'
+    const smsWebhookUrl = `${appUrl}/api/twilio/sms-webhook`
 
     console.log(`[B2B Provision] Configuring Twilio number for OpenAI Realtime server: ${voiceUrl}`)
+    console.log(`[B2B Provision] Configuring SMS webhook: ${smsWebhookUrl}`)
 
-    // Update Twilio number to point to OpenAI Realtime server
+    // Update Twilio number to point to OpenAI Realtime server and configure SMS webhook
     await twilioClient.incomingPhoneNumbers(twilioSid).update({
       voiceUrl: voiceUrl,
       voiceMethod: 'POST',
       statusCallback: statusCallbackUrl,
       statusCallbackMethod: 'POST',
+      smsUrl: smsWebhookUrl,
+      smsMethod: 'POST',
     })
 
     console.log(`[B2B Provision] Twilio number configured for OpenAI Realtime server`)

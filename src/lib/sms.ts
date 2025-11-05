@@ -118,6 +118,58 @@ export async function purchaseTwilioNumber(phoneNumber: string): Promise<string>
   }
 }
 
+/**
+ * Make a phone call using Twilio
+ * Returns the call SID if successful, null otherwise
+ */
+export async function makePhoneCall({
+  to,
+  twimlUrl,
+  statusCallback,
+}: {
+  to: string
+  twimlUrl: string
+  statusCallback?: string
+}): Promise<string | null> {
+  const client = getTwilioClient()
+
+  if (!client) {
+    console.warn('[Phone Call] Skipping call - Twilio not configured')
+    return null
+  }
+
+  try {
+    // Clean phone number - remove all non-digits
+    let cleanPhone = to.replace(/\D/g, '')
+
+    // Add +1 if it's a 10-digit US number
+    if (cleanPhone.length === 10) {
+      cleanPhone = `+1${cleanPhone}`
+    } else if (cleanPhone.length === 11 && cleanPhone.startsWith('1')) {
+      cleanPhone = `+${cleanPhone}`
+    } else if (!cleanPhone.startsWith('+')) {
+      cleanPhone = `+${cleanPhone}`
+    }
+
+    console.log(`[Phone Call] Initiating call to ${cleanPhone}`)
+
+    const call = await client.calls.create({
+      to: cleanPhone,
+      from: TWILIO_PHONE_NUMBER,
+      url: twimlUrl,
+      statusCallback: statusCallback,
+      statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+      statusCallbackMethod: 'POST',
+    })
+
+    console.log(`[Phone Call] Call initiated successfully - SID: ${call.sid}`)
+    return call.sid
+  } catch (error: any) {
+    console.error('[Phone Call] Failed to initiate call:', error.message)
+    return null
+  }
+}
+
 export function buildBookingConfirmationSMS(
   businessName: string,
   customerName: string,

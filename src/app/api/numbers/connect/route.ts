@@ -98,12 +98,18 @@ export async function POST(req: NextRequest) {
         
         console.log(`[Connect Number] Purchased Twilio number: ${numberToPurchase} (SID: ${twilioSid})`)
 
+        // Get app URL for SMS webhook (use Next.js app URL, not server URL)
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://afterhourfix.com'
+        const smsWebhookUrl = `${appUrl}/api/twilio/sms-webhook`
+
         // Configure the new Twilio number
         await twilioClient.incomingPhoneNumbers(twilioSid).update({
           voiceUrl: voiceUrl,
           voiceMethod: 'POST',
           statusCallback: statusCallbackUrl,
           statusCallbackMethod: 'POST',
+          smsUrl: smsWebhookUrl,
+          smsMethod: 'POST',
         })
 
                         // Use safe assignment for the forwarding number
