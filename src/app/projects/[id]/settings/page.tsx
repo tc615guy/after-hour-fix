@@ -431,7 +431,11 @@ export default function SettingsPage() {
 
           <TabsContent value="numbers" className="mt-6">
             <div className="mb-6">
-              <PhoneSetup projectId={projectId} aiNumber={project.numbers?.[0]?.e164} />
+              <PhoneSetup 
+                projectId={projectId} 
+                agentId={project.agents?.[0]?.id}
+                aiNumber={project.numbers?.[0]?.e164} 
+              />
             </div>
             {/* How It Works Card */}
             <Card className="mb-6 bg-blue-50 border-blue-200">

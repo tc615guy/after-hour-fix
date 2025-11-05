@@ -95,8 +95,7 @@ async function handleAvailabilityRequest(req: NextRequest) {
 
     // SMART ROUTING: Filter slots to only include those where at least one technician is available
     // Get all active technicians and their bookings that could overlap with our time range
-    const startDate = new Date(startIso)
-    const endDate = new Date(endIso)
+    // Note: startDate and endDate are already defined above from query params
     
     const technicians = await prisma.technician.findMany({
       where: { projectId, isActive: true, deletedAt: null },

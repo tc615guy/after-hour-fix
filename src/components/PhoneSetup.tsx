@@ -7,15 +7,25 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import PhoneInput, { toE164 } from '@/components/PhoneInput'
+import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 type Props = {
   projectId: string
+  agentId?: string
   aiNumber?: string
 }
 
-export default function PhoneSetup({ projectId, aiNumber }: Props) {
+export default function PhoneSetup({ projectId, agentId, aiNumber }: Props) {
+  const router = useRouter()
   const [forwardOpen, setForwardOpen] = useState(false)
   const [portStatus, setPortStatus] = useState<any>(null)
+  const [connectOpen, setConnectOpen] = useState(false)
+  const [existingNumber, setExistingNumber] = useState('')
+  const [connecting, setConnecting] = useState(false)
+  const [connectResult, setConnectResult] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     ;(async () => {
@@ -37,6 +47,49 @@ export default function PhoneSetup({ projectId, aiNumber }: Props) {
     return aiNumber
   }, [aiNumber])
 
+  const handleConnectExistingNumber = async () => {
+    if (!agentId) {
+      setError('Agent ID is required. Please create an AI assistant first.')
+      return
+    }
+
+    const e164Number = toE164(existingNumber)
+    if (!e164Number) {
+      setError('Please enter a valid phone number')
+      return
+    }
+
+    setConnecting(true)
+    setError(null)
+    setConnectResult(null)
+
+    try {
+      const res = await fetch('/api/numbers/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId,
+          agentId,
+          existingPhoneNumber: e164Number,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to connect number')
+      }
+
+      setConnectResult(data)
+      // Refresh the page to show the new number
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message || 'Failed to connect number')
+    } finally {
+      setConnecting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 gap-4">
@@ -57,8 +110,111 @@ export default function PhoneSetup({ projectId, aiNumber }: Props) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Use Call Forwarding</CardTitle>
-            <CardDescription>Forward your existing business number to your AI.</CardDescription>
+            <CardTitle>Connect Your Existing Number</CardTitle>
+            <CardDescription>Forward your existing business number to your AI assistant.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!connectResult ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="existing-number">Your Business Phone Number</Label>
+                  <PhoneInput
+                    id="existing-number"
+                    value={existingNumber}
+                    onChange={setExistingNumber}
+                    placeholder="(205) 555-1234"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Enter the phone number you want customers to call. We'll set up call forwarding automatically.
+                  </p>
+                </div>
+
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-md flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-600 mt-0.5" />
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleConnectExistingNumber}
+                  disabled={!existingNumber || connecting || !agentId}
+                  className="w-full"
+                >
+                  {connecting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Setting up forwarding...
+                    </>
+                  ) : (
+                    'Connect Existing Number'
+                  )}
+                </Button>
+
+                {!agentId && (
+                  <p className="text-xs text-amber-600">
+                    Please create an AI assistant first before connecting a phone number.
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="space-y-3">
+                <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                  <div className="flex items-start gap-2 mb-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
+                    <div>
+                      <h4 className="font-semibold text-green-900 mb-1">Call Forwarding Set Up!</h4>
+                      <p className="text-sm text-green-700">
+                        Your AI assistant number is ready. Forward calls from your existing number to activate.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-3 rounded border border-green-200 space-y-2">
+                    <div>
+                      <p className="text-xs text-gray-600 mb-1">Your Business Number:</p>
+                      <p className="font-mono text-sm font-semibold">{connectResult.existingNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600 mb-1">Forward calls to:</p>
+                      <p className="font-mono text-sm font-semibold">{connectResult.forwardingNumber?.e164}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-semibold text-green-900">Next Steps:</p>
+                    <ol className="text-sm text-green-800 list-decimal list-inside space-y-1">
+                      {connectResult.forwardingInstructions?.nextSteps?.map((step: string, idx: number) => (
+                        <li key={idx}>{step}</li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  <p className="text-xs text-green-700 mt-3 font-medium">
+                    {connectResult.forwardingInstructions?.note}
+                  </p>
+                </div>
+
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setConnectResult(null)
+                    setExistingNumber('')
+                    setConnectOpen(false)
+                  }}
+                  className="w-full"
+                >
+                  Set Up Another Number
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Use Call Forwarding (Manual)</CardTitle>
+            <CardDescription>If you already have an AI number, forward your existing number to it.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="text-sm text-gray-700">

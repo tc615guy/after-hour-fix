@@ -8,7 +8,7 @@ import PhoneInput from '@/components/PhoneInput'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Trash2, Phone, AlertCircle, CheckCircle2, Clock, Download } from 'lucide-react'
+import { Plus, Trash2, Phone, AlertCircle, CheckCircle2, Clock, Download, Upload } from 'lucide-react'
 
 interface Technician {
   id: string
@@ -31,6 +31,8 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
   const [technicians, setTechnicians] = useState<Technician[]>([])
   const [newTech, setNewTech] = useState({ name: '', phone: '', email: '' })
   const [showAddForm, setShowAddForm] = useState(false)
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [importing, setImporting] = useState(false)
 
   useEffect(() => {
     loadTechnicians()
