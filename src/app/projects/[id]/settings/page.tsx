@@ -23,6 +23,7 @@ import FirstTimeSettingsChecklist from '@/components/FirstTimeSettingsChecklist'
 import PricingResponseTemplates from '@/components/PricingResponseTemplates'
 import PhoneSetup from '@/components/PhoneSetup'
 import AdvancedAISettings from '@/components/AdvancedAISettings'
+import AddressAutocomplete from '@/components/AddressAutocomplete'
 
 
 export default function SettingsPage() {
@@ -242,15 +243,13 @@ export default function SettingsPage() {
                 <CardDescription>Information the AI uses when talking to customers</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label>Business Address</Label>
-                  <Input
-                    value={project.businessAddress || ''}
-                    onChange={(e) => setProject({ ...project, businessAddress: e.target.value })}
-                    placeholder="123 Main St, City, State ZIP"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Used for service area validation and distance calculations</p>
-                </div>
+                <AddressAutocomplete
+                  value={project.businessAddress || ''}
+                  onChange={(address) => setProject({ ...project, businessAddress: address })}
+                  label="Business Address"
+                  placeholder="123 Main St, City, State ZIP"
+                />
+                <p className="text-xs text-gray-500 -mt-1">Used for service area validation and distance calculations</p>
                 <div>
                   <Label>Service Radius (miles)</Label>
                   <Input

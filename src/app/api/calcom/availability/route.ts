@@ -95,6 +95,9 @@ async function handleAvailabilityRequest(req: NextRequest) {
 
     // SMART ROUTING: Filter slots to only include those where at least one technician is available
     // Get all active technicians and their bookings that could overlap with our time range
+    const startDate = new Date(startIso)
+    const endDate = new Date(endIso)
+    
     const technicians = await prisma.technician.findMany({
       where: { projectId, isActive: true, deletedAt: null },
       include: {
@@ -104,15 +107,16 @@ async function handleAvailabilityRequest(req: NextRequest) {
             // A booking overlaps if: booking_start < range_end AND booking_end > range_start
             AND: [
               { slotStart: { not: null } },
-              { slotStart: { lt: new Date(endIso) } },
+              { slotStart: { lt: endDate } },
               {
                 OR: [
-                  { slotEnd: { gt: new Date(startIso) } },
+                  { slotEnd: { gt: startDate } },
                   { slotEnd: null }, // If no end time, assume it extends beyond start
                 ],
               },
+              // Exclude only canceled/failed bookings - include ALL other statuses (including 'TN' from CSV imports)
+              { status: { notIn: ['canceled', 'failed'] } },
             ],
-            status: { in: ['pending', 'booked', 'en_route'] },
             deletedAt: null,
           },
         },
@@ -120,43 +124,85 @@ async function handleAvailabilityRequest(req: NextRequest) {
     })
 
     console.log(`[Cal.com Availability] Checking availability against ${technicians.length} technicians`)
+    console.log(`[Cal.com Availability] Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`)
     
     // Log technician bookings for debugging
+    let totalBookings = 0
     for (const tech of technicians) {
       if (tech.bookings.length > 0) {
+        totalBookings += tech.bookings.length
         console.log(`[Cal.com Availability] Tech ${tech.name} has ${tech.bookings.length} bookings in range`)
+        tech.bookings.forEach(b => {
+          const startStr = b.slotStart ? new Date(b.slotStart).toLocaleString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: project.timezone || 'America/Chicago',
+          }) : 'NO START'
+          console.log(`  - ${b.customerName}: ${startStr} (${b.slotStart?.toISOString()})`)
+        })
       }
     }
+    console.log(`[Cal.com Availability] Total bookings to check against: ${totalBookings}`)
 
     // Filter slots to only those where at least one technician is free
     const availableSlots: Array<{ start: string; end?: string }> = []
     for (const slot of calcomSlots) {
       const slotStart = new Date(slot.start)
-      const slotEnd = slot.end ? new Date(slot.end) : new Date(slotStart.getTime() + 90 * 60 * 1000) // Default 1.5 hours
+      const slotEnd = slot.end ? new Date(slot.end) : new Date(slotStart.getTime() + 30 * 60 * 1000) // Default 30 min for Cal.com slots
       
       // Check if any technician is available for this slot
       let hasAvailableTech = false
+      const conflicts: Array<{ tech: string; booking: string; start: Date; end: Date }> = []
+      
       for (const tech of technicians) {
-        const isConflicted = tech.bookings.some((b) => {
-          if (!b.slotStart) return false
+        let techIsBusy = false
+        for (const b of tech.bookings) {
+          if (!b.slotStart) continue
           const bStart = new Date(b.slotStart)
           const bEnd = b.slotEnd ? new Date(b.slotEnd) : new Date(bStart.getTime() + 90 * 60 * 1000) // Default 1.5 hours
+          
           // Check for overlap: slot overlaps booking if slot_start < booking_end AND slot_end > booking_start
           const overlaps = slotStart < bEnd && slotEnd > bStart
-          return overlaps
-        })
+          
+          if (overlaps) {
+            techIsBusy = true
+            conflicts.push({
+              tech: tech.name,
+              booking: b.customerName || 'Unknown',
+              start: bStart,
+              end: bEnd,
+            })
+            break // This tech is busy, no need to check other bookings
+          }
+        }
         
-        if (!isConflicted) {
+        if (!techIsBusy) {
           hasAvailableTech = true
-          break
+          break // At least one tech is free, slot is available
         }
       }
       
       if (hasAvailableTech) {
         availableSlots.push(slot)
       } else {
-        // Log why this slot was filtered out
-        console.log(`[Cal.com Availability] Filtered out ${slot.start} - all ${technicians.length} techs are busy`)
+        // Log why this slot was filtered out with detailed conflict info
+        const slotTimeStr = slotStart.toLocaleString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+          timeZone: project.timezone || 'America/Chicago',
+        })
+        console.log(`[Cal.com Availability] Filtered out ${slotTimeStr} (${slot.start}) - all ${technicians.length} techs are busy:`)
+        conflicts.forEach(c => {
+          const conflictTimeStr = c.start.toLocaleString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: project.timezone || 'America/Chicago',
+          })
+          console.log(`  - ${c.tech} busy with ${c.booking} (${conflictTimeStr})`)
+        })
       }
     }
 
