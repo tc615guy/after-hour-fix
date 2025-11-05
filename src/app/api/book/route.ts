@@ -259,6 +259,55 @@ export async function POST(req: NextRequest) {
       console.error('[BOOK] Error checking for duplicate:', err)
     }
 
+    // Find available technician for this time slot (smart assignment)
+    let technicianId: string | null = null
+    try {
+      // Get all active technicians and check which ones are available
+      const allTechs = await prisma.technician.findMany({
+        where: {
+          projectId,
+          isActive: true,
+          deletedAt: null,
+        },
+        include: {
+          bookings: {
+            where: {
+              slotStart: { not: null },
+              deletedAt: null,
+              status: { in: ['pending', 'booked', 'en_route'] },
+            },
+          },
+        },
+        orderBy: { priority: 'desc' }, // Use priority if set
+      })
+      
+      // Find first tech without conflicting bookings
+      for (const tech of allTechs) {
+        const hasConflict = tech.bookings.some((b: any) => {
+          if (!b.slotStart) return false
+          const bStart = new Date(b.slotStart).getTime()
+          const bEnd = b.slotEnd ? new Date(b.slotEnd).getTime() : bStart + 90 * 60 * 1000
+          const slotStartTime = startTime.getTime()
+          const slotEndTime = endTime.getTime()
+          // Check for overlap
+          return slotStartTime < bEnd && slotEndTime > bStart
+        })
+        
+        if (!hasConflict) {
+          technicianId = tech.id
+          console.log(`[BOOK] Auto-assigned technician: ${tech.name} (${technicianId})`)
+          break
+        }
+      }
+      
+      if (!technicianId) {
+        console.log('[BOOK] No available technician found for this slot - booking will be unassigned')
+      }
+    } catch (techErr) {
+      console.warn('[BOOK] Error finding technician:', techErr)
+      // Continue without technician assignment
+    }
+
     // Synchronous creation: pending -> Cal.com -> booked
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const createRes = await fetch(`${appUrl}/api/projects/${projectId}/bookings/quick-create`, {
@@ -272,6 +321,7 @@ export async function POST(req: NextRequest) {
             slotStart: startTime.toISOString(),
             slotEnd: endTime.toISOString(),
             status: 'pending',
+            technicianId: technicianId, // Assign technician if found
           }),
         })
     const createdPayload = await createRes.json().catch(() => ({} as any))

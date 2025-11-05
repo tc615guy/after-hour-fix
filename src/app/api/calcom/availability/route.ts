@@ -227,13 +227,13 @@ async function handleAvailabilityRequest(req: NextRequest) {
 
     // Filter slots to only those where at least one technician is free
     // Use businessHoursFiltered instead of calcomSlots (already filtered)
-    const availableSlots: Array<{ start: string; end?: string }> = []
+    const availableSlots: Array<{ start: string; end?: string; technicianId?: string; technicianName?: string }> = []
     for (const slot of businessHoursFiltered) {
       const slotStart = new Date(slot.start)
       const slotEnd = slot.end ? new Date(slot.end) : new Date(slotStart.getTime() + 30 * 60 * 1000) // Default 30 min for Cal.com slots
       
-      // Check if any technician is available for this slot
-      let hasAvailableTech = false
+      // Find which specific technician(s) are available for this slot
+      const availableTechs: Array<{ id: string; name: string }> = []
       const conflicts: Array<{ tech: string; booking: string; start: Date; end: Date }> = []
       
       for (const tech of technicians) {
@@ -259,13 +259,19 @@ async function handleAvailabilityRequest(req: NextRequest) {
         }
         
         if (!techIsBusy) {
-          hasAvailableTech = true
-          break // At least one tech is free, slot is available
+          availableTechs.push({ id: tech.id, name: tech.name })
         }
       }
       
-      if (hasAvailableTech) {
-        availableSlots.push(slot)
+      // If at least one tech is available, include this slot with the available tech info
+      if (availableTechs.length > 0) {
+        // Pick the first available tech (can be improved with smart routing later)
+        const assignedTech = availableTechs[0]
+        availableSlots.push({
+          ...slot,
+          technicianId: assignedTech.id, // Add technician ID so booking can assign it
+          technicianName: assignedTech.name, // Add name for display
+        })
       } else {
         // Log why this slot was filtered out with detailed conflict info
         const slotTimeStr = slotStart.toLocaleString('en-US', {
@@ -367,7 +373,9 @@ async function handleAvailabilityRequest(req: NextRequest) {
   
   console.log(`[Cal.com Availability] First slot time verification: ${firstTime} (explicit: ${explicitTime}, hour in ${tz}: ${hourInTimezone})`)
   
-  const resultText = `SUCCESS: Found ${limitedSlots.length} available slots. The first available time is ${firstTime}. IMPORTANT: This is ${ampm} (${hourInTimezone >= 12 ? 'afternoon/evening' : 'morning'}), NOT ${ampm === 'AM' ? 'PM' : 'AM'}. Say to customer: "I can get someone out there at ${firstTime}. Does that work?"`
+  // Include technician name if available
+  const techInfo = firstSlot.technicianName ? ` (technician: ${firstSlot.technicianName})` : ''
+  const resultText = `SUCCESS: Found ${limitedSlots.length} available slots. The first available time is ${firstTime}${techInfo}. IMPORTANT: This is ${ampm} (${hourInTimezone >= 12 ? 'afternoon/evening' : 'morning'}), NOT ${ampm === 'AM' ? 'PM' : 'AM'}. Say to customer: "I can get someone out there at ${firstTime}. Does that work?"`
   
   const response = {
     result: resultText,

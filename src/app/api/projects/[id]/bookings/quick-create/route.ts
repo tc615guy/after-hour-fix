@@ -23,6 +23,7 @@ export async function POST(
         slotEnd: endTime,
         priceCents: body.priceCents ?? null,
         status: body.status || 'pending',
+        technicianId: body.technicianId || null, // Assign technician if provided
       },
     })
     return NextResponse.json({ success: true, booking })
