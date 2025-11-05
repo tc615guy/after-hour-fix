@@ -42,8 +42,8 @@ export async function GET(req: NextRequest) {
         where: { userId: project.ownerId, status: { in: ['active', 'trialing'] } },
         orderBy: { updatedAt: 'desc' },
       })
-      const premiumId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM
-      const cap = sub && premiumId && sub.priceId === premiumId ? 2500
+      const ultraId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ULTRA
+      const cap = sub && ultraId && sub.priceId === ultraId ? 2500
         : sub && proId && sub.priceId === proId ? 1200
         : 500
       const minutesLeft = Math.max(0, cap - aiMinutesUsed)

@@ -7,7 +7,7 @@ export default function PricingPage() {
   const plans = [
     {
       name: 'Starter',
-      price: 149,
+      price: 299,
       priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
       description: 'Perfect for solo operators',
       features: [
@@ -17,11 +17,12 @@ export default function PricingPage() {
         'Email & SMS confirmations',
         'Call transcripts',
         'Smart reports & tracking',
+        '7-day pro-rated refund',
       ],
     },
     {
       name: 'Pro',
-      price: 299,
+      price: 699,
       priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
       description: 'For growing businesses',
       features: [
@@ -33,25 +34,26 @@ export default function PricingPage() {
         'Smart reports & tracking',
         'Priority support',
         'Custom conversation scripts',
+        '7-day pro-rated refund',
       ],
       popular: true,
     },
     {
-      name: 'Premium',
-      price: 499,
-      priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM,
-      description: 'Best-in-class AI experience',
+      name: 'Ultra',
+      price: 1499,
+      priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ULTRA,
+      description: 'For high-volume operations',
       features: [
         '2,500 AI minutes/month',
-        'Premium AI model',
-        'Most natural voice options',
-        'Enhanced transcription',
-        '1 phone number',
+        'Unlimited phone numbers',
         'Cal.com integration',
         'Email & SMS confirmations',
         'Call transcripts',
         'Smart reports & tracking',
         'Priority support',
+        'Custom conversation scripts',
+        'Dedicated account manager',
+        '7-day pro-rated refund',
       ],
     },
   ]

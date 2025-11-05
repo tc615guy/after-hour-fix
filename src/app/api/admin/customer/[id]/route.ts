@@ -60,12 +60,12 @@ export async function GET(
 
     // Cap / minutes left
     const proId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
-    const premiumId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM
+    const ultraId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ULTRA
     const sub = await prisma.subscription.findFirst({
       where: { userId: project.ownerId, status: { in: ['active', 'trialing'] } },
       orderBy: { updatedAt: 'desc' },
     })
-    const minutesCap = sub && premiumId && sub.priceId === premiumId ? 2500
+    const minutesCap = sub && ultraId && sub.priceId === ultraId ? 2500
       : sub && proId && sub.priceId === proId ? 1200
       : 500
     const minutesLeft = Math.max(0, minutesCap - aiMinutesUsed)
