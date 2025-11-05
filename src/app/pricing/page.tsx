@@ -176,7 +176,7 @@ export default function PricingPage() {
         </div>
 
         <div className="mt-12 text-center">
-          <p className="text-gray-600">All plans include a 14-day free trial. No credit card required to start.</p>
+          <p className="text-gray-600">All plans include a 7-day money-back guarantee. Cancel within 7 days for a pro-rated refund.</p>
           <p className="text-sm text-gray-500 mt-2">One-time setup fee applies to all new accounts.</p>
         </div>
       </section>
