@@ -69,15 +69,28 @@ export class RealtimeAgent {
       // Load agent and project data from database
       const agent = await prisma.agent.findUnique({
         where: { id: this.agentId },
-        include: { project: true },
+        include: { 
+          project: {
+            include: {
+              numbers: {
+                where: { deletedAt: null },
+                orderBy: { createdAt: 'desc' }, // Get most recent phone number first
+                take: 1,
+              },
+            },
+          },
+        },
       })
 
       if (!agent || !agent.project) {
         throw new Error(`Agent or project not found: agentId=${this.agentId}, projectId=${this.projectId}`)
       }
 
+      // Get the most recently assigned phone number
+      const mostRecentNumber = agent.project.numbers[0]?.e164 || null
+
       // Build system prompt and tools (similar to Vapi setup)
-      const systemPrompt = this.buildSystemPrompt(agent.project.name, agent.project.trade)
+      const systemPrompt = this.buildSystemPrompt(agent.project.name, agent.project.trade, mostRecentNumber)
       const tools = await this.buildTools(agent.project)
 
       // Get Realtime API WebSocket URL
@@ -561,7 +574,7 @@ export class RealtimeAgent {
 
   // Helper methods to build prompt and tools (similar to Vapi implementation)
   // Note: In production, these should be imported from a shared utilities file
-  private buildSystemPrompt(projectName: string, trade: string): string {
+  private buildSystemPrompt(projectName: string, trade: string, phoneNumber: string | null = null): string {
     const normalizedTrade = trade.toLowerCase()
     
     // Trade-specific context and emergency indicators (Week 2, Day 6 - Emergency Triage)
@@ -645,7 +658,16 @@ ${tradeConfig.emergencyQuestions.map((q, i) => `   ${i + 1}. "${q}"`).join('\n')
 
 `
 
-    return `You are the friendly AI receptionist for ${projectName}, a professional ${trade} company specializing in ${tradeConfig.context}.
+    // Format phone number for display if available
+    const phoneDisplay = phoneNumber 
+      ? phoneNumber.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3') 
+      : null
+    
+    const phoneInfo = phoneDisplay 
+      ? `\n**YOUR PHONE NUMBER:** ${phoneDisplay} (${phoneNumber}) - This is the number customers can call to reach ${projectName}.`
+      : ''
+    
+    return `You are the friendly AI receptionist for ${projectName}, a professional ${trade} company specializing in ${tradeConfig.context}.${phoneInfo}
 
 **VOICE & TONE:**
 - Warm, empathetic, and reassuring

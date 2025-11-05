@@ -295,7 +295,7 @@ async function handleAvailabilityRequest(req: NextRequest) {
     if (currentHour >= 16 && !isEmergency) { // After 4 PM and not emergency
       // Get today's date in the project timezone (not UTC!)
       // toLocaleDateString returns MM/DD/YYYY, so we need to parse it correctly
-      const dateParts = currentTime.toLocaleDateString('en-US', { 
+      const dateParts = now.toLocaleDateString('en-US', { 
         year: 'numeric', 
         month: '2-digit', 
         day: '2-digit',
