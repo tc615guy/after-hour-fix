@@ -854,9 +854,9 @@ export default function DashboardPage() {
           (() => {
             const proId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
             const ultraId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ULTRA
-            const cap = subscription && ultraId && subscription.priceId === ultraId ? 2500
-              : subscription && proId && subscription.priceId === proId ? 1200
-              : 500
+            const cap = subscription && ultraId && subscription.priceId === ultraId ? 1200
+              : subscription && proId && subscription.priceId === proId ? 800
+              : 300
             const used = stats.minutesUsed || 0
             const pct = cap > 0 ? used / cap : 0
             if (pct >= 1) {

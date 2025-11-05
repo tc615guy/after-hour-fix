@@ -65,9 +65,9 @@ export async function GET(
       where: { userId: project.ownerId, status: { in: ['active', 'trialing'] } },
       orderBy: { updatedAt: 'desc' },
     })
-    const minutesCap = sub && ultraId && sub.priceId === ultraId ? 2500
-      : sub && proId && sub.priceId === proId ? 1200
-      : 500
+    const minutesCap = sub && ultraId && sub.priceId === ultraId ? 1200
+      : sub && proId && sub.priceId === proId ? 800
+      : 300
     const minutesLeft = Math.max(0, minutesCap - aiMinutesUsed)
 
     const estimatedRevenue = project.bookings.reduce((sum, booking) =>

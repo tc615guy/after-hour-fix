@@ -111,9 +111,9 @@ export async function POST(req: NextRequest) {
               })
               const proId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
               const ultraId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ULTRA
-              const cap = subs && ultraId && subs.priceId === ultraId ? 2500
-                : subs && proId && subs.priceId === proId ? 1200
-                : 500
+              const cap = subs && ultraId && subs.priceId === ultraId ? 1200
+                : subs && proId && subs.priceId === proId ? 800
+                : 300
               const used = (project.agents || []).reduce((s, a) => s + (a.minutesThisPeriod || 0), 0)
               if (!isTestAccount && used >= cap) {
                 // Attempt to forward regardless of business hours
@@ -203,7 +203,10 @@ export async function POST(req: NextRequest) {
                   })
                 : null
               const proId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
-              const cap = sub && proId && sub.priceId === proId ? 1200 : 500
+              const ultraId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ULTRA
+              const cap = sub && ultraId && sub.priceId === ultraId ? 1200
+                : sub && proId && sub.priceId === proId ? 800
+                : 300
               const used = (project?.agents || []).reduce((s, a) => s + (a.minutesThisPeriod || 0), 0)
               const overage = Math.max(0, used - cap)
               const overagePrice = process.env.STRIPE_PRICE_OVERAGE_MINUTE

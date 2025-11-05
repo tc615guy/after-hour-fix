@@ -43,9 +43,9 @@ export async function GET(req: NextRequest) {
         orderBy: { updatedAt: 'desc' },
       })
       const ultraId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ULTRA
-      const cap = sub && ultraId && sub.priceId === ultraId ? 2500
-        : sub && proId && sub.priceId === proId ? 1200
-        : 500
+      const cap = sub && ultraId && sub.priceId === ultraId ? 1200
+        : sub && proId && sub.priceId === proId ? 800
+        : 300
       const minutesLeft = Math.max(0, cap - aiMinutesUsed)
 
       const estimatedRevenue = project.bookings.reduce((sum, booking) =>

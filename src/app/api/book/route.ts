@@ -104,9 +104,9 @@ export async function POST(req: NextRequest) {
       })
       const proId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
       const ultraId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ULTRA
-      const cap = subs && ultraId && subs.priceId === ultraId ? 2500
-        : subs && proId && subs.priceId === proId ? 1200
-        : 500
+      const cap = subs && ultraId && subs.priceId === ultraId ? 1200
+        : subs && proId && subs.priceId === proId ? 800
+        : 300
       const used = (project.agents || []).reduce((s, a) => s + (a.minutesThisPeriod || 0), 0)
       if (used >= cap) {
         const msg = "We’ve reached this month’s included AI minutes. Let me connect you to the office to finish booking."

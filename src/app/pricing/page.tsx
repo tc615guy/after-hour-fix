@@ -7,11 +7,11 @@ export default function PricingPage() {
   const plans = [
     {
       name: 'Starter',
-      price: 299,
+      price: 199,
       priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
       description: 'Perfect for solo operators',
       features: [
-        '500 AI minutes/month',
+        '300 AI minutes/month',
         '1 phone number',
         'Cal.com integration',
         'Email & SMS confirmations',
@@ -22,11 +22,11 @@ export default function PricingPage() {
     },
     {
       name: 'Pro',
-      price: 699,
+      price: 399,
       priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
       description: 'For growing businesses',
       features: [
-        '1,200 AI minutes/month',
+        '800 AI minutes/month',
         '3 phone numbers',
         'Cal.com integration',
         'Email & SMS confirmations',
@@ -40,11 +40,11 @@ export default function PricingPage() {
     },
     {
       name: 'Ultra',
-      price: 1499,
+      price: 599,
       priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ULTRA,
       description: 'For high-volume operations',
       features: [
-        '2,500 AI minutes/month',
+        '1,200 AI minutes/month',
         'Unlimited phone numbers',
         'Cal.com integration',
         'Email & SMS confirmations',
@@ -121,7 +121,7 @@ export default function PricingPage() {
               <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="w-8 h-8 text-white" />
               </div>
-              <CardTitle className="text-3xl mb-2">One-Time Setup Fee: $449</CardTitle>
+              <CardTitle className="text-3xl mb-2">One-Time Setup Fee: $299</CardTitle>
               <CardDescription className="text-base">
                 Professional setup by our team to ensure your smart AI receptionist is configured perfectly for your business
               </CardDescription>
