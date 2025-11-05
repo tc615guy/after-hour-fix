@@ -18,6 +18,7 @@ import FirstTimePopup from '@/components/FirstTimePopup'
 import MissedOpportunityCalculator from '@/components/MissedOpportunityCalculator'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { useRouter } from 'next/navigation'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -66,6 +67,7 @@ export default function DashboardPage() {
   const [rangeTo, setRangeTo] = useState<string>('')
   const [exportSource, setExportSource] = useState<'all' | 'ahf'>('all')
   const [purchasingNumber, setPurchasingNumber] = useState(false)
+  const [selectedCall, setSelectedCall] = useState<any>(null)
 
   useEffect(() => {
     checkAuth()
@@ -889,11 +891,16 @@ export default function DashboardPage() {
                     <TableHead>Intent</TableHead>
                     <TableHead>Duration</TableHead>
                     <TableHead>Date</TableHead>
+                    <TableHead>Transcript</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {calls.slice(0, 5).map((call) => (
-                    <TableRow key={call.id}>
+                    <TableRow 
+                      key={call.id}
+                      className={call.transcript ? "cursor-pointer hover:bg-gray-50" : ""}
+                      onClick={() => call.transcript && setSelectedCall(call)}
+                    >
                       <TableCell className="font-mono">
                         {formatPhoneNumber(call.fromNumber)}
                       </TableCell>
@@ -920,6 +927,13 @@ export default function DashboardPage() {
                       </TableCell>
                       <TableCell className="text-sm text-gray-500">
                         {new Date(call.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        {call.transcript ? (
+                          <Badge variant="outline" className="cursor-pointer">View</Badge>
+                        ) : (
+                          <span className="text-xs text-gray-400">-</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1255,6 +1269,53 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Call Transcript Dialog */}
+      <Dialog open={!!selectedCall} onOpenChange={(open) => !open && setSelectedCall(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Call Transcript</DialogTitle>
+          </DialogHeader>
+          {selectedCall && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-semibold">From:</span> {formatPhoneNumber(selectedCall.fromNumber)}
+                </div>
+                <div>
+                  <span className="font-semibold">Duration:</span> {selectedCall.durationSec ? formatDuration(selectedCall.durationSec) : '-'}
+                </div>
+                <div>
+                  <span className="font-semibold">Status:</span>{' '}
+                  <Badge variant={selectedCall.status === 'completed' ? 'default' : 'destructive'}>
+                    {selectedCall.status}
+                  </Badge>
+                </div>
+                <div>
+                  <span className="font-semibold">Date:</span> {new Date(selectedCall.createdAt).toLocaleString()}
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-2">Transcript:</h4>
+                <ScrollArea className="h-[400px] w-full rounded-md border p-4">
+                  <div className="whitespace-pre-wrap text-sm">
+                    {selectedCall.transcript || 'No transcript available'}
+                  </div>
+                </ScrollArea>
+              </div>
+              {selectedCall.recordingUrl && (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-2">Recording:</h4>
+                  <audio controls className="w-full">
+                    <source src={selectedCall.recordingUrl} type="audio/mpeg" />
+                    Your browser does not support the audio element.
+                  </audio>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

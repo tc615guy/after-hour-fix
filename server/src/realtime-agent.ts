@@ -671,8 +671,11 @@ ${emergencyTriageSection}
    - Address: "Where are you located?" (ask for unit/apartment if needed)
    - Issue: If not mentioned, ask: "What's going on?"
 5. **Check Availability & Book**:
+   - For ROUTINE calls, ask: "Do you prefer morning or afternoon?"
    - Call get_slots with appropriate time window (TODAY for emergency, TOMORROW+ for routine)
-   - Propose ONLY times from get_slots result - NEVER invent availability
+   - Filter slots based on customer's time preference (morning = before 12pm, afternoon = 12pm or later)
+   - Propose ONLY times from get_slots result that match their preference - NEVER invent availability
+   - If no slots match preference, offer closest alternative: "I don't have any morning slots, but I have 2pm available. Does that work?"
    - When customer agrees, call book_slot with confirm=true
    - Wait for booking confirmation before continuing
 

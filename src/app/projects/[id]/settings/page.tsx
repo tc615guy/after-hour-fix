@@ -251,6 +251,18 @@ export default function SettingsPage() {
                   <p className="text-xs text-gray-500 mt-1">Used for service area validation and distance calculations</p>
                 </div>
                 <div>
+                  <Label>Service Radius (miles)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="500"
+                    value={project.serviceRadius || ''}
+                    onChange={(e) => setProject({ ...project, serviceRadius: parseInt(e.target.value) || null })}
+                    placeholder="25"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Maximum distance from your business address to accept jobs (recommended: 25-50 miles)</p>
+                </div>
+                <div>
                   <Label>Warranty Information</Label>
                   <Textarea
                     value={
@@ -279,11 +291,13 @@ export default function SettingsPage() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                           businessAddress: project.businessAddress,
+                          serviceRadius: project.serviceRadius,
                           warrantyInfo: project.warrantyInfo,
                         }),
                       })
                       if (!res.ok) throw new Error('Failed to save')
                       alert('Saved!')
+                      loadProject() // Reload to confirm save
                     } catch (e: any) {
                       alert(e.message)
                     }

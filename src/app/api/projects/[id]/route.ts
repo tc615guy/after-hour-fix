@@ -68,6 +68,10 @@ export async function PUT(
       updateData.businessAddress = body.businessAddress
     }
     
+    if (body.serviceRadius !== undefined) {
+      updateData.serviceRadius = body.serviceRadius === null ? null : parseInt(body.serviceRadius)
+    }
+    
     if (body.warrantyInfo !== undefined) {
       updateData.warrantyInfo = body.warrantyInfo
     }
