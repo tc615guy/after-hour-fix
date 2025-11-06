@@ -741,14 +741,15 @@ ${emergencyTriageSection}
    - EMERGENCY = "no heat", "burst pipe", "sparks", "flooding", "no power", "sewage backup"
    - ROUTINE = everything else
 
-3. **Fast Path to Booking** - Collect info WHILE checking slots:
+3. **Fast Path to Booking** - Collect info and book immediately:
    - After understanding issue, ask: "What's your name and phone number?" → Get both at once
    - While they answer, think about time: EMERGENCY=today, ROUTINE=today if before 8 PM, otherwise tomorrow
    - Then ask: "What's your address?" → Get it
-   - **IMMEDIATELY call get_slots** with the appropriate date
+   - **IMMEDIATELY call get_slots** with the appropriate date (skip service area check)
    - Present top 2-3 slots: "I have [time1], [time2], or [time3]. Which works best?"
    - Customer picks → **IMMEDIATELY call book_slot** 
    - Confirm: "You're all set! See you at [time]."
+   - **DO NOT check service area - just book the appointment**
 
 **DATE LOGIC - CRITICAL:**
 - Current time: ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York', hour12: true })} (Eastern Time)
@@ -829,17 +830,19 @@ ${aiSettings.customClosing ? `\n**CLOSING:** ${aiSettings.customClosing}` : ''}`
           required: [],
         },
       },
-      {
-        name: 'check_service_area',
-        description: 'Check if a service address is within the configured service area. Use this before booking to verify coverage.',
-        parameters: {
-          type: 'object',
-          properties: {
-            address: { type: 'string', description: 'Service address to check' },
-          },
-          required: ['address'],
-        },
-      },
+      // TEMPORARILY DISABLED - check_service_area causes AI to go silent
+      // Will re-enable after fixing the flow
+      // {
+      //   name: 'check_service_area',
+      //   description: 'Check if a service address is within the configured service area. Use this before booking to verify coverage.',
+      //   parameters: {
+      //     type: 'object',
+      //     properties: {
+      //       address: { type: 'string', description: 'Service address to check' },
+      //     },
+      //     required: ['address'],
+      //   },
+      // },
     ]
   }
 }
