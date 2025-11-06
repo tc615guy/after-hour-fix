@@ -318,6 +318,42 @@ export class CallSessionManager {
                 break
               }
               
+              case 'cancel_booking': {
+                // Cancel booking by phone number
+                console.log(`[SessionManager] Calling cancel_booking [attempt ${attempt}/${maxRetries}]`, params)
+                
+                const url = `${appUrl}/api/cancel-booking`
+                const cancelParams = {
+                  customerPhone: params.customerPhone,
+                  projectId: session.projectId,
+                  reason: params.reason,
+                }
+                
+                const res = await fetch(url, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(cancelParams),
+                  signal: AbortSignal.timeout(10000),
+                })
+                
+                if (!res.ok) {
+                  const errorData = await res.json().catch(() => ({})) as { error?: string; result?: string }
+                  // If booking not found, return friendly message
+                  if (res.status === 404 && errorData.result) {
+                    result = { result: errorData.result }
+                    break
+                  }
+                  throw new Error(`HTTP ${res.status}: ${errorData.error || res.statusText}`)
+                }
+                
+                const data = await res.json() as { result?: string; success?: boolean }
+                result = { 
+                  result: data.result || 'Appointment canceled successfully',
+                  canceled: data.success || true
+                }
+                break
+              }
+              
               case 'get_pricing': {
                 const url = `${appUrl}/api/pricing/assistant?projectId=${session.projectId}`
                 console.log(`[SessionManager] Calling get_pricing: ${url} [attempt ${attempt}/${maxRetries}]`)

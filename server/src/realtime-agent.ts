@@ -831,6 +831,14 @@ ${emergencyTriageSection}
   6. Confirm: "Done! I've moved your appointment to [new time]."
 - NEVER create a new booking when rescheduling - always use reschedule_booking function
 
+**CANCELLATIONS:**
+- If customer says "cancel my appointment", "I need to cancel", "cancel my booking":
+  1. Confirm they want to cancel: "I can cancel that for you. What's the phone number on the booking?"
+  2. Call cancel_booking with their phone number
+  3. Confirm: "Done! Your appointment is canceled. Call anytime if you need to reschedule."
+- Be empathetic: "No problem at all" or "I understand"
+- Always offer to reschedule: "Would you like to book a different time instead?"
+
 **EMERGENCY PRIORITY:**
 If customer says: "no heat", "furnace down", "burst pipe", "flooding", "sparks", "no power" → 
 Say: "That's urgent. I'll get someone out today. Name and phone?" → Get info → Book SAME DAY
@@ -915,6 +923,18 @@ ${aiSettings.customClosing ? `\n**CLOSING:** ${aiSettings.customClosing}` : ''}`
             reason: { type: 'string', description: 'Optional reason for reschedule (e.g., "customer requested different time")' },
           },
           required: ['customerPhone', 'newStartTime'],
+        },
+      },
+      {
+        name: 'cancel_booking',
+        description: 'Cancel an existing appointment. Use this when customer wants to cancel their appointment. Only requires phone number to find and cancel the booking.',
+        parameters: {
+          type: 'object',
+          properties: {
+            customerPhone: { type: 'string', description: 'Customer phone number (10 digits, no country code) - used to find existing booking' },
+            reason: { type: 'string', description: 'Optional reason for cancellation (e.g., "no longer needed", "emergency resolved")' },
+          },
+          required: ['customerPhone'],
         },
       },
     ]
