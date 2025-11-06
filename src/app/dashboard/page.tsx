@@ -351,17 +351,36 @@ export default function DashboardPage() {
     try {
       setCsvImporting(true)
       let rows = csvPreview.rows.map(r => mapRowToBooking(csvPreview.headers, r))
+      const totalRows = rows.length
+      
+      // ALWAYS filter out rows with invalid/missing dates (not just when date range is set)
+      rows = rows.filter((row) => {
+        if (!row.slotStart) return false
+        const d = new Date(row.slotStart)
+        if (isNaN(d.getTime())) return false
+        return true
+      })
+      
+      const invalidDateCount = totalRows - rows.length
+      if (invalidDateCount > 0) {
+        console.warn(`[Import] Skipped ${invalidDateCount} rows with invalid dates`)
+      }
+      
       // Optional date range filter
       const from = rangeFrom ? new Date(rangeFrom) : null
       const to = rangeTo ? new Date(rangeTo) : null
       if (from || to) {
+        const beforeFilter = rows.length
         rows = rows.filter((row) => {
-          if (!row.slotStart) return false
-          const d = new Date(row.slotStart)
+          const d = new Date(row.slotStart!)
           if (from && d < from) return false
           if (to && d > to) return false
           return true
         })
+        const filteredOutByRange = beforeFilter - rows.length
+        if (filteredOutByRange > 0) {
+          console.log(`[Import] Filtered out ${filteredOutByRange} rows by date range`)
+        }
       }
       
       // Debug: Log first row to see technician fields
@@ -375,6 +394,10 @@ export default function DashboardPage() {
             technicianId: csvMapping.technicianId
           }
         })
+      }
+      
+      if (rows.length === 0) {
+        throw new Error(`No valid rows to import. ${invalidDateCount} rows had invalid dates.`)
       }
       
       const res = await fetch(`/api/projects/${selectedProject.id}/bookings/import-batch`, {
@@ -405,20 +428,31 @@ export default function DashboardPage() {
       const errors = (data.results || []).filter((r: any) => r.status === 'error').map((r: any) => ({ index: r.index, error: r.error }))
       setCsvResults({ created: data.created || 0, errors })
       
+      // Build summary message
+      let summaryParts = []
+      if (data.created > 0) {
+        summaryParts.push(`✅ ${data.created} bookings imported`)
+      }
+      if (invalidDateCount > 0) {
+        summaryParts.push(`⚠️ ${invalidDateCount} rows skipped (invalid dates)`)
+      }
+      if (errors.length > 0) {
+        summaryParts.push(`❌ ${errors.length} rows failed (duplicates/errors)`)
+      }
+      
       if (errors.length > 0 && data.created === 0) {
         // All rows failed - show detailed error with first few unique errors
         const uniqueErrors = [...new Set(errors.slice(0, 5).map((e: any) => e.error))]
         const errorMessage = uniqueErrors.length > 0 
           ? `Import failed: ${uniqueErrors.join('; ')}${errors.length > 1 ? ` (${errors.length} total errors)` : ''}`
           : `Import failed: All ${errors.length} rows were skipped (likely duplicates or validation errors)`
-        alert(errorMessage)
+        alert(errorMessage + (invalidDateCount > 0 ? `\n\n${invalidDateCount} additional rows were skipped due to invalid dates.` : ''))
       } else if (data.created === 0 && errors.length === 0) {
         // No errors but nothing created - might be duplicates
-        alert(`Import completed but no bookings were created. All ${rows.length} rows were likely duplicates.`)
+        alert(`Import completed but no bookings were created. All ${rows.length} rows were likely duplicates.${invalidDateCount > 0 ? ` (${invalidDateCount} rows skipped due to invalid dates)` : ''}`)
       } else if (data.created > 0) {
         // Success with some errors
-        const errorCount = errors.length
-        alert(`Import completed: ${data.created} bookings created${errorCount > 0 ? `, ${errorCount} skipped (duplicates/errors)` : ''}`)
+        alert(summaryParts.join('\n'))
       }
       
       await loadProjectData(selectedProject.id)
