@@ -710,7 +710,7 @@ ${emergencyTriageSection}
 
 2. **Listen First** - Let customer explain the issue fully. Don't interrupt.
 
-2. **Triage the Issue** - Use emergency triage process above to classify as EMERGENCY or ROUTINE
+3. **Triage the Issue** - Use emergency triage process above to classify as EMERGENCY or ROUTINE
    - For HVAC: "furnace down", "no heat", "furnace not working" = EMERGENCY (especially in winter)
    - Ask 1-2 clarifying questions from emergency list if needed
 
