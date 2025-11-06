@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from '@/lib/supabase/server'
 import { prisma } from '@/lib/db'
 import { isValidIcsUrl } from '@/lib/calendar/utils'
 

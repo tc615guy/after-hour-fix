@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from '@/lib/supabase/server'
 
 const MS_OAUTH_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize'
 const SCOPES = ['Calendars.ReadWrite', 'offline_access'].join(' ')
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       scope: SCOPES,
       response_mode: 'query',
       prompt: 'consent', // Force consent to get refresh token
-      state: Buffer.from(JSON.stringify({ email: session.user.email })).toString('base64'),
+      state: 'microsoft-calendar-connect', // Simple state for CSRF protection
     })
 
     const authUrl = `${MS_OAUTH_URL}?${params.toString()}`

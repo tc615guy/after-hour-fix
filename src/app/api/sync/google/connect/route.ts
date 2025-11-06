@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from '@/lib/supabase/server'
 
 const GOOGLE_OAUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 const SCOPES = [
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       scope: SCOPES,
       access_type: 'offline', // Request refresh token
       prompt: 'consent', // Force consent to get refresh token
-      state: Buffer.from(JSON.stringify({ email: session.user.email })).toString('base64'),
+      state: 'google-calendar-connect', // Simple state for CSRF protection
     })
 
     const authUrl = `${GOOGLE_OAUTH_URL}?${params.toString()}`

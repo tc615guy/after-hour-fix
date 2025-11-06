@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from '@/lib/supabase/server'
 import { prisma } from '@/lib/db'
 import { encrypt } from '@/lib/calendar/utils'
 
@@ -25,17 +26,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/dashboard/settings/calendar?error=no_code`)
     }
 
-    // Decode state
-    const stateData = JSON.parse(Buffer.from(state || '', 'base64').toString())
-    const userEmail = stateData.email
-
-    if (!userEmail) {
-      return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/dashboard/settings/calendar?error=invalid_state`)
+    // Get current session
+    const session = await getServerSession()
+    if (!session?.user?.email) {
+      return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/dashboard/settings/calendar?error=unauthorized`)
     }
 
     // Get user
     const user = await prisma.user.findUnique({
-      where: { email: userEmail },
+      where: { email: session.user.email },
     })
 
     if (!user) {
