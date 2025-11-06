@@ -90,7 +90,7 @@ export class RealtimeAgent {
 
       // Store project info for custom greeting
       this.projectName = agent.project.name
-      const aiSettings = (agent.project.aiSettings as any) || {}
+      const aiSettings: any = (agent.project as any).aiSettings || {}
       this.customGreeting = aiSettings.customGreeting || ''
       
       console.log(`[RealtimeAgent] Custom greeting: ${this.customGreeting ? 'SET' : 'NOT SET'}`)
@@ -351,6 +351,15 @@ export class RealtimeAgent {
       case 'response.done':
         // Response complete
         console.log('[RealtimeAgent] ✅ Response done:', event.response?.status)
+        
+        // Debug: Log if response had function calls
+        const output = event.response?.output || []
+        const hasFunctionCall = output.some((item: any) => item.type === 'function_call')
+        if (hasFunctionCall) {
+          console.log('[RealtimeAgent] Response included function call(s)')
+        } else {
+          console.log('[RealtimeAgent] Response had NO function calls')
+        }
         break
 
                    case 'error':
@@ -741,15 +750,23 @@ ${emergencyTriageSection}
    - EMERGENCY = "no heat", "burst pipe", "sparks", "flooding", "no power", "sewage backup"
    - ROUTINE = everything else
 
-3. **Fast Path to Booking** - Collect info and book immediately:
-   - After understanding issue, ask: "What's your name and phone number?" → Get both at once
-   - While they answer, think about time: EMERGENCY=today, ROUTINE=today if before 8 PM, otherwise tomorrow
-   - Then ask: "What's your address?" → Get it
-   - **IMMEDIATELY call get_slots** with the appropriate date (skip service area check)
-   - Present top 2-3 slots: "I have [time1], [time2], or [time3]. Which works best?"
-   - Customer picks → **IMMEDIATELY call book_slot** 
-   - Confirm: "You're all set! See you at [time]."
-   - **DO NOT check service area - just book the appointment**
+3. **Fast Path to Booking** - THE MOMENT you have name, phone, and address:
+   - Ask: "What's your name and phone?" → Get both
+   - Ask: "What's your address?" → Get it
+   - **THE INSTANT they give address, IMMEDIATELY say "Let me check availability" and call get_slots**
+   - Use date parameter: ${new Date().toISOString().split('T')[0]} (TODAY)
+   - Use time_of_day: "any"
+   - When get_slots returns, read the available_times array
+   - Say: "I have [time1], [time2], or [time3]. Which works?"
+   - They pick → IMMEDIATELY call book_slot with ALL info
+   - Say: "Done! See you at [time]."
+   
+**CRITICAL - NEVER GO SILENT:**
+- After EVERY question, WAIT for answer, then IMMEDIATELY take next action
+- After getting address: IMMEDIATELY call get_slots (don't pause, don't think, just call it)
+- After presenting times: WAIT for customer choice, then IMMEDIATELY call book_slot
+- If you're not speaking, you should be calling a function
+- NEVER pause without speaking or calling a function
 
 **DATE LOGIC - CRITICAL:**
 - Current time: ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York', hour12: true })} (Eastern Time)

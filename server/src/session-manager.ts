@@ -112,7 +112,10 @@ export class CallSessionManager {
 
     // Handle function calls (Week 2, Day 6 - Full implementation)
     agent.onFunctionCall(async (functionName: string, args: any) => {
-      console.log(`[SessionManager] Function call: ${functionName}`, args)
+      console.log(`[SessionManager] ============================================`)
+      console.log(`[SessionManager] FUNCTION CALL RECEIVED: ${functionName}`)
+      console.log(`[SessionManager] Arguments:`, JSON.stringify(args, null, 2))
+      console.log(`[SessionManager] ============================================`)
       
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
       
@@ -319,6 +322,7 @@ export class CallSessionManager {
             if (attempt > 1) {
               console.log(`[SessionManager] Function ${functionName} succeeded on attempt ${attempt}`)
             }
+            console.log(`[SessionManager] ✅ Returning result for ${functionName}:`, JSON.stringify(result).substring(0, 200))
             return result
             
           } catch (error: any) {
