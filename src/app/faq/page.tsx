@@ -20,10 +20,14 @@ export const metadata: Metadata = {
     'missed call prevention FAQ',
     'automatic job booking questions',
   ],
+  alternates: {
+    canonical: '/faq',
+  },
   openGraph: {
     title: 'FAQ: AI Receptionist for Trade Professionals',
     description: 'Common questions about 24/7 AI call answering and automatic job booking for trades',
     type: 'website',
+    url: '/faq',
   },
 }
 

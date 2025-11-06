@@ -24,10 +24,14 @@ export const metadata: Metadata = {
     'missed call prevention system',
     'automated appointment booking',
   ],
+  alternates: {
+    canonical: '/features',
+  },
   openGraph: {
     title: 'AI Receptionist Features | AfterHourFix',
     description: 'Complete feature set: 24/7 answering, auto-booking, smart routing, and more for trade professionals',
     type: 'website',
+    url: '/features',
   },
 }
 

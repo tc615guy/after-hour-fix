@@ -23,10 +23,14 @@ export const metadata: Metadata = {
     'voice AI booking system for home service business',
     'reduce missed job calls for HVAC contractor'
   ],
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
     title: 'AI Receptionist for Trades | Never Miss Emergency Calls',
     description: '24/7 AI voice receptionist for plumbers, HVAC & electrical contractors. Book jobs automatically, even at 3am.',
     type: 'website',
+    url: '/',
   },
   twitter: {
     card: 'summary_large_image',

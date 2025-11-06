@@ -5,6 +5,9 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Privacy Policy | AfterHourFix',
   description: 'Privacy Policy for AfterHourFix. Learn how we protect your customer data, call recordings, and business information with enterprise-grade security.',
+  alternates: {
+    canonical: '/privacy',
+  },
   robots: {
     index: true,
     follow: true,

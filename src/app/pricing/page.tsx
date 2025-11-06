@@ -21,10 +21,14 @@ export const metadata: Metadata = {
     'missed call prevention cost',
     'automatic job booking pricing',
   ],
+  alternates: {
+    canonical: '/pricing',
+  },
   openGraph: {
     title: 'Pricing: AI Receptionist for Trade Professionals',
     description: 'Simple, transparent pricing starting at $199/month. No hidden fees.',
     type: 'website',
+    url: '/pricing',
   },
 }
 

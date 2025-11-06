@@ -5,6 +5,9 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Terms of Service | AfterHourFix',
   description: 'Terms of Service for AfterHourFix AI receptionist platform. Read our terms and conditions for using our 24/7 call answering and automatic booking services.',
+  alternates: {
+    canonical: '/terms',
+  },
   robots: {
     index: true,
     follow: true,
