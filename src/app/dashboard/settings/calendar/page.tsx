@@ -6,6 +6,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -18,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Calendar, RefreshCw, Plus, Copy, Trash2, ExternalLink } from 'lucide-react'
+import { Calendar, RefreshCw, Plus, Copy, Trash2, ExternalLink, ArrowLeft } from 'lucide-react'
 
 export default function CalendarSettingsPage() {
   const [accounts, setAccounts] = useState<any[]>([])
@@ -138,15 +139,25 @@ export default function CalendarSettingsPage() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Calendar className="w-8 h-8" />
-            Calendar Sync
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Connect external calendars and manage sync settings
-          </p>
+      <div className="space-y-4">
+        <Link 
+          href="/dashboard" 
+          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1" />
+          Back to Settings
+        </Link>
+        
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <Calendar className="w-8 h-8" />
+              Calendar Sync
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Connect external calendars and manage sync settings
+            </p>
+          </div>
         </div>
       </div>
 
