@@ -352,11 +352,30 @@ export class RealtimeAgent {
         // Response complete
         console.log('[RealtimeAgent] ✅ Response done:', event.response?.status)
         
-        // Debug: Log if response had function calls
+        // Debug: Log if response had function calls and extract them manually
         const output = event.response?.output || []
-        const hasFunctionCall = output.some((item: any) => item.type === 'function_call')
-        if (hasFunctionCall) {
+        const functionCallItems = output.filter((item: any) => item.type === 'function_call')
+        
+        if (functionCallItems.length > 0) {
           console.log('[RealtimeAgent] Response included function call(s)')
+          console.log('[RealtimeAgent] ⚠️  MANUAL EXTRACTION - Function calls found in response.done:')
+          
+          // WORKAROUND: Since response.function_call_arguments.done isn't firing,
+          // extract function calls manually from response.done
+          for (const item of functionCallItems) {
+            console.log('[RealtimeAgent] 🔧 Manually extracted function call:', {
+              name: item.name,
+              call_id: item.call_id,
+              arguments: item.arguments
+            })
+            
+            // Execute the function call
+            if (item.name && item.call_id) {
+              console.log(`[RealtimeAgent] 🚀 Executing extracted function: ${item.name}`)
+              this.metrics.functionCallsCount++
+              this.handleFunctionCall(item.call_id, item.name, item.arguments)
+            }
+          }
         } else {
           console.log('[RealtimeAgent] Response had NO function calls')
         }
