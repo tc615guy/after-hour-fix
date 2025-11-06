@@ -68,7 +68,7 @@ export default function TermsPage() {
           <li>All plans are billed monthly via Stripe</li>
           <li>One-time setup fee of $299 applies to all new accounts</li>
           <li>Pricing is subject to change with 30 days notice</li>
-          <li>Additional AI minutes beyond your plan are charged at $0.10/minute</li>
+          <li>Additional AI minutes beyond your plan are charged at $0.425/minute</li>
         </ul>
 
         <h3>Cancellation</h3>

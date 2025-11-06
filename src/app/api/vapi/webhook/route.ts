@@ -264,7 +264,7 @@ export async function POST(req: NextRequest) {
                     await prisma.project.update({ where: { id: project!.id }, data: { minutesAlert100Sent: true } })
                     try {
                       const { sendEmailAsync } = await import('@/lib/email')
-                      const msg = project?.allowOverage ? 'Extra usage is enabled at $0.10/min.' : 'Extra usage is disabled; calls may be forwarded or blocked.'
+                      const msg = project?.allowOverage ? 'Extra usage is enabled at $0.425/min.' : 'Extra usage is disabled; calls may be forwarded or blocked.'
                       await sendEmailAsync({ to: toEmail, subject: 'Plan minutes reached', html: `<p>${msg} (${used}/${cap} minutes)</p>` })
                     } catch {}
                   }

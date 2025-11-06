@@ -55,7 +55,7 @@ export default function FAQPage() {
     },
     {
       q: 'What happens if I run out of AI minutes?',
-      a: 'Your AI will continue to work seamlessly, and additional minutes are charged at $0.10/min. You can upgrade to a higher plan anytime. We\'ll notify you when you\'re approaching your limit so you can decide whether to upgrade or continue with pay-as-you-go minutes.',
+      a: 'Your AI will continue to work seamlessly, and additional minutes are charged at $0.425/min. You can upgrade to a higher plan anytime. We\'ll notify you when you\'re approaching your limit so you can decide whether to upgrade or continue with pay-as-you-go minutes.',
     },
     {
       q: 'Can I use my existing phone number?',

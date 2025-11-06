@@ -710,11 +710,11 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between text-[10px] sm:text-xs mb-1">
                       <div>{used}/{cap} min ({pct}%)</div>
                       <div className="flex items-center gap-1.5 sm:gap-2">
-                        <div className="text-[9px] sm:text-[10px] text-gray-600 hidden sm:block">Allow extra (+$0.10/min)</div>
+                        <div className="text-[9px] sm:text-[10px] text-gray-600 hidden sm:block">Allow extra (+$0.425/min)</div>
                         <Switch
                           checked={Boolean(stats.allowOverage)}
                           onCheckedChange={async (val) => {
-                            if (!window.confirm(val ? 'Enable extra usage at $0.10/min?' : 'Disable extra usage and enforce hard cap?')) return
+                            if (!window.confirm(val ? 'Enable extra usage at $0.425/min?' : 'Disable extra usage and enforce hard cap?')) return
                             try {
                               await fetch(`/api/projects/${selectedProject.id}/overage`, {
                                 method: 'PUT',
