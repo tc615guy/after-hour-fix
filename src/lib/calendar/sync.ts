@@ -184,7 +184,13 @@ export async function importFromExternal(params: {
         direction: 'import',
         status: result.status,
         summary: result.summary,
-        payload: { result },
+        payload: {
+          created: result.created,
+          updated: result.updated,
+          deleted: result.deleted,
+          skipped: result.skipped,
+          errors: result.errors,
+        },
       },
     })
 
