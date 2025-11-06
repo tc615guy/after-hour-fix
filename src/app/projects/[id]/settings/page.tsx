@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, ExternalLink, Phone } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Phone, Calendar as CalendarIcon, Settings } from 'lucide-react'
 import MobileNav from '@/components/MobileNav'
 import AssistantConfig from '@/components/AssistantConfig'
 import PricingSheetEditor from '@/components/PricingSheetEditor'
@@ -335,6 +335,37 @@ export default function SettingsPage() {
               trade={project.trade}
               projectName={project.name}
             />
+            
+            {/* Calendar Sync Section */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarIcon className="w-5 h-5" />
+                  Calendar Sync
+                </CardTitle>
+                <CardDescription>
+                  Sync with Google Calendar, Outlook, or ICS feeds to prevent double-booking
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Connect external calendars to automatically block unavailable times and sync bookings.
+                  </p>
+                  <Link href="/dashboard/settings/calendar">
+                    <Button className="w-full">
+                      <Settings className="w-4 h-4 mr-2" />
+                      Manage Calendar Sync
+                    </Button>
+                  </Link>
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <p>• Import: Block time from external calendars</p>
+                    <p>• Export: Push bookings to Google/Outlook</p>
+                    <p>• ICS Feeds: Subscribe or publish calendar feeds</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="assistant" className="mt-6">
