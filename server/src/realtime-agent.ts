@@ -364,6 +364,16 @@ export class RealtimeAgent {
         // Response complete
         console.log('[RealtimeAgent] ✅ Response done:', event.response?.status)
         
+        // If response failed, log the full response details for debugging
+        if (event.response?.status === 'failed') {
+          console.error('[RealtimeAgent] ❌ RESPONSE FAILED - Full event details:', JSON.stringify(event, null, 2))
+          
+          // Check if there's a status_details field with more info
+          if (event.response?.status_details) {
+            console.error('[RealtimeAgent] ❌ FAILURE REASON:', JSON.stringify(event.response.status_details, null, 2))
+          }
+        }
+        
         // Debug: Log if response had function calls and extract them manually
         const output = event.response?.output || []
         const functionCallItems = output.filter((item: any) => item.type === 'function_call')
@@ -394,7 +404,10 @@ export class RealtimeAgent {
         break
 
                    case 'error':
-               console.error('[RealtimeAgent] Error event:', event.error)
+               console.error('[RealtimeAgent] ❌ ERROR EVENT - Full details:', JSON.stringify(event, null, 2))
+               console.error('[RealtimeAgent] ❌ Error message:', event.error?.message || 'No message')
+               console.error('[RealtimeAgent] ❌ Error type:', event.error?.type || 'Unknown')
+               console.error('[RealtimeAgent] ❌ Error code:', event.error?.code || 'No code')
                // Week 4, Day 20: Send alert for OpenAI API errors
                this.sendOpenAIAlert(event.error).catch(console.error)
                break
