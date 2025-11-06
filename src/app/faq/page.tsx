@@ -175,11 +175,8 @@ export default function FAQPage() {
           <h2 className="text-2xl font-bold mb-4">Still have questions?</h2>
           <p className="text-gray-600 mb-6">Our team is here to help</p>
           <div className="flex gap-4 justify-center">
-            <a href="tel:+18446075052">
-              <Button>Call 844-607-5052</Button>
-            </a>
             <a href="mailto:support@afterhourfix.com">
-              <Button variant="outline">Email Support</Button>
+              <Button>Email Support</Button>
             </a>
           </div>
         </div>

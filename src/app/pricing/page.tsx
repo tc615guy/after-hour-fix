@@ -236,11 +236,8 @@ export default function PricingPage() {
             <Link href="/faq">
               <Button variant="outline">View FAQ</Button>
             </Link>
-            <a href="tel:+18446075052">
-              <Button>Call 844-607-5052</Button>
-            </a>
             <a href="mailto:support@afterhourfix.com">
-              <Button variant="outline">Email Us</Button>
+              <Button>Email Us</Button>
             </a>
           </div>
         </div>

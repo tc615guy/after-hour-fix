@@ -125,7 +125,6 @@ export default function TermsPage() {
         <h2>Contact</h2>
         <p>
           For questions about these Terms, contact us at:<br />
-          Phone: 844-607-5052<br />
           Email: support@afterhourfix.com
         </p>
       </article>

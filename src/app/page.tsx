@@ -734,7 +734,6 @@ export default function HomePage() {
             <div>
               <h4 className="text-white font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="tel:+18446075052" className="hover:text-white transition">844-607-5052</a></li>
                 <li><a href="mailto:support@afterhourfix.com" className="hover:text-white transition">support@afterhourfix.com</a></li>
               </ul>
             </div>
