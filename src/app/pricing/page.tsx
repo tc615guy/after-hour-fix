@@ -2,6 +2,31 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle } from 'lucide-react'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Pricing: AI Receptionist for Trades | Affordable 24/7 Call Answering',
+  description: 'Simple, transparent pricing for AI receptionist services. Plans from $199/month for plumbers, HVAC contractors, and electricians. Includes 24/7 call answering, automatic booking, and calendar integration.',
+  keywords: [
+    'AI receptionist pricing',
+    'answering service cost',
+    '24/7 call answering price',
+    'automated booking system pricing',
+    'voice AI receptionist cost',
+    'plumber answering service price',
+    'HVAC contractor AI pricing',
+    'electrician call answering cost',
+    'affordable AI receptionist',
+    'trade business answering service pricing',
+    'missed call prevention cost',
+    'automatic job booking pricing',
+  ],
+  openGraph: {
+    title: 'Pricing: AI Receptionist for Trade Professionals',
+    description: 'Simple, transparent pricing starting at $199/month. No hidden fees.',
+    type: 'website',
+  },
+}
 
 export default function PricingPage() {
   const plans = [
@@ -70,9 +95,19 @@ export default function PricingPage() {
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="text-2xl font-bold text-blue-600">AfterHourFix</Link>
-          <Link href="/auth/login">
-            <Button variant="ghost" size="sm">Sign In</Button>
-          </Link>
+          <nav className="hidden md:flex gap-6">
+            <Link href="/" className="text-sm hover:text-blue-600 transition">Home</Link>
+            <Link href="/features" className="text-sm hover:text-blue-600 transition">Features</Link>
+            <Link href="/faq" className="text-sm hover:text-blue-600 transition">FAQ</Link>
+          </nav>
+          <div className="flex gap-3">
+            <Link href="/auth/login">
+              <Button variant="ghost" size="sm">Sign In</Button>
+            </Link>
+            <Link href="/auth/signup">
+              <Button size="sm">Get Started</Button>
+            </Link>
+          </div>
         </div>
       </header>
 

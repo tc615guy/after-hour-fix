@@ -128,7 +128,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="text-2xl font-bold text-blue-600">AfterHourFix</div>
           <nav className="hidden md:flex gap-6">
-            <Link href="#features" className="text-sm hover:text-blue-600 transition">Features</Link>
+            <Link href="/features" className="text-sm hover:text-blue-600 transition">Features</Link>
             <Link href="/pricing" className="text-sm hover:text-blue-600 transition">Pricing</Link>
             <Link href="/faq" className="text-sm hover:text-blue-600 transition">FAQ</Link>
           </nav>
@@ -715,6 +715,7 @@ export default function HomePage() {
             <div>
               <h4 className="text-white font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-sm">
+                <li><Link href="/features" className="hover:text-white transition">Features</Link></li>
                 <li><Link href="/pricing" className="hover:text-white transition">Pricing</Link></li>
                 <li><Link href="/faq" className="hover:text-white transition">FAQ</Link></li>
               </ul>

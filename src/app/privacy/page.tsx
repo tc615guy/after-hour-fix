@@ -1,5 +1,15 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy | AfterHourFix',
+  description: 'Privacy Policy for AfterHourFix. Learn how we protect your customer data, call recordings, and business information with enterprise-grade security.',
+  robots: {
+    index: true,
+    follow: true,
+  },
+}
 
 export default function PrivacyPage() {
   return (
@@ -7,9 +17,20 @@ export default function PrivacyPage() {
       <header className="border-b sticky top-0 bg-white z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="text-2xl font-bold text-blue-600">AfterHourFix</Link>
-          <Link href="/auth/login">
-            <Button variant="ghost" size="sm">Sign In</Button>
-          </Link>
+          <nav className="hidden md:flex gap-6">
+            <Link href="/" className="text-sm hover:text-blue-600 transition">Home</Link>
+            <Link href="/features" className="text-sm hover:text-blue-600 transition">Features</Link>
+            <Link href="/pricing" className="text-sm hover:text-blue-600 transition">Pricing</Link>
+            <Link href="/faq" className="text-sm hover:text-blue-600 transition">FAQ</Link>
+          </nav>
+          <div className="flex gap-3">
+            <Link href="/auth/login">
+              <Button variant="ghost" size="sm">Sign In</Button>
+            </Link>
+            <Link href="/auth/signup">
+              <Button size="sm">Get Started</Button>
+            </Link>
+          </div>
         </div>
       </header>
 
