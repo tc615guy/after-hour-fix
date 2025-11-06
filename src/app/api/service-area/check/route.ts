@@ -61,13 +61,55 @@ async function handleServiceAreaCheck(req: NextRequest) {
     const zipMatch = address.match(/\b\d{5}(?:-\d{4})?\b/)
     const zipCode = zipMatch ? zipMatch[0] : null
 
-    // Parse city (rough extraction)
-    const cityParts = address.split(',').map((s) => s.trim())
-    const city = cityParts.length > 1 ? cityParts[cityParts.length - 2] : null
+    // Helper function to extract city from address using multiple strategies
+    const extractCity = async (addr: string): Promise<string | null> => {
+      // Strategy 1: Extract from comma-separated format (e.g., "123 Main St, City, State" or "City, State")
+      const cityParts = addr.split(',').map((s) => s.trim())
+      if (cityParts.length > 1) {
+        // If we have multiple parts, city is usually the second-to-last (before state)
+        const potentialCity = cityParts[cityParts.length - 2]
+        // Remove common state abbreviations and zip codes
+        const cleanedCity = potentialCity.replace(/\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b/gi, '').trim()
+        if (cleanedCity && !cleanedCity.match(/^\d+$/)) {
+          console.log(`[Service Area Check] Extracted city from comma format: "${cleanedCity}"`)
+          return cleanedCity
+        }
+      }
+
+      // Strategy 2: Try to find city name in the address (look for capitalized words that might be city names)
+      // This is a fallback for addresses like "123 Main St Murfreesboro" or just "Murfreesboro"
+      const words = addr.split(/\s+/)
+      // Look for capitalized words (potential city names) that aren't street types or numbers
+      const streetTypes = ['st', 'street', 'ave', 'avenue', 'rd', 'road', 'dr', 'drive', 'ln', 'lane', 'blvd', 'boulevard', 'ct', 'court', 'pl', 'place', 'way', 'cir', 'circle']
+      for (let i = words.length - 1; i >= 0; i--) {
+        const word = words[i].replace(/[^a-zA-Z]/g, '') // Remove punctuation
+        if (word.length > 3 && word[0] === word[0].toUpperCase() && !streetTypes.includes(word.toLowerCase()) && !word.match(/^\d+$/)) {
+          console.log(`[Service Area Check] Extracted potential city from word pattern: "${word}"`)
+          return word
+        }
+      }
+
+      // Strategy 3: Use Google Maps Geocoding API to extract city (most reliable)
+      const googleApiKey = process.env.GOOGLE_MAPS_API_KEY
+      if (googleApiKey) {
+        try {
+          const geocodeResult = await geocodeAddressForCity(addr, googleApiKey)
+          if (geocodeResult) {
+            console.log(`[Service Area Check] Extracted city from geocoding: "${geocodeResult}"`)
+            return geocodeResult
+          }
+        } catch (e) {
+          console.warn(`[Service Area Check] Geocoding for city extraction failed:`, e)
+        }
+      }
+
+      return null
+    }
 
     // Check service area type
     if (serviceArea?.type === 'zipcodes' && Array.isArray(serviceArea.value)) {
       const allowedZipCodes = serviceArea.value.map((z: any) => z.toString().padStart(5, '0'))
+      console.log(`[Service Area Check] Checking zipcode: ${zipCode} against allowed: ${allowedZipCodes.join(', ')}`)
       if (zipCode && allowedZipCodes.includes(zipCode)) {
         const msg = `We service ${zipCode}!`
         return NextResponse.json({
@@ -85,16 +127,45 @@ async function handleServiceAreaCheck(req: NextRequest) {
     }
 
     if (serviceArea?.type === 'cities' && Array.isArray(serviceArea.value)) {
-      const allowedCities = serviceArea.value.map((c: string) => c.toLowerCase())
-      if (city && allowedCities.includes(city.toLowerCase())) {
-        const msg = `We service ${city}!`
-        return NextResponse.json({
-          result: msg,
-          inServiceArea: true,
-          message: msg,
+      const allowedCities = serviceArea.value.map((c: string) => c.toLowerCase().trim())
+      console.log(`[Service Area Check] Checking address: "${address}" against allowed cities: ${allowedCities.join(', ')}`)
+      
+      // Extract city from address
+      const city = await extractCity(address)
+      console.log(`[Service Area Check] Extracted city: "${city}"`)
+      
+      if (city) {
+        const cityLower = city.toLowerCase().trim()
+        // Check for exact match
+        if (allowedCities.includes(cityLower)) {
+          const msg = `We service ${city}!`
+          console.log(`[Service Area Check] ✅ City match found: "${city}"`)
+          return NextResponse.json({
+            result: msg,
+            inServiceArea: true,
+            message: msg,
+          })
+        }
+        
+        // Check for partial match (e.g., "Murfreesboro" matches "Murfreesboro, TN")
+        const partialMatch = allowedCities.some(allowed => {
+          const allowedBase = allowed.split(',')[0].trim().toLowerCase()
+          return cityLower === allowedBase || cityLower.includes(allowedBase) || allowedBase.includes(cityLower)
         })
+        
+        if (partialMatch) {
+          const msg = `We service ${city}!`
+          console.log(`[Service Area Check] ✅ Partial city match found: "${city}"`)
+          return NextResponse.json({
+            result: msg,
+            inServiceArea: true,
+            message: msg,
+          })
+        }
       }
+      
       const msg = `I'm sorry, we don't currently service ${city ? city : 'that area'}. We cover: ${serviceArea.value.slice(0, 5).join(', ')}${serviceArea.value.length > 5 ? ' and more' : ''}.`
+      console.log(`[Service Area Check] ❌ City not in service area. Extracted: "${city}", Allowed: ${allowedCities.join(', ')}`)
       return NextResponse.json({
         result: msg,
         inServiceArea: false,
@@ -203,6 +274,39 @@ async function geocodeAddress(address: string, apiKey: string): Promise<{ lat: n
     return null
   } catch (error: any) {
     console.error('[Geocoding] Error:', error.message)
+    return null
+  }
+}
+
+/**
+ * Geocode an address and extract the city name from the results
+ */
+async function geocodeAddressForCity(address: string, apiKey: string): Promise<string | null> {
+  try {
+    const encoded = encodeURIComponent(address)
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encoded}&key=${apiKey}`
+    
+    const response = await fetch(url)
+    const data = await response.json()
+
+    if (data.status === 'OK' && data.results && data.results.length > 0) {
+      const result = data.results[0]
+      // Extract city from address_components
+      const addressComponents = result.address_components || []
+      for (const component of addressComponents) {
+        if (component.types.includes('locality')) {
+          return component.long_name
+        }
+        // Fallback to administrative_area_level_2 (county) or administrative_area_level_3 if no locality
+        if (component.types.includes('administrative_area_level_3')) {
+          return component.long_name
+        }
+      }
+    }
+
+    return null
+  } catch (error: any) {
+    console.error('[Geocoding City] Error:', error.message)
     return null
   }
 }
