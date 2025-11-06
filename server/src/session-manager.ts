@@ -507,14 +507,16 @@ export class CallSessionManager {
         // Send customer feedback request (async, non-blocking)
         // Only for completed calls with successful bookings
         if (finalStatus === 'completed') {
-          // Import and send feedback request (don't block on this)
-          import('../../../src/lib/ai-learning/customer-feedback.js').then(({ sendFeedbackRequest }) => {
-            sendFeedbackRequest(session.callRecordId!).catch((err: Error) => {
-              console.error('[SessionManager] Failed to send feedback request:', err)
-            })
-          }).catch((err: Error) => {
-            console.error('[SessionManager] Failed to import feedback module:', err)
-          })
+          // TODO: Trigger feedback request via webhook/API to main app
+          // The main app will handle sending SMS feedback requests
+          console.log(`[SessionManager] Call completed with booking - feedback request should be triggered for call ${session.callRecordId}`)
+          
+          // Optionally: Make API call to main app to trigger feedback
+          // fetch(`${process.env.APP_URL}/api/feedback/trigger`, {
+          //   method: 'POST',
+          //   headers: { 'Content-Type': 'application/json' },
+          //   body: JSON.stringify({ callId: session.callRecordId })
+          // }).catch(err => console.error('[SessionManager] Failed to trigger feedback:', err))
         }
       } catch (error: any) {
         console.error(`[SessionManager] Failed to update Call record:`, error)
