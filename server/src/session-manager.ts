@@ -130,21 +130,47 @@ export class CallSessionManager {
             
             switch (functionName) {
               case 'get_slots': {
-                // Handle emergency-aware slot fetching
-                // The API will handle smart date range based on isEmergency
+                // Handle slot fetching with date and time_of_day preference
                 const isEmergency = params.isEmergency === true || params.isEmergency === 'true'
-                const start = params.start || undefined // Let API decide if not provided
-                const end = params.end || undefined
+                const date = params.date // YYYY-MM-DD format
+                const timeOfDay = params.time_of_day || 'any' // morning/afternoon/evening/any
+                const durationMin = params.duration_min || 60
+                
+                // Convert date to ISO datetime range
+                let start: string | undefined
+                let end: string | undefined
+                
+                if (date) {
+                  // Convert YYYY-MM-DD to ISO datetime for the day
+                  const dateObj = new Date(date + 'T00:00:00')
+                  const tz = 'America/Chicago' // Default timezone
+                  
+                  // Start of day in local timezone
+                  const dayStart = new Date(dateObj.toLocaleString('en-US', { timeZone: tz }))
+                  dayStart.setHours(timeOfDay === 'morning' ? 8 : timeOfDay === 'afternoon' ? 12 : timeOfDay === 'evening' ? 17 : 8, 0, 0, 0)
+                  
+                  // End of day or next day
+                  const dayEnd = new Date(dayStart)
+                  dayEnd.setDate(dayEnd.getDate() + 1)
+                  
+                  start = dayStart.toISOString()
+                  end = dayEnd.toISOString()
+                } else {
+                  // Fallback: use smart defaults (API will handle)
+                  start = undefined
+                  end = undefined
+                }
                 
                 const urlParams = new URLSearchParams({
                   projectId: session.projectId,
                   ...(start && { start }),
                   ...(end && { end }),
                   ...(isEmergency && { isEmergency: 'true' }),
+                  durationMinutes: durationMin.toString(),
                 })
                 
                 const url = `${appUrl}/api/calcom/availability?${urlParams.toString()}`
-                console.log(`[SessionManager] Calling get_slots: ${url} (emergency: ${isEmergency}) [attempt ${attempt}/${maxRetries}]`)
+                console.log(`[SessionManager] Calling get_slots: ${url} (date: ${date}, time_of_day: ${timeOfDay}, emergency: ${isEmergency}) [attempt ${attempt}/${maxRetries}]`)
                 
                 const res = await fetch(url, {
                   signal: AbortSignal.timeout(10000), // 10 second timeout
@@ -154,8 +180,51 @@ export class CallSessionManager {
                   throw new Error(`HTTP ${res.status}: ${res.statusText}`)
                 }
                 
-                const data = await res.json() as { result?: string; message?: string }
-                result = { result: data.result || data.message || 'Available slots retrieved' }
+                const data = await res.json() as { 
+                  slots?: Array<{ start: string; end: string; capacity: number; candidates: string[] }>
+                  result?: string
+                  message?: string
+                  firstSlot?: string
+                  totalSlots?: number
+                }
+                
+                // Format response for OpenAI Realtime - structured format
+                if (data.slots && data.slots.length > 0) {
+                  // Filter slots by time_of_day preference if specified
+                  let filteredSlots = data.slots
+                  if (timeOfDay !== 'any') {
+                    filteredSlots = data.slots.filter(slot => {
+                      const slotTime = new Date(slot.start)
+                      const hour = slotTime.getHours()
+                      if (timeOfDay === 'morning') return hour < 12
+                      if (timeOfDay === 'afternoon') return hour >= 12 && hour < 17
+                      if (timeOfDay === 'evening') return hour >= 17
+                      return true
+                    })
+                  }
+                  
+                  // Return structured format for the model
+                  const availableTimes = filteredSlots.slice(0, 5).map(slot => ({
+                    start: slot.start,
+                    end: slot.end,
+                  }))
+                  
+                  result = {
+                    success: true,
+                    available_times: availableTimes,
+                    message: filteredSlots.length > 0 
+                      ? `Found ${filteredSlots.length} ${timeOfDay} option(s) for ${date || 'your preferred date'}.`
+                      : `No ${timeOfDay} slots available for ${date || 'that date'}. Would tomorrow morning or the following day ${timeOfDay} work better?`,
+                  }
+                } else {
+                  // No slots available
+                  result = {
+                    success: false,
+                    available_times: [],
+                    message: `No ${timeOfDay} slots available for ${date || 'that date'}. Would tomorrow morning or the following day ${timeOfDay} work better?`,
+                  }
+                }
+                
                 break
               }
               
