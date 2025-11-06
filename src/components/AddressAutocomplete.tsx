@@ -36,8 +36,11 @@ export default function AddressAutocomplete({
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
+    console.log('[AddressAutocomplete] Checking Google Maps API key:', apiKey ? 'Found' : 'Not found')
+
     if (!apiKey) {
-      setError('Google Maps API key not configured')
+      console.warn('[AddressAutocomplete] NEXT_PUBLIC_GOOGLE_MAPS_API_KEY not set. Falling back to manual input.')
+      // Don't show error, just use as regular input
       setLoading(false)
       return
     }
@@ -55,14 +58,17 @@ export default function AddressAutocomplete({
 
     script.onload = () => {
       if (window.google?.maps?.places) {
+        console.log('[AddressAutocomplete] Google Maps API loaded successfully')
         initializeAutocomplete()
       } else {
+        console.error('[AddressAutocomplete] Google Maps loaded but Places API not available')
         setError('Failed to load Google Places API')
         setLoading(false)
       }
     }
 
-    script.onerror = () => {
+    script.onerror = (e) => {
+      console.error('[AddressAutocomplete] Failed to load Google Maps script:', e)
       setError('Failed to load Google Maps script')
       setLoading(false)
     }
@@ -128,18 +134,24 @@ export default function AddressAutocomplete({
         />
         {error && (
           <p className="text-xs text-red-600 mt-1">
-            {error} {value && '(Entering manually is still possible)'}
+            {error} - Manual entry is still available
           </p>
         )}
-        {!error && !loading && value && (
+        {!error && !loading && value && autocompleteRef.current && (
           <p className="text-xs text-green-600 mt-1">
             ✓ Address validated by Google Maps
           </p>
         )}
       </div>
-      <p className="text-xs text-gray-500 mt-1">
-        Start typing your address and select from suggestions
-      </p>
+      {autocompleteRef.current ? (
+        <p className="text-xs text-gray-500 mt-1">
+          Start typing your address and select from suggestions
+        </p>
+      ) : (
+        <p className="text-xs text-gray-500 mt-1">
+          Enter your full business address manually
+        </p>
+      )}
     </div>
   )
 }
