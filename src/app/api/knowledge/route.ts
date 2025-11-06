@@ -16,7 +16,7 @@ function normalizeProjectId(req: NextRequest, bodyProjectId?: string) {
 
 /**
  * API endpoint for AI assistant to query knowledge base, warranty, and service area info
- * Called via function calling from Vapi assistant
+ * Called via function calling from OpenAI Realtime assistant
  */
 async function handleKnowledgeRequest(req: NextRequest) {
   try {
@@ -95,7 +95,7 @@ async function handleKnowledgeRequest(req: NextRequest) {
       response += '\n'
     }
 
-    // Return format that Vapi AI can read
+    // Return format for OpenAI Realtime assistant (function call response)
     // Include a "result" field with human-readable knowledge summary
     return NextResponse.json({
       result: response.trim() || 'No additional knowledge available.',
