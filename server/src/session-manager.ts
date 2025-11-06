@@ -316,7 +316,7 @@ export class CallSessionManager {
                 }
                 
                 const url = `${appUrl}/api/service-area/check?projectId=${session.projectId}&address=${encodeURIComponent(params.address)}`
-                console.log(`[SessionManager] Calling check_service_area: ${url} [attempt ${attempt}/${maxRetries}]`)
+                console.log(`[SessionManager] 🔍 Calling check_service_area for address: "${params.address}" [attempt ${attempt}/${maxRetries}]`)
                 
                 const res = await fetch(url, {
                   method: 'POST',
@@ -329,8 +329,17 @@ export class CallSessionManager {
                   throw new Error(`HTTP ${res.status}: ${res.statusText}`)
                 }
                 
-                const data = await res.json() as { result?: string; message?: string }
-                result = { result: data.result || data.message || 'Service area checked' }
+                const data = await res.json() as { result?: string; message?: string; inServiceArea?: boolean; distanceMiles?: number }
+                
+                // Include inServiceArea flag to make it clear to AI whether to proceed
+                const message = data.result || data.message || 'Service area checked'
+                result = { 
+                  result: message,
+                  inServiceArea: data.inServiceArea !== undefined ? data.inServiceArea : true, // Default to true if not specified
+                  ...(data.distanceMiles && { distanceMiles: data.distanceMiles })
+                }
+                
+                console.log(`[SessionManager] ✅ Service area check result: ${data.inServiceArea ? 'IN SERVICE AREA' : 'OUTSIDE SERVICE AREA'} - "${message}"`)
                 break
               }
               

@@ -781,8 +781,8 @@ ${emergencyTriageSection}
    - Ask: "What's your name and phone?" → Get both
    - Ask: "What's your address?" → Get it
    - **THE INSTANT they give address, IMMEDIATELY call check_service_area with the address**
-   - If service area check returns "We service your area!" → Say "Great!" and IMMEDIATELY call get_slots
-   - If outside service area → Apologize: "I'm sorry, we don't service that area right now."
+   - **Check the response: If inServiceArea is true OR result contains "We service" → Say "Great!" and IMMEDIATELY call get_slots**
+   - **If inServiceArea is false OR result contains "don't service" → Apologize: "I'm sorry, we don't service that area right now." and END the booking**
    - Use date parameter: ${new Date().toISOString().split('T')[0]} (TODAY)
    - Use time_of_day: "any"
    - When get_slots returns, read the available_times array
@@ -809,8 +809,9 @@ ${emergencyTriageSection}
 - Get name + phone in ONE question: "What's your name and phone number?"
 - Get address after: "What's your address?"
 - Call check_service_area IMMEDIATELY after getting address
-- If in service area, call get_slots IMMEDIATELY
-- If outside service area, apologize and don't proceed to booking
+- **Check the inServiceArea flag in the response:**
+  - If inServiceArea is true → Say "Great!" and IMMEDIATELY call get_slots
+  - If inServiceArea is false → Apologize: "I'm sorry, we don't service that area right now." and END the booking (do NOT call get_slots)
 - Present 2-3 time options from the slots
 - When they pick a time, call book_slot IMMEDIATELY
 - Keep responses under 15 words
