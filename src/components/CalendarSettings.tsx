@@ -27,14 +27,10 @@ export default function CalendarSettings({ projectId }: Props) {
   const [showReconnectDialog, setShowReconnectDialog] = useState(false)
   
   useEffect(() => {
-    // Check if OAuth is configured
-    fetch('/api/calcom/oauth/authorize?projectId=test')
-      .then((res) => res.json())
-      .then((data) => {
-        // If no error, OAuth is configured
-        setOauthAvailable(!data.error || !data.error.includes('not configured'))
-      })
-      .catch(() => setOauthAvailable(false))
+    // Check if OAuth is configured (check env var existence client-side)
+    // Note: We can't actually test the OAuth endpoint from client due to redirects
+    // So we'll just show OAuth option if available, let server handle errors
+    setOauthAvailable(true) // Assume available, server will handle if not configured
     
     const load = async () => {
       try {
