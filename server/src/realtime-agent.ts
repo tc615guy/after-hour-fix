@@ -256,6 +256,14 @@ export class RealtimeAgent {
     if (process.env.NODE_ENV === 'development') {
       console.log(`[RealtimeAgent] Event: ${event.type}`, event)
     }
+    
+    // DEBUG: Log ALL non-audio events to diagnose function call issues
+    if (event.type && !event.type.includes('audio') && !event.type.includes('input_audio_buffer')) {
+      console.log(`[RealtimeAgent] 📥 EVENT: ${event.type}`)
+      if (event.type.includes('function')) {
+        console.log(`[RealtimeAgent] 📥 FUNCTION EVENT DETAILS:`, JSON.stringify(event, null, 2))
+      }
+    }
 
     switch (event.type) {
       case 'session.created':
@@ -772,7 +780,9 @@ ${emergencyTriageSection}
 3. **Fast Path to Booking** - THE MOMENT you have name, phone, and address:
    - Ask: "What's your name and phone?" → Get both
    - Ask: "What's your address?" → Get it
-   - **THE INSTANT they give address, IMMEDIATELY say "Let me check availability" and call get_slots**
+   - **THE INSTANT they give address, IMMEDIATELY call check_service_area with the address**
+   - If service area check returns "We service your area!" → Say "Great!" and IMMEDIATELY call get_slots
+   - If outside service area → Apologize: "I'm sorry, we don't service that area right now."
    - Use date parameter: ${new Date().toISOString().split('T')[0]} (TODAY)
    - Use time_of_day: "any"
    - When get_slots returns, read the available_times array
@@ -782,7 +792,8 @@ ${emergencyTriageSection}
    
 **CRITICAL - NEVER GO SILENT:**
 - After EVERY question, WAIT for answer, then IMMEDIATELY take next action
-- After getting address: IMMEDIATELY call get_slots (don't pause, don't think, just call it)
+- After getting address: IMMEDIATELY call check_service_area
+- After service area confirms: IMMEDIATELY call get_slots
 - After presenting times: WAIT for customer choice, then IMMEDIATELY call book_slot
 - If you're not speaking, you should be calling a function
 - NEVER pause without speaking or calling a function
@@ -797,7 +808,9 @@ ${emergencyTriageSection}
 **BOOKING RULES:**
 - Get name + phone in ONE question: "What's your name and phone number?"
 - Get address after: "What's your address?"
-- Call get_slots IMMEDIATELY after getting address - don't wait
+- Call check_service_area IMMEDIATELY after getting address
+- If in service area, call get_slots IMMEDIATELY
+- If outside service area, apologize and don't proceed to booking
 - Present 2-3 time options from the slots
 - When they pick a time, call book_slot IMMEDIATELY
 - Keep responses under 15 words
@@ -866,19 +879,17 @@ ${aiSettings.customClosing ? `\n**CLOSING:** ${aiSettings.customClosing}` : ''}`
           required: [],
         },
       },
-      // TEMPORARILY DISABLED - check_service_area causes AI to go silent
-      // Will re-enable after fixing the flow
-      // {
-      //   name: 'check_service_area',
-      //   description: 'Check if a service address is within the configured service area. Use this before booking to verify coverage.',
-      //   parameters: {
-      //     type: 'object',
-      //     properties: {
-      //       address: { type: 'string', description: 'Service address to check' },
-      //     },
-      //     required: ['address'],
-      //   },
-      // },
+      {
+        name: 'check_service_area',
+        description: 'Check if a service address is within the configured service area. Use this AFTER getting address and BEFORE calling get_slots.',
+        parameters: {
+          type: 'object',
+          properties: {
+            address: { type: 'string', description: 'Service address to check' },
+          },
+          required: ['address'],
+        },
+      },
     ]
   }
 }
