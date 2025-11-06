@@ -492,6 +492,19 @@ export class CallSessionManager {
           },
         })
         console.log(`[SessionManager] Updated Call record ${session.callRecordId} with transcript and status`)
+        
+        // Send customer feedback request (async, non-blocking)
+        // Only for completed calls with successful bookings
+        if (finalStatus === 'completed') {
+          // Import and send feedback request (don't block on this)
+          import('../../../src/lib/ai-learning/customer-feedback.js').then(({ sendFeedbackRequest }) => {
+            sendFeedbackRequest(session.callRecordId!).catch((err: Error) => {
+              console.error('[SessionManager] Failed to send feedback request:', err)
+            })
+          }).catch((err: Error) => {
+            console.error('[SessionManager] Failed to import feedback module:', err)
+          })
+        }
       } catch (error: any) {
         console.error(`[SessionManager] Failed to update Call record:`, error)
       }
