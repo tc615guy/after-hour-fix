@@ -145,16 +145,30 @@ export class CallSessionManager {
                 
                 if (date) {
                   // Convert YYYY-MM-DD to ISO datetime for the day
-                  const dateObj = new Date(date + 'T00:00:00')
+                  // CRITICAL: Handle timezone correctly to avoid off-by-one day errors
                   const tz = 'America/Chicago' // Default timezone
                   
-                  // Start of day in local timezone
-                  const dayStart = new Date(dateObj.toLocaleString('en-US', { timeZone: tz }))
-                  dayStart.setHours(timeOfDay === 'morning' ? 8 : timeOfDay === 'afternoon' ? 12 : timeOfDay === 'evening' ? 17 : 8, 0, 0, 0)
+                  // Parse date in project timezone (YYYY-MM-DD format)
+                  // Create a date at midnight in the project timezone
+                  const [year, month, day] = date.split('-').map(Number)
+                  const dayStart = new Date(year, month - 1, day, 0, 0, 0, 0)
+                  
+                  // Set start hour based on time of day preference
+                  // This helps the API filter, but we also filter again after getting results
+                  if (timeOfDay === 'morning') {
+                    dayStart.setHours(8, 0, 0, 0) // Start at 8 AM
+                  } else if (timeOfDay === 'afternoon') {
+                    dayStart.setHours(12, 0, 0, 0) // Start at noon
+                  } else if (timeOfDay === 'evening') {
+                    dayStart.setHours(17, 0, 0, 0) // Start at 5 PM
+                  } else {
+                    dayStart.setHours(0, 0, 0, 0) // Start at midnight
+                  }
                   
                   // End of day or next day
                   const dayEnd = new Date(dayStart)
                   dayEnd.setDate(dayEnd.getDate() + 1)
+                  dayEnd.setHours(0, 0, 0, 0) // Midnight next day
                   
                   start = dayStart.toISOString()
                   end = dayEnd.toISOString()
@@ -194,11 +208,18 @@ export class CallSessionManager {
                 // Format response for OpenAI Realtime - structured format
                 if (data.slots && data.slots.length > 0) {
                   // Filter slots by time_of_day preference if specified
+                  // CRITICAL: Use project timezone, NOT UTC!
+                  const projectTimezone = 'America/Chicago' // TODO: Get from project settings
                   let filteredSlots = data.slots
                   if (timeOfDay !== 'any') {
                     filteredSlots = data.slots.filter(slot => {
                       const slotTime = new Date(slot.start)
-                      const hour = slotTime.getHours()
+                      // Get hour in project timezone (NOT UTC!)
+                      const hour = parseInt(slotTime.toLocaleString('en-US', { 
+                        hour: 'numeric', 
+                        hour12: false, 
+                        timeZone: projectTimezone 
+                      }))
                       if (timeOfDay === 'morning') return hour < 12
                       if (timeOfDay === 'afternoon') return hour >= 12 && hour < 17
                       if (timeOfDay === 'evening') return hour >= 17
