@@ -26,7 +26,12 @@ export async function sendFeedbackRequest(callId: string): Promise<boolean> {
   try {
     const call = await prisma.call.findUnique({
       where: { id: callId },
-      include: { project: true, bookings: true },
+      include: { 
+        project: { 
+          include: { numbers: true } 
+        }, 
+        bookings: true 
+      },
     })
 
     if (!call || !call.project) {
