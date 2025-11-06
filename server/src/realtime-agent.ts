@@ -99,7 +99,8 @@ export class RealtimeAgent {
       const mostRecentNumber = agent.project.numbers[0]?.e164 || null
 
       // Build system prompt and tools (similar to Vapi setup)
-      let systemPrompt = this.buildSystemPrompt(agent.project.name, agent.project.trade, mostRecentNumber, aiSettings)
+      const projectTimezone = agent.project.timezone || 'America/Chicago'
+      let systemPrompt = this.buildSystemPrompt(agent.project.name, agent.project.trade, mostRecentNumber, aiSettings, projectTimezone)
       
       // Append pricing data from agent.basePrompt if available (set by push-pricing endpoint)
       if (agent.basePrompt) {
@@ -660,7 +661,7 @@ export class RealtimeAgent {
 
   // Helper methods to build prompt and tools (similar to Vapi implementation)
   // Note: In production, these should be imported from a shared utilities file
-  private buildSystemPrompt(projectName: string, trade: string, phoneNumber: string | null = null, aiSettings: any = {}): string {
+  private buildSystemPrompt(projectName: string, trade: string, phoneNumber: string | null = null, aiSettings: any = {}, projectTimezone: string = 'America/Chicago'): string {
     const normalizedTrade = trade.toLowerCase()
     
     // Trade-specific context and emergency indicators (Week 2, Day 6 - Emergency Triage)
@@ -786,8 +787,9 @@ ${emergencyTriageSection}
    - Use date parameter: ${new Date().toISOString().split('T')[0]} (TODAY)
    - Use time_of_day: "any"
    - When get_slots returns, read the available_times array
-   - Say: "I have [time1], [time2], or [time3]. Which works?"
-   - They pick → IMMEDIATELY call book_slot with ALL info
+   - **CRITICAL: Use the displayTime field when speaking times to customers** (NOT the start field - that's for booking only)
+   - Say: "I have [displayTime1], [displayTime2], or [displayTime3]. Which works?"
+   - They pick → IMMEDIATELY call book_slot using the corresponding start time from that slot
    - Say: "Done! See you at [time]."
    
 **CRITICAL - NEVER GO SILENT:**
@@ -799,7 +801,8 @@ ${emergencyTriageSection}
 - NEVER pause without speaking or calling a function
 
 **DATE LOGIC - CRITICAL:**
-- Current time: ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York', hour12: true })} (Eastern Time)
+- Current time: ${new Date().toLocaleString('en-US', { timeZone: projectTimezone, hour12: true })} (${projectTimezone})
+- **All times you speak to customers MUST be in ${projectTimezone} timezone**
 - **EMERGENCY**: Always use TODAY's date
 - **ROUTINE before 8 PM**: Use TODAY's date (gives same-day service)
 - **ROUTINE after 8 PM**: Use TOMORROW's date (next business day)

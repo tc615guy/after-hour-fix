@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle, AlertTriangle, Lightbulb, TrendingUp, MessageSquare } from 'lucide-react'
@@ -29,7 +29,7 @@ interface AutoFAQ {
   confidence: number
 }
 
-export default function AIInsightsPage() {
+function AIInsightsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const projectId = searchParams.get('projectId')
@@ -359,3 +359,19 @@ export default function AIInsightsPage() {
   )
 }
 
+export default function AIInsightsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-r-transparent"></div>
+            <p className="mt-4 text-gray-600">Loading AI Insights...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <AIInsightsContent />
+    </Suspense>
+  )
+}

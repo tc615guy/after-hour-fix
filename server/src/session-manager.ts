@@ -228,16 +228,27 @@ export class CallSessionManager {
                   }
                   
                   // Return structured format for the model
-                  const availableTimes = filteredSlots.slice(0, 5).map(slot => ({
-                    start: slot.start,
-                    end: slot.end,
-                  }))
+                  // CRITICAL: Include human-readable times in project timezone for AI to speak to customers
+                  const availableTimes = filteredSlots.slice(0, 5).map(slot => {
+                    const slotTime = new Date(slot.start)
+                    const displayTime = slotTime.toLocaleString('en-US', {
+                      timeZone: projectTimezone,
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true,
+                    })
+                    return {
+                      start: slot.start, // ISO format for booking
+                      end: slot.end,
+                      displayTime: displayTime, // Human-readable time in project timezone
+                    }
+                  })
                   
                   result = {
                     success: true,
                     available_times: availableTimes,
                     message: filteredSlots.length > 0 
-                      ? `Found ${filteredSlots.length} ${timeOfDay} option(s) for ${date || 'your preferred date'}.`
+                      ? `Found ${filteredSlots.length} ${timeOfDay} option(s) for ${date || 'your preferred date'}. When presenting times to the customer, use the displayTime field which is in ${projectTimezone} timezone.`
                       : `No ${timeOfDay} slots available for ${date || 'that date'}. Would tomorrow morning or the following day ${timeOfDay} work better?`,
                   }
                 } else {
