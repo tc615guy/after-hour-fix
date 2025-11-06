@@ -322,26 +322,19 @@ export class RealtimeAgent {
         break
 
       case 'response.function_call_arguments.done':
-        // Function call received - store it until we can execute it
+        // Function call received - execute immediately
+        // OpenAI sends this when function call arguments are complete
         const functionCall = event.function_call
-        if (functionCall && event.item_id) {
-          this.activeFunctionCalls.set(event.item_id, {
-            name: functionCall.name,
-            args: functionCall.arguments,
-          })
-        }
-        break
-
-      case 'response.function_call_result.done':
-        // Function call ready to execute
-        if (event.item_id && this.activeFunctionCalls.has(event.item_id)) {
-          const func = this.activeFunctionCalls.get(event.item_id)!
-          this.activeFunctionCalls.delete(event.item_id)
+        const callId = event.call_id || event.item_id
+        
+        if (functionCall && callId) {
+          console.log(`[RealtimeAgent] Function call detected: ${functionCall.name} (call_id: ${callId})`)
           
           // Day 5: Track function call metrics
           this.metrics.functionCallsCount++
           
-          this.handleFunctionCall(event.item_id, func.name, func.args)
+          // Execute function immediately
+          this.handleFunctionCall(callId, functionCall.name, functionCall.arguments)
         }
         break
 
@@ -391,31 +384,50 @@ export class RealtimeAgent {
       }
 
       // Send function result back to OpenAI
-      // CRITICAL: Must send tool_output with matching call_id (item_id) to prevent hanging
+      // CRITICAL: Must use conversation.item.create with function_call_output type
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        const response = {
-          type: 'response.function_call_result.create',
-          item_id: itemId, // This is the call_id - must match what OpenAI sent
-          result: resultString,
+        // Step 1: Add function output to conversation
+        const outputItem = {
+          type: 'conversation.item.create',
+          item: {
+            type: 'function_call_output',
+            call_id: itemId, // Must match the function call's call_id
+            output: resultString,
+          },
         }
+        this.ws.send(JSON.stringify(outputItem))
+        console.log(`[RealtimeAgent] Function output sent for ${functionName} (call_id: ${itemId})`)
+        console.log(`[RealtimeAgent] Output: ${resultString.substring(0, 200)}...`)
 
-        this.ws.send(JSON.stringify(response))
-        console.log(`[RealtimeAgent] Function result sent for ${functionName} (item_id: ${itemId})`)
-        console.log(`[RealtimeAgent] Result: ${resultString.substring(0, 200)}...`)
+        // Step 2: Create response to continue the conversation
+        const createResponse = {
+          type: 'response.create',
+        }
+        this.ws.send(JSON.stringify(createResponse))
+        console.log(`[RealtimeAgent] Response.create sent to continue conversation`)
       } else {
-        console.error(`[RealtimeAgent] Cannot send function result - WebSocket not open (item_id: ${itemId})`)
+        console.error(`[RealtimeAgent] Cannot send function result - WebSocket not open (call_id: ${itemId})`)
       }
     } catch (error: any) {
       console.error(`[RealtimeAgent] Error handling function call ${functionName}:`, error)
       
-      // Send error back to OpenAI
+      // Send error back to OpenAI using correct format
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        const errorResponse = {
-          type: 'response.function_call_result.create',
-          item_id: itemId,
-          result: JSON.stringify({ error: error.message }),
+        const errorOutput = {
+          type: 'conversation.item.create',
+          item: {
+            type: 'function_call_output',
+            call_id: itemId,
+            output: JSON.stringify({ error: error.message }),
+          },
         }
-        this.ws.send(JSON.stringify(errorResponse))
+        this.ws.send(JSON.stringify(errorOutput))
+        
+        // Continue conversation after error
+        const createResponse = {
+          type: 'response.create',
+        }
+        this.ws.send(JSON.stringify(createResponse))
       }
     }
   }
