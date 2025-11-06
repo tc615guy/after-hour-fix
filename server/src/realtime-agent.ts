@@ -821,6 +821,16 @@ ${emergencyTriageSection}
 - No credit card - we bill after service
 - No long confirmations - just "[time], got it. See you then!"
 
+**RESCHEDULING:**
+- If customer says "move my appointment", "change my time", "reschedule", or mentions an existing booking:
+  1. Ask for their phone number if you don't have it: "What's the phone number on the booking?"
+  2. Ask what new time they want: "What time works better for you?"
+  3. Call get_slots to find available times for the new date/time
+  4. Present options: "I have [time1], [time2], or [time3] available"
+  5. When they pick, call reschedule_booking with their phone and the new time
+  6. Confirm: "Done! I've moved your appointment to [new time]."
+- NEVER create a new booking when rescheduling - always use reschedule_booking function
+
 **EMERGENCY PRIORITY:**
 If customer says: "no heat", "furnace down", "burst pipe", "flooding", "sparks", "no power" → 
 Say: "That's urgent. I'll get someone out today. Name and phone?" → Get info → Book SAME DAY
@@ -892,6 +902,19 @@ ${aiSettings.customClosing ? `\n**CLOSING:** ${aiSettings.customClosing}` : ''}`
             address: { type: 'string', description: 'Service address to check' },
           },
           required: ['address'],
+        },
+      },
+      {
+        name: 'reschedule_booking',
+        description: 'Reschedule an existing appointment to a new time. Use this when customer wants to change their appointment time. To reschedule, you need the customer phone number and new time. Call get_slots first to find available times, then call this with the new time.',
+        parameters: {
+          type: 'object',
+          properties: {
+            customerPhone: { type: 'string', description: 'Customer phone number (10 digits, no country code) - used to find existing booking' },
+            newStartTime: { type: 'string', description: 'New start time in ISO format from get_slots' },
+            reason: { type: 'string', description: 'Optional reason for reschedule (e.g., "customer requested different time")' },
+          },
+          required: ['customerPhone', 'newStartTime'],
         },
       },
     ]

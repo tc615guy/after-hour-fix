@@ -284,6 +284,40 @@ export class CallSessionManager {
                 break
               }
               
+              case 'reschedule_booking': {
+                // Reschedule by calling book_slot with the new time
+                // The /api/book endpoint automatically detects duplicate phone numbers and updates the booking
+                console.log(`[SessionManager] Calling reschedule_booking [attempt ${attempt}/${maxRetries}]`, params)
+                
+                const url = `${appUrl}/api/book?projectId=${session.projectId}`
+                const rescheduleParams = {
+                  customerPhone: params.customerPhone,
+                  startTime: params.newStartTime,
+                  // We need to preserve other details from the existing booking
+                  // The /api/book endpoint will handle this by looking up the existing booking
+                  notes: params.reason ? `Rescheduled: ${params.reason}` : 'Rescheduled by customer request',
+                }
+                
+                const res = await fetch(url, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(rescheduleParams),
+                  signal: AbortSignal.timeout(15000),
+                })
+                
+                if (!res.ok) {
+                  const errorData = await res.json().catch(() => ({})) as { error?: string }
+                  throw new Error(`HTTP ${res.status}: ${errorData.error || res.statusText}`)
+                }
+                
+                const data = await res.json() as { result?: string; message?: string; rescheduled?: boolean }
+                result = { 
+                  result: data.result || data.message || 'Appointment rescheduled successfully',
+                  rescheduled: data.rescheduled || true
+                }
+                break
+              }
+              
               case 'get_pricing': {
                 const url = `${appUrl}/api/pricing/assistant?projectId=${session.projectId}`
                 console.log(`[SessionManager] Calling get_pricing: ${url} [attempt ${attempt}/${maxRetries}]`)
