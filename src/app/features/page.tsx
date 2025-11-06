@@ -195,7 +195,7 @@ export default function FeaturesPage() {
         </p>
         <div className="flex gap-4 justify-center">
           <Link href="/auth/signup">
-            <Button size="lg" className="text-lg px-8">Start Free Trial</Button>
+            <Button size="lg" className="text-lg px-8">Get Started</Button>
           </Link>
           <Link href="/pricing">
             <Button size="lg" variant="outline" className="text-lg px-8">View Pricing</Button>
@@ -331,11 +331,11 @@ export default function FeaturesPage() {
       <section className="bg-blue-600 text-white py-20">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-4xl font-bold mb-6">Ready to See All Features in Action?</h2>
-          <p className="text-xl mb-8 opacity-90">Start your free trial and experience the complete feature set</p>
+          <p className="text-xl mb-8 opacity-90">Get started today and experience the complete feature set</p>
           <Link href="/auth/signup">
-            <Button size="lg" variant="secondary" className="text-lg px-8">Get Started Free</Button>
+            <Button size="lg" variant="secondary" className="text-lg px-8">Get Started</Button>
           </Link>
-          <p className="text-sm mt-4 opacity-75">No credit card required • Setup in 10 minutes</p>
+          <p className="text-sm mt-4 opacity-75">Setup in 10 minutes</p>
         </div>
       </section>
 

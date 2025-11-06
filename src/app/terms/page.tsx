@@ -66,7 +66,7 @@ export default function TermsPage() {
         <h3>Payment</h3>
         <ul>
           <li>All plans are billed monthly via Stripe</li>
-          <li>14-day free trial available for new customers</li>
+          <li>One-time setup fee of $299 applies to all new accounts</li>
           <li>Pricing is subject to change with 30 days notice</li>
           <li>Additional AI minutes beyond your plan are charged at $0.10/minute</li>
         </ul>

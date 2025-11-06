@@ -174,7 +174,7 @@ export default function HomePage() {
             <Button size="lg" variant="outline" className="text-lg px-8">View Pricing</Button>
           </Link>
         </div>
-        <p className="text-sm text-gray-500 mt-4">No credit card required • Setup in 10 minutes</p>
+        <p className="text-sm text-gray-500 mt-4">Setup in 10 minutes</p>
       </section>
 
       {/* Security & Privacy */}
@@ -704,7 +704,7 @@ export default function HomePage() {
           <Link href="/auth/signup">
             <Button size="lg" variant="secondary" className="text-lg px-8">Get Started</Button>
           </Link>
-          <p className="text-sm mt-4 opacity-75">No credit card required • Setup in 10 minutes</p>
+          <p className="text-sm mt-4 opacity-75">Setup in 10 minutes</p>
         </div>
       </section>
 

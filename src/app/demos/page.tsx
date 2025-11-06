@@ -309,7 +309,7 @@ Customer: "No, that's it!"`,
           <div className="flex gap-4 justify-center">
             <Link href="/auth/signup">
               <Button size="lg" variant="secondary">
-                Start Free Trial
+                Get Started
               </Button>
             </Link>
             <Link href="/pricing">
