@@ -8,15 +8,20 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  name          String?
-  image         String?
-  phone         String?
-  role          String         @default("user") // "user" | "admin"
-  createdAt     DateTime       @default(now())
-  projects      Project[]
-  subscriptions Subscription[]
+  id                       String                     @id @default(cuid())
+  email                    String                     @unique
+  name                     String?
+  image                    String?
+  phone                    String?
+  role                     String                     @default("user") // "user" | "admin"
+  createdAt                DateTime                   @default(now())
+  projects                 Project[]
+  subscriptions            Subscription[]
+  externalCalendarAccounts ExternalCalendarAccount[]
+  calendarMappings         CalendarMapping[]
+  eventMappings            EventMapping[]
+  icsFeeds                 IcsFeed[]
+  syncLogs                 SyncLog[]
 }
 
 model Subscription {
@@ -272,4 +277,107 @@ model ImportJob {
   updatedAt  DateTime @updatedAt
 
   @@index([projectId, createdAt])
+}
+
+// ============================================================================
+// CALENDAR SYNC MODELS
+// ============================================================================
+
+model ExternalCalendarAccount {
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider        String // 'google' | 'microsoft' | 'ics'
+  accountEmail    String?
+  accessToken     String?           @db.Text // encrypted
+  refreshToken    String?           @db.Text // encrypted
+  tokenExpiresAt  DateTime?
+  icsUrl          String?           @db.Text // for read-only ICS subscriptions
+  webhookChannelId String?          // Google/Microsoft push notification channel ID
+  webhookExpiry   DateTime?         // When webhook registration expires
+  lastSyncedAt    DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  calendarMappings CalendarMapping[]
+
+  @@index([provider, userId])
+  @@index([userId])
+}
+
+model CalendarMapping {
+  id                  String                   @id @default(cuid())
+  userId              String
+  user                User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId           String?                  // Optional: link to specific project
+  technicianId        String?                  // Optional: link to specific technician
+  accountId           String
+  account             ExternalCalendarAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  provider            String // 'google' | 'microsoft' | 'ics'
+  providerCalendarId  String? // Google/Microsoft calendar id (e.g., "primary")
+  visibility          String                   @default("busyOnly") // 'busyOnly' | 'details'
+  direction           String                   @default("import") // 'import' | 'export' | 'two-way'
+  enabled             Boolean                  @default(true)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([technicianId])
+  @@index([accountId])
+}
+
+model EventMapping {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId       String? // Optional: for filtering
+  technicianId    String? // Optional: for filtering
+  internalEventId String // Booking ID or internal busy block ID
+  provider        String // 'google' | 'microsoft' | 'ics'
+  providerEventId String // External event ID
+  providerETag    String? // For change detection
+  lastSyncedAt    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([provider, providerEventId])
+  @@index([provider, internalEventId])
+  @@index([userId])
+  @@index([internalEventId])
+}
+
+model IcsFeed {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId    String? // Optional: project-specific feed
+  technicianId String? // Optional: tech-specific feed
+  token        String   @unique // random secret in feed URL
+  name         String // e.g., "Tech—Alex" or "Company—All Jobs"
+  includeNotes Boolean  @default(false)
+  includePhone Boolean  @default(false)
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([technicianId])
+}
+
+model SyncLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId  String? // Optional: for project-specific logs
+  source     String // 'google' | 'microsoft' | 'ics' | 'system'
+  direction  String // 'import' | 'export'
+  status     String // 'ok' | 'retry' | 'error'
+  summary    String
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([projectId, createdAt])
+  @@index([status])
 }
