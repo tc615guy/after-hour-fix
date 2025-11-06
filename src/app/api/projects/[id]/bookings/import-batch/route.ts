@@ -177,6 +177,10 @@ export async function POST(
     await audit({ projectId, type: 'bookings.importBatch.completed', payload: { created, total: rows.length } })
     return NextResponse.json({ success: true, created, results })
   } catch (error: any) {
+    // If error is a Response (thrown by requireSession/ensureProjectAccess), rethrow it
+    if (error instanceof Response) {
+      throw error
+    }
     captureException(error)
     return NextResponse.json({ error: error.message || 'Failed to import' }, { status: 500 })
   }

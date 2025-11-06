@@ -26,6 +26,10 @@ export async function GET(
 
     return NextResponse.json({ technicians })
   } catch (error: any) {
+    // If error is a Response (thrown by requireSession/ensureProjectAccess), rethrow it
+    if (error instanceof Response) {
+      throw error
+    }
     captureException(error)
     console.error('[Technicians] GET Error:', error)
     return NextResponse.json(
@@ -68,6 +72,10 @@ export async function POST(
 
     return NextResponse.json({ technician })
   } catch (error: any) {
+    // If error is a Response (thrown by requireSession/ensureProjectAccess), rethrow it
+    if (error instanceof Response) {
+      throw error
+    }
     captureException(error)
     console.error('[Technicians] POST Error:', error)
     return NextResponse.json(

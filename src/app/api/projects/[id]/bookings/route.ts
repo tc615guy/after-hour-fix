@@ -47,8 +47,12 @@ export async function GET(
     const nextCursor = bookings.length === limit ? bookings[bookings.length - 1]?.id : undefined
     return NextResponse.json({ bookings, nextCursor })
   } catch (error: any) {
+    // If error is a Response (thrown by requireSession/ensureProjectAccess), rethrow it
+    if (error instanceof Response) {
+      throw error
+    }
     captureException(error)
     console.error('Get bookings error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Failed to fetch bookings' }, { status: 500 })
   }
 }
