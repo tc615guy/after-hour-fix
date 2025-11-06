@@ -91,7 +91,14 @@ export class RealtimeAgent {
       const mostRecentNumber = agent.project.numbers[0]?.e164 || null
 
       // Build system prompt and tools (similar to Vapi setup)
-      const systemPrompt = this.buildSystemPrompt(agent.project.name, agent.project.trade, mostRecentNumber)
+      let systemPrompt = this.buildSystemPrompt(agent.project.name, agent.project.trade, mostRecentNumber)
+      
+      // Append pricing data from agent.basePrompt if available (set by push-pricing endpoint)
+      if (agent.basePrompt) {
+        console.log(`[RealtimeAgent] Appending pricing data from basePrompt (${agent.basePrompt.length} chars)`)
+        systemPrompt += agent.basePrompt
+      }
+      
       const tools = await this.buildTools(agent.project)
 
       // Get Realtime API WebSocket URL

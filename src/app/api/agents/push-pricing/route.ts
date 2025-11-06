@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { createVapiClient, buildAssistantPrompt, buildAssistantTools } from '@/lib/vapi'
 import { z } from 'zod'
 export const runtime = 'nodejs'
 
+/**
+ * Push pricing updates to OpenAI Realtime assistant
+ * Stores pricing data in agent.basePrompt for use by realtime agent
+ */
 export async function POST(req: NextRequest) {
   try {
     const { projectId } = z.object({ projectId: z.string().min(1) }).parse(await req.json())
@@ -14,8 +17,7 @@ export async function POST(req: NextRequest) {
     const agent = await prisma.agent.findFirst({ where: { projectId }, orderBy: { updatedAt: 'desc' } })
     if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 })
 
-    const base = buildAssistantPrompt(project.name, project.trade)
-
+    // Build pricing block for OpenAI Realtime assistant
     let pricingBlock = '\n\n---\nPRICING & SERVICES (INTERNAL REFERENCE)\n'
     const ps: any = project.pricingSheet
     if (ps && ps.enabled !== false) {
@@ -87,48 +89,23 @@ export async function POST(req: NextRequest) {
     }
     responseGuide += '\n--- END RESPONSE GUIDE ---\n'
 
-    const combined = `${base}\n${pricingBlock}${responseGuide}`
-
-    const vapi = createVapiClient()
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const tools = buildAssistantTools(appUrl, project.id)
-
-    // Preserve existing provider/model when updating, otherwise Vapi returns 400
-    let vapiUpdated = false
+    const combined = `${pricingBlock}${responseGuide}`
 
     // Idempotency: skip if unchanged
     if (agent.basePrompt && agent.basePrompt === combined) {
       await prisma.eventLog.create({ data: { projectId, type: 'agent.pricing_pushed.skipped', payload: { reason: 'no_change' } } })
       return NextResponse.json({ success: true, skipped: true })
     }
-    try {
-      const current = await vapi.getAssistant(agent.vapiAssistantId)
-      const existingModel: any = (current as any).model || {}
-      const provider = existingModel.provider || 'openai'
-      const modelName = existingModel.model || 'gpt-4o-mini'
-      const temperature = existingModel.temperature ?? 0.7
 
-      await vapi.updateAssistant(agent.vapiAssistantId, {
-        model: {
-          provider,
-          model: modelName,
-          temperature,
-          messages: [{ role: 'system', content: combined }],
-          tools,
-        },
-      } as any)
-      vapiUpdated = true
-    } catch (e: any) {
-      // In demo/mock projects, allow local prompt update without failing hard
-      const mock = process.env.ENABLE_MOCK_MODE === 'true' || /^vapi_?demo/i.test(agent.vapiAssistantId || '')
-      if (!mock) throw e
-    }
-
+    // Store pricing in agent.basePrompt for OpenAI Realtime agent to use
+    // The realtime agent will append this to the system prompt when connecting
     await prisma.agent.update({ where: { id: agent.id }, data: { basePrompt: combined } })
 
     await prisma.eventLog.create({
-      data: { projectId, type: 'agent.pricing_pushed', payload: { agentId: agent.id } },
+      data: { projectId, type: 'agent.pricing_pushed', payload: { agentId: agent.id, target: 'openai_realtime' } },
     })
+
+    console.log('[Push Pricing] Updated agent basePrompt for OpenAI Realtime:', { agentId: agent.id, projectId, pricingLength: combined.length })
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

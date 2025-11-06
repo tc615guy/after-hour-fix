@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     const projectId = normalizeProjectId(req)
     const pricing = await getPricing(projectId)
     
-    // Format result for Vapi AI
+    // Format result for OpenAI Realtime assistant (function call response)
     const parts: string[] = []
     if (pricing.tripFee > 0) parts.push(`Trip fee: $${pricing.tripFee}`)
     if (pricing.items.length > 0) {
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     const projectId = normalizeProjectId(req, parsed?.projectId)
     const pricing = await getPricing(projectId)
     
-    // Format result for Vapi AI
+    // Format result for OpenAI Realtime assistant (function call response)
     const parts: string[] = []
     if (pricing.tripFee > 0) parts.push(`Trip fee: $${pricing.tripFee}`)
     if (pricing.items.length > 0) {
