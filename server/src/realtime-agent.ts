@@ -24,6 +24,7 @@ export class RealtimeAgent {
   private sessionId: string | null = null
   private projectId: string
   private agentId: string
+  private projectName: string = '' // Store project name for greeting
   private ws: WebSocket | null = null
   private audioCallbacks: Array<(audio: Buffer) => void> = []
   private functionCallCallbacks: Array<(name: string, args: any) => Promise<any>> = []
@@ -248,18 +249,22 @@ export class RealtimeAgent {
         break
 
       case 'session.updated':
-        console.log('[RealtimeAgent] Session updated - triggering initial greeting')
+        console.log('[RealtimeAgent] Session updated - triggering initial greeting with company name')
         // Session is ready - trigger initial greeting so assistant speaks first
-        // The system prompt instructs the assistant to greet, but we need to trigger a response
+        // CRITICAL: Must include company name in greeting
+        const greeting = this.projectName 
+          ? `Thanks for calling ${this.projectName} — I'm your virtual assistant. How can I help you today?`
+          : 'Thanks for calling! I\'m your virtual assistant. How can I help you today?'
+        
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           this.ws.send(JSON.stringify({
             type: 'response.create',
             response: {
               modalities: ['audio', 'text'],
-              instructions: 'Greet the caller with a friendly welcome. Say something like "Hey there, thanks for calling! I can help you right away. What\'s going on?" Keep it brief and natural.',
+              instructions: `Greet the caller with: "${greeting}" Say this exactly as written, including the company name.`,
             }
           }))
-          console.log('[RealtimeAgent] Initial greeting triggered')
+          console.log('[RealtimeAgent] Initial greeting triggered with company name:', this.projectName)
         }
         break
 
@@ -367,16 +372,31 @@ export class RealtimeAgent {
       // Use the first result (or you could merge them)
       const result = results[0] || { result: 'Function executed successfully' }
 
+      // Format result - ensure it's a JSON string for OpenAI Realtime
+      let resultString: string
+      if (typeof result === 'string') {
+        resultString = result
+      } else if (result && typeof result === 'object') {
+        // If result already has structured format (success, available_times, message), use it as-is
+        resultString = JSON.stringify(result)
+      } else {
+        resultString = JSON.stringify({ result: result || 'Function executed successfully' })
+      }
+
       // Send function result back to OpenAI
+      // CRITICAL: Must send tool_output with matching call_id (item_id) to prevent hanging
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         const response = {
           type: 'response.function_call_result.create',
-          item_id: itemId,
-          result: typeof result === 'string' ? result : JSON.stringify(result),
+          item_id: itemId, // This is the call_id - must match what OpenAI sent
+          result: resultString,
         }
 
         this.ws.send(JSON.stringify(response))
-        console.log(`[RealtimeAgent] Function result sent for ${functionName}`)
+        console.log(`[RealtimeAgent] Function result sent for ${functionName} (item_id: ${itemId})`)
+        console.log(`[RealtimeAgent] Result: ${resultString.substring(0, 200)}...`)
+      } else {
+        console.error(`[RealtimeAgent] Cannot send function result - WebSocket not open (item_id: ${itemId})`)
       }
     } catch (error: any) {
       console.error(`[RealtimeAgent] Error handling function call ${functionName}:`, error)
@@ -692,9 +712,9 @@ ${emergencyTriageSection}
    - For HVAC: "furnace down", "no heat", "furnace not working" = EMERGENCY (especially in winter)
    - Ask 1-2 clarifying questions from emergency list if needed
 
-3. **Show Empathy** - Brief acknowledgment: "Oh man, that sounds stressful" or "I understand, let's get this sorted"
+4. **Show Empathy** - Brief acknowledgment: "Oh man, that sounds stressful" or "I understand, let's get this sorted"
 
-4. **Gather ALL REQUIRED INFO BEFORE BOOKING** - You MUST collect ALL of these before calling get_slots or book_slot:
+5. **Gather ALL REQUIRED INFO BEFORE BOOKING** - You MUST collect ALL of these before calling get_slots or book_slot:
    - **Name**: "Who am I speaking with?" → WAIT for answer
    - **Phone**: "What's the best number to reach you?" (10 digits, no country code) → WAIT for answer
    - **Address**: "Where are you located?" (must include street number, street name, city) → WAIT for answer
@@ -702,11 +722,15 @@ ${emergencyTriageSection}
      * Ask for apartment/unit if needed
    - **Issue**: If not mentioned, ask: "What's going on?" → WAIT for answer
 
-5. **ONLY AFTER YOU HAVE: name, phone, address, and issue** → Check Availability & Book:
-   - For EMERGENCY calls: Call get_slots with isEmergency=true for TODAY
-   - For ROUTINE calls: Ask "Do you prefer morning or afternoon?" → WAIT → Then call get_slots for TOMORROW+
-   - Propose ONLY times from get_slots result - NEVER invent availability
-   - When customer agrees to a time, call book_slot with ALL collected info: customerName, customerPhone, address, notes (issue), startTime
+6. **ONLY AFTER YOU HAVE: name, phone, address, and issue** → Check Availability & Book:
+   - For EMERGENCY calls: Call get_slots with date=today (YYYY-MM-DD), isEmergency=true
+   - For ROUTINE calls: Ask "Do you prefer morning or afternoon?" → WAIT for answer
+     * If they say "morning" → Call get_slots with date=tomorrow (YYYY-MM-DD), time_of_day="morning"
+     * If they say "afternoon" → Call get_slots with date=tomorrow (YYYY-MM-DD), time_of_day="afternoon"
+     * If they say "any" or no preference → Call get_slots with date=tomorrow, time_of_day="any"
+   - **CRITICAL**: When get_slots returns, read the "available_times" array from the result. Present 2-3 best options verbally to the customer.
+   - If no slots available, ask: "Would tomorrow morning or the following day [preference] work better?"
+   - When customer agrees to a time, call book_slot with ALL collected info: customerName, customerPhone, address, notes (issue), startTime (use exact ISO string from available_times)
    - Wait for booking confirmation before continuing
 
 **CRITICAL RULES - NEVER VIOLATE:**
@@ -730,15 +754,16 @@ Say: "Perfect! You're all set for [time]. We'll text you the details."`
     return [
       {
         name: 'get_slots',
-        description: 'Get available booking time slots. For EMERGENCY calls, set isEmergency=true to get same-day slots. For ROUTINE calls, use tomorrow or later. Returns a list of times in the "result" field.',
+        description: 'Get available booking time slots. Use date (YYYY-MM-DD) and time_of_day (morning/afternoon/evening/any) to find slots. Returns available times in structured format.',
         parameters: {
           type: 'object',
           properties: {
-            start: { type: 'string', description: 'ISO start datetime. For emergencies, use today/now. For routine, use tomorrow.' },
-            end: { type: 'string', description: 'ISO end datetime (optional, defaults to 7 days ahead)' },
+            date: { type: 'string', description: 'Date in YYYY-MM-DD format (local timezone). For routine calls, use tomorrow or later. For emergencies, use today.' },
+            time_of_day: { type: 'string', enum: ['morning', 'afternoon', 'evening', 'any'], description: 'Preferred time of day. Morning = before 12pm, Afternoon = 12pm-5pm, Evening = after 5pm, Any = no preference' },
+            duration_min: { type: 'number', description: 'Duration in minutes (default: 60)' },
             isEmergency: { type: 'boolean', description: 'Set true for emergency calls to prioritize same-day availability' },
           },
-          required: [],
+          required: ['date', 'time_of_day'],
         },
       },
       {
