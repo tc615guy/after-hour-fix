@@ -69,7 +69,8 @@ export class CallSessionManager {
       fromNumber,
       toNumber,
       // Initialize conversation tracking
-      lastUserMessageTime: now,
+      // Don't set lastUserMessageTime until user actually speaks
+      lastUserMessageTime: undefined,
       lastActivityTime: now,
       bookingProgress: 'none',
       silenceDuration: 0,
@@ -77,7 +78,7 @@ export class CallSessionManager {
 
     this.sessions.set(callSid, session)
     
-    // Start monitoring for timeouts
+    // Start monitoring for timeouts (but silence detection won't start until user speaks)
     this.startConversationMonitoring(callSid)
     
     return session
@@ -615,13 +616,18 @@ export class CallSessionManager {
     if (!session) return
     
     const now = new Date()
+    const isFirstMessage = !session.lastUserMessageTime
     session.lastUserMessageTime = now
     session.lastActivityTime = now
     session.silenceDuration = 0
     
-    // Reset silence timeout
+    // Reset silence timeout (only start after first user message)
     if (session.silenceTimeout) {
       clearTimeout(session.silenceTimeout)
+    }
+    // Only start silence detection after user has spoken at least once
+    if (isFirstMessage) {
+      console.log(`[SessionManager] First user message received for call ${callSid}, starting silence detection`)
     }
     this.resetSilenceTimeout(callSid)
   }
@@ -649,13 +655,11 @@ export class CallSessionManager {
    * Start monitoring conversation for timeouts
    */
   private startConversationMonitoring(callSid: string): void {
-    // Monitor silence (15 seconds of no user response = hangup)
-    this.resetSilenceTimeout(callSid)
-    
+    // Don't start silence timeout until user has spoken (handled in onUserMessage)
     // Monitor conversation progress (3 minutes with no booking progress = hangup)
     this.resetConversationTimeout(callSid)
     
-    // Periodic check for silence duration
+    // Periodic check for silence duration (only after user has spoken)
     const checkInterval = setInterval(() => {
       const session = this.sessions.get(callSid)
       if (!session || session.state !== 'active') {
@@ -668,32 +672,40 @@ export class CallSessionManager {
         session.silenceDuration = silenceSec
         
         // Log if silence is getting long (for debugging)
-        if (silenceSec > 10) {
-          console.log(`[SessionManager] Call ${callSid} - ${silenceSec}s of silence`)
+        if (silenceSec > 20) {
+          console.log(`[SessionManager] Call ${callSid} - ${silenceSec}s of silence since last user message`)
         }
       }
     }, 5000) // Check every 5 seconds
   }
 
   /**
-   * Reset silence timeout (15 seconds)
+   * Reset silence timeout (30 seconds after user has spoken)
    */
   private resetSilenceTimeout(callSid: string): void {
     const session = this.sessions.get(callSid)
     if (!session) return
     
+    // Don't start silence detection until user has spoken at least once
+    if (!session.lastUserMessageTime) {
+      return
+    }
+    
     if (session.silenceTimeout) {
       clearTimeout(session.silenceTimeout)
     }
     
+    // Increased to 30 seconds to give users more time to think/respond
+    // This timeout will fire if no user message is received within 30 seconds
     session.silenceTimeout = setTimeout(async () => {
       const currentSession = this.sessions.get(callSid)
       if (!currentSession || currentSession.state !== 'active') return
       
-      // Check if we've had 15+ seconds of silence
+      // Double-check that we still have silence (user might have spoken just before timeout fired)
       if (currentSession.lastUserMessageTime) {
         const silenceSec = Math.floor((Date.now() - currentSession.lastUserMessageTime.getTime()) / 1000)
-        if (silenceSec >= 15) {
+        // Only hang up if we've had at least 25 seconds of silence (account for timing variance)
+        if (silenceSec >= 25) {
           console.log(`[SessionManager] Auto-hanging up call ${callSid} due to ${silenceSec}s of silence`)
           currentSession.hangupReason = `Silence timeout (${silenceSec}s)`
           await this.endSession(callSid, 'missed')
@@ -706,7 +718,7 @@ export class CallSessionManager {
           }
         }
       }
-    }, 15000) // 15 seconds
+    }, 30000) // 30 seconds (increased from 15)
   }
 
   /**
