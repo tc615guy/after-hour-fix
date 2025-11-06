@@ -7,10 +7,10 @@ import { audit } from '@/lib/audit'
 // GET all technicians for a project
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const projectId = params.id
+    const { id: projectId } = await params
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
     await rateLimit(req, `techs:GET:${projectId}:${ip}`, 120, 60)
     const session = await requireSession(req)
@@ -38,10 +38,10 @@ export async function GET(
 // POST create new technician
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const projectId = params.id
+    const { id: projectId } = await params
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
     await rateLimit(req, `techs:POST:${projectId}:${ip}`, 30, 60)
     const session = await requireSession(req)
