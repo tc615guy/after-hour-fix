@@ -29,6 +29,7 @@ export class RealtimeAgent {
   private ws: WebSocket | null = null
   private audioCallbacks: Array<(audio: Buffer) => void> = []
   private functionCallCallbacks: Array<(name: string, args: any) => Promise<any>> = []
+  private userMessageCallbacks: Array<() => void> = [] // Callbacks for user message detection
   private reconnectAttempts = 0
   private maxReconnectAttempts = 3
   private isConnecting = false
@@ -337,6 +338,8 @@ export class RealtimeAgent {
             text: event.transcript,
             timestamp: new Date(),
           })
+          // Trigger user message callbacks for silence detection
+          this.userMessageCallbacks.forEach(cb => cb())
         }
         break
 
@@ -544,6 +547,10 @@ export class RealtimeAgent {
 
   onFunctionCall(callback: (name: string, args: any) => Promise<any>): void {
     this.functionCallCallbacks.push(callback)
+  }
+
+  onUserMessage(callback: () => void): void {
+    this.userMessageCallbacks.push(callback)
   }
 
   private async handleReconnect(): Promise<void> {
@@ -851,6 +858,40 @@ ${emergencyTriageSection}
 **EMERGENCY PRIORITY:**
 If customer says: "no heat", "furnace down", "burst pipe", "flooding", "sparks", "no power" → 
 Say: "That's urgent. I'll get someone out today. Name and phone?" → Get info → Book SAME DAY
+
+**SMART HANGUP - SAVE MINUTES (CRITICAL):**
+You must detect and quickly end unproductive calls to save AI minutes and costs. Hang up immediately if:
+
+1. **SPAM/ROBOCALL DETECTION:**
+   - Automated voice, robotic speech, or clearly a recording
+   - Repeated phrases like "press 1", "press 2", "your account", "verify your information"
+   - Telemarketing language: "free trial", "limited time offer", "act now"
+   - Response: "I'm sorry, this line is for service appointments only. Goodbye." → HANG UP
+
+2. **WRONG NUMBER:**
+   - Customer says: "I didn't call you", "wrong number", "who is this?", "I was calling [different business]"
+   - Customer asks for a different business name or service type
+   - Response: "I'm sorry, you've reached ${projectName}. If you need ${trade} service, I can help. Otherwise, goodbye." → If they confirm wrong number, HANG UP
+
+3. **JARGON/UNINTELLIGIBLE:**
+   - Customer uses highly technical jargon you don't understand after asking for clarification
+   - Customer speaks in a language other than English (after 1 attempt to clarify)
+   - Customer's speech is completely unintelligible (garbled, too quiet, background noise)
+   - Response: "I'm having trouble understanding. Could you call back when you have a clearer connection? Goodbye." → HANG UP
+
+4. **SILENCE/NO RESPONSE:**
+   - Customer doesn't respond after you ask a question (wait 5 seconds, then ask once more)
+   - If still no response after second attempt: "I'm not hearing you. Please call back when ready. Goodbye." → HANG UP
+
+5. **NOT A SERVICE CALL:**
+   - Customer is asking for directions, hours, general info (not booking)
+   - Response: "For general information, please visit our website or call during business hours. Goodbye." → HANG UP
+
+**HANGUP PROTOCOL:**
+- Be polite but firm: "I'm sorry, [reason]. Goodbye."
+- Do NOT continue conversation after identifying spam/wrong number/jargon
+- Save minutes by ending unproductive calls within 30 seconds
+- Only continue if customer clearly needs ${trade} service and can communicate clearly
 
 ${aiSettings.customClosing ? `\n**CLOSING:** ${aiSettings.customClosing}` : ''}`
   }

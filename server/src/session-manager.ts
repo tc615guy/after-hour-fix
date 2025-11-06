@@ -14,6 +14,14 @@ export interface CallSession {
   callRecordId?: string // Day 8: Store database Call record ID
   fromNumber?: string // Day 8: Store caller phone number
   toNumber?: string // Day 8: Store called phone number
+  // Conversation tracking for smart hangup
+  lastUserMessageTime?: Date // Last time we received user audio/transcript
+  lastActivityTime?: Date // Last time any activity occurred (user or AI)
+  bookingProgress?: 'none' | 'name' | 'phone' | 'address' | 'slots' | 'booked' // Track booking progress
+  silenceDuration?: number // Seconds of silence since last user message
+  conversationTimeout?: NodeJS.Timeout // Timeout for no progress
+  silenceTimeout?: NodeJS.Timeout // Timeout for silence
+  hangupReason?: string // Reason for hanging up (for logging)
 }
 
 export class CallSessionManager {
@@ -48,20 +56,30 @@ export class CallSessionManager {
       // Continue even if Call record creation fails
     }
 
+    const now = new Date()
     const session: CallSession = {
       callSid,
       agentId,
       projectId,
       realtimeAgent: null,
       twilioWs: null,
-      startTime: new Date(),
+      startTime: now,
       state: 'connecting',
       callRecordId,
       fromNumber,
       toNumber,
+      // Initialize conversation tracking
+      lastUserMessageTime: now,
+      lastActivityTime: now,
+      bookingProgress: 'none',
+      silenceDuration: 0,
     }
 
     this.sessions.set(callSid, session)
+    
+    // Start monitoring for timeouts
+    this.startConversationMonitoring(callSid)
+    
     return session
   }
 
@@ -110,6 +128,11 @@ export class CallSessionManager {
       }
     })
 
+    // Track user messages for silence detection
+    agent.onUserMessage(() => {
+      this.onUserMessage(callSid)
+    })
+
     // Handle function calls (Week 2, Day 6 - Full implementation)
     agent.onFunctionCall(async (functionName: string, args: any) => {
       console.log(`[SessionManager] ============================================`)
@@ -122,6 +145,15 @@ export class CallSessionManager {
       try {
         // Parse arguments if they're a string
         const params = typeof args === 'string' ? JSON.parse(args) : args
+        
+        // Track booking progress
+        if (functionName === 'get_slots') {
+          this.onBookingProgress(callSid, 'slots')
+        } else if (functionName === 'book_slot') {
+          this.onBookingProgress(callSid, 'booked')
+        } else if (functionName === 'check_service_area' && params.address) {
+          this.onBookingProgress(callSid, 'address')
+        }
         
         // Week 3, Day 16: Retry logic with exponential backoff
         const maxRetries = 3
@@ -575,14 +607,158 @@ export class CallSessionManager {
     // This method just stores the WebSocket reference
   }
 
+  /**
+   * Update conversation tracking when user speaks
+   */
+  onUserMessage(callSid: string): void {
+    const session = this.sessions.get(callSid)
+    if (!session) return
+    
+    const now = new Date()
+    session.lastUserMessageTime = now
+    session.lastActivityTime = now
+    session.silenceDuration = 0
+    
+    // Reset silence timeout
+    if (session.silenceTimeout) {
+      clearTimeout(session.silenceTimeout)
+    }
+    this.resetSilenceTimeout(callSid)
+  }
+
+  /**
+   * Update booking progress tracking
+   */
+  onBookingProgress(callSid: string, progress: CallSession['bookingProgress']): void {
+    const session = this.sessions.get(callSid)
+    if (!session) return
+    
+    session.bookingProgress = progress
+    session.lastActivityTime = new Date()
+    
+    // Reset conversation timeout if we're making progress
+    if (progress !== 'none') {
+      if (session.conversationTimeout) {
+        clearTimeout(session.conversationTimeout)
+      }
+      this.resetConversationTimeout(callSid)
+    }
+  }
+
+  /**
+   * Start monitoring conversation for timeouts
+   */
+  private startConversationMonitoring(callSid: string): void {
+    // Monitor silence (15 seconds of no user response = hangup)
+    this.resetSilenceTimeout(callSid)
+    
+    // Monitor conversation progress (3 minutes with no booking progress = hangup)
+    this.resetConversationTimeout(callSid)
+    
+    // Periodic check for silence duration
+    const checkInterval = setInterval(() => {
+      const session = this.sessions.get(callSid)
+      if (!session || session.state !== 'active') {
+        clearInterval(checkInterval)
+        return
+      }
+      
+      if (session.lastUserMessageTime) {
+        const silenceSec = Math.floor((Date.now() - session.lastUserMessageTime.getTime()) / 1000)
+        session.silenceDuration = silenceSec
+        
+        // Log if silence is getting long (for debugging)
+        if (silenceSec > 10) {
+          console.log(`[SessionManager] Call ${callSid} - ${silenceSec}s of silence`)
+        }
+      }
+    }, 5000) // Check every 5 seconds
+  }
+
+  /**
+   * Reset silence timeout (15 seconds)
+   */
+  private resetSilenceTimeout(callSid: string): void {
+    const session = this.sessions.get(callSid)
+    if (!session) return
+    
+    if (session.silenceTimeout) {
+      clearTimeout(session.silenceTimeout)
+    }
+    
+    session.silenceTimeout = setTimeout(async () => {
+      const currentSession = this.sessions.get(callSid)
+      if (!currentSession || currentSession.state !== 'active') return
+      
+      // Check if we've had 15+ seconds of silence
+      if (currentSession.lastUserMessageTime) {
+        const silenceSec = Math.floor((Date.now() - currentSession.lastUserMessageTime.getTime()) / 1000)
+        if (silenceSec >= 15) {
+          console.log(`[SessionManager] Auto-hanging up call ${callSid} due to ${silenceSec}s of silence`)
+          currentSession.hangupReason = `Silence timeout (${silenceSec}s)`
+          await this.endSession(callSid, 'missed')
+          
+          // Send hangup command to Twilio
+          if (currentSession.twilioWs && currentSession.twilioWs.readyState === WebSocket.OPEN) {
+            currentSession.twilioWs.send(JSON.stringify({
+              event: 'stop',
+            }))
+          }
+        }
+      }
+    }, 15000) // 15 seconds
+  }
+
+  /**
+   * Reset conversation timeout (3 minutes with no booking progress)
+   */
+  private resetConversationTimeout(callSid: string): void {
+    const session = this.sessions.get(callSid)
+    if (!session) return
+    
+    if (session.conversationTimeout) {
+      clearTimeout(session.conversationTimeout)
+    }
+    
+    session.conversationTimeout = setTimeout(async () => {
+      const currentSession = this.sessions.get(callSid)
+      if (!currentSession || currentSession.state !== 'active') return
+      
+      // If no booking progress after 3 minutes, hang up
+      if (currentSession.bookingProgress === 'none' || currentSession.bookingProgress === 'name') {
+        const durationMin = Math.floor((Date.now() - currentSession.startTime.getTime()) / 60000)
+        console.log(`[SessionManager] Auto-hanging up call ${callSid} - no booking progress after ${durationMin} minutes`)
+        currentSession.hangupReason = `No booking progress (${durationMin}min)`
+        await this.endSession(callSid, 'missed')
+        
+        // Send hangup command to Twilio
+        if (currentSession.twilioWs && currentSession.twilioWs.readyState === WebSocket.OPEN) {
+          currentSession.twilioWs.send(JSON.stringify({
+            event: 'stop',
+          }))
+        }
+      }
+    }, 180000) // 3 minutes
+  }
+
   async endSession(callSid: string, finalStatus: 'completed' | 'missed' | 'failed' = 'completed'): Promise<void> {
     const session = this.sessions.get(callSid)
     if (!session) {
       return
     }
 
-    console.log(`[SessionManager] Ending session for call ${callSid}, status: ${finalStatus}`)
+    console.log(`[SessionManager] Ending session for call ${callSid}, status: ${finalStatus}${session.hangupReason ? ` (${session.hangupReason})` : ''}`)
     session.state = 'ending'
+    
+    // Clean up timeouts
+    if (session.silenceTimeout) {
+      clearTimeout(session.silenceTimeout)
+      session.silenceTimeout = undefined
+    }
+    if (session.conversationTimeout) {
+      clearTimeout(session.conversationTimeout)
+      session.conversationTimeout = undefined
+    }
 
     // Day 8: Collect transcript and update Call record
     let transcript: string | undefined
