@@ -80,19 +80,51 @@ export default function AuthCallbackPage() {
           }
           if (!redirectTo) {
             try {
-              // Wait a bit for cookies to be set
-              await new Promise(resolve => setTimeout(resolve, 100))
+              // Wait longer for cookies to be set and propagated
+              await new Promise(resolve => setTimeout(resolve, 500))
 
-              const res = await fetch('/api/projects', {
-                credentials: 'include'
-              })
+              // Retry logic: try up to 3 times with increasing delays
+              let projects: any[] = []
+              let lastError: any = null
+              
+              for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                  if (attempt > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 500 * attempt))
+                  }
+                  
+                  const res = await fetch('/api/projects', {
+                    credentials: 'include',
+                    headers: {
+                      'Cache-Control': 'no-cache',
+                    },
+                  })
 
-              if (res.ok) {
-                const data = await res.json()
-                // If user has no projects, send them to onboarding
-                redirectTo = (data.projects && data.projects.length > 0) ? '/dashboard' : '/onboarding'
+                  if (res.ok) {
+                    const data = await res.json()
+                    projects = data.projects || []
+                    lastError = null
+                    break // Success, exit retry loop
+                  } else {
+                    const errorText = await res.text()
+                    lastError = new Error(`API returned ${res.status}: ${errorText}`)
+                    console.warn(`Project check attempt ${attempt + 1} failed:`, res.status, errorText)
+                  }
+                } catch (e) {
+                  lastError = e
+                  console.warn(`Project check attempt ${attempt + 1} error:`, e)
+                }
+              }
+
+              // If we got projects, redirect to dashboard; otherwise onboarding
+              if (projects && projects.length > 0) {
+                console.log(`User has ${projects.length} project(s), redirecting to dashboard`)
+                redirectTo = '/dashboard'
               } else {
-                // If API fails, assume new user and send to onboarding
+                if (lastError) {
+                  console.error('Failed to check projects after retries:', lastError)
+                }
+                console.log('User has no projects, redirecting to onboarding')
                 redirectTo = '/onboarding'
               }
             } catch (e) {

@@ -40,7 +40,7 @@ export default function OnboardingPage() {
   const [projectId, setProjectId] = useState<string | null>(null)
 
   useEffect(() => {
-    // Check if user is authenticated
+    // Check if user is authenticated and has projects
     const checkAuth = async () => {
       try {
         const res = await fetch('/api/auth/me', {
@@ -54,6 +54,24 @@ export default function OnboardingPage() {
         const data = await res.json()
         console.log('Auth check success:', data.user?.email)
         setUserId(data.user?.id)
+
+        // Check if user already has projects - if so, redirect to dashboard
+        try {
+          const projectsRes = await fetch('/api/projects', {
+            credentials: 'include'
+          })
+          if (projectsRes.ok) {
+            const projectsData = await projectsRes.json()
+            if (projectsData.projects && projectsData.projects.length > 0) {
+              console.log(`User already has ${projectsData.projects.length} project(s), redirecting to dashboard`)
+              router.push('/dashboard')
+              return
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to check projects in onboarding:', e)
+          // Continue to onboarding if check fails
+        }
       } catch (e) {
         console.error('Auth check error:', e)
         router.push('/auth/login')
