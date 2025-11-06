@@ -406,8 +406,19 @@ export default function DashboardPage() {
       setCsvResults({ created: data.created || 0, errors })
       
       if (errors.length > 0 && data.created === 0) {
-        // All rows failed - show detailed error
-        alert(`Import failed: ${errors[0].error}${errors.length > 1 ? ` (and ${errors.length - 1} more)` : ''}`)
+        // All rows failed - show detailed error with first few unique errors
+        const uniqueErrors = [...new Set(errors.slice(0, 5).map((e: any) => e.error))]
+        const errorMessage = uniqueErrors.length > 0 
+          ? `Import failed: ${uniqueErrors.join('; ')}${errors.length > 1 ? ` (${errors.length} total errors)` : ''}`
+          : `Import failed: All ${errors.length} rows were skipped (likely duplicates or validation errors)`
+        alert(errorMessage)
+      } else if (data.created === 0 && errors.length === 0) {
+        // No errors but nothing created - might be duplicates
+        alert(`Import completed but no bookings were created. All ${rows.length} rows were likely duplicates.`)
+      } else if (data.created > 0) {
+        // Success with some errors
+        const errorCount = errors.length
+        alert(`Import completed: ${data.created} bookings created${errorCount > 0 ? `, ${errorCount} skipped (duplicates/errors)` : ''}`)
       }
       
       await loadProjectData(selectedProject.id)
@@ -621,12 +632,25 @@ export default function DashboardPage() {
                   Settings
                 </Button>
               </Link>
-              <Link href="/auth/logout">
-                <Button variant="ghost" size="sm" className="hidden md:inline-flex">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </Button>
-              </Link>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="hidden md:inline-flex"
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/auth/logout', { method: 'POST' })
+                    if (res.ok) {
+                      router.push('/')
+                    }
+                  } catch (e) {
+                    console.error('Logout error:', e)
+                    router.push('/')
+                  }
+                }}
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
             </div>
           </div>
         </div>

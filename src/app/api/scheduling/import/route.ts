@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { createCalComClient } from '@/lib/calcom'
+import { requireSession, ensureProjectAccess, captureException } from '@/lib/api-guard'
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,6 +9,10 @@ export async function POST(req: NextRequest) {
     if (!provider || !projectId) {
       return NextResponse.json({ error: 'Missing provider or projectId' }, { status: 400 })
     }
+
+    // Require authentication
+    const session = await requireSession(req)
+    await ensureProjectAccess(session!.user.email || '', projectId)
 
     if (provider !== 'calcom') {
       return NextResponse.json({ success: false, message: 'Provider not supported yet. Coming soon.' }, { status: 200 })
@@ -65,8 +70,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, imported: bookings.length, created, updated })
+    return NextResponse.json({ success: true, imported: bookings.length, created, updated, message: `Imported ${created} new and updated ${updated} existing bookings` })
   } catch (error: any) {
+    // If error is a Response (thrown by requireSession/ensureProjectAccess), rethrow it
+    if (error instanceof Response) {
+      throw error
+    }
+    captureException(error)
+    console.error('[Scheduling Import] Error:', error)
     return NextResponse.json({ error: error.message || 'Import failed' }, { status: 500 })
   }
 }

@@ -60,22 +60,28 @@ export async function POST(
             continue
           }
         }
-        // Fallback dedupe
+        // Fallback dedupe - check for exact match on slotStart + customer name/phone
+        // Only check if we have enough info to dedupe
         const phoneDigits = (r.customerPhone || '').replace(/\D/g, '')
-        const name = (r.customerName || '').trim().toLowerCase()
-        const existing = await prisma.booking.findFirst({
-          where: {
-            projectId,
-            slotStart,
-            deletedAt: null, // Only check non-deleted bookings
-            OR: [
-              phoneDigits ? { customerPhone: { contains: phoneDigits } } : { customerName: { equals: r.customerName || '' } },
-            ],
-          },
-        })
-        if (existing) {
-          results.push({ index: i, status: 'error', error: 'Duplicate booking' })
-          continue
+        const customerName = (r.customerName || '').trim()
+        
+        // Only perform dedupe check if we have customer name or phone
+        if (phoneDigits || customerName) {
+          const existing = await prisma.booking.findFirst({
+            where: {
+              projectId,
+              slotStart,
+              deletedAt: null, // Only check non-deleted bookings
+              OR: [
+                phoneDigits ? { customerPhone: { contains: phoneDigits } } : undefined,
+                customerName ? { customerName: { equals: customerName, mode: 'insensitive' } } : undefined,
+              ].filter(Boolean) as any,
+            },
+          })
+          if (existing) {
+            results.push({ index: i, status: 'error', error: 'Duplicate booking (same time and customer)' })
+            continue
+          }
         }
         // Compose notes with tags & metadata
         const parts: string[] = []
