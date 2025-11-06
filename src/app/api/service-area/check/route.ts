@@ -148,7 +148,7 @@ async function handleServiceAreaCheck(req: NextRequest) {
         }
         
         // Check for partial match (e.g., "Murfreesboro" matches "Murfreesboro, TN")
-        const partialMatch = allowedCities.some(allowed => {
+        const partialMatch = allowedCities.some((allowed: string) => {
           const allowedBase = allowed.split(',')[0].trim().toLowerCase()
           return cityLower === allowedBase || cityLower.includes(allowedBase) || allowedBase.includes(cityLower)
         })
