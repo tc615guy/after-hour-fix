@@ -284,18 +284,68 @@ export class CallSessionManager {
                 break
               }
               
+              case 'lookup_booking': {
+                // Look up existing bookings by phone number
+                console.log(`[SessionManager] Calling lookup_booking [attempt ${attempt}/${maxRetries}]`, params)
+                
+                const url = `${appUrl}/api/lookup-booking`
+                const lookupParams = {
+                  customerPhone: params.customerPhone,
+                  projectId: session.projectId,
+                }
+                
+                const res = await fetch(url, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(lookupParams),
+                  signal: AbortSignal.timeout(10000),
+                })
+                
+                if (!res.ok) {
+                  const errorData = await res.json().catch(() => ({})) as { error?: string }
+                  throw new Error(`HTTP ${res.status}: ${errorData.error || res.statusText}`)
+                }
+                
+                const data = await res.json() as { 
+                  success?: boolean
+                  found?: boolean
+                  message?: string
+                  bookings?: Array<{
+                    id: string
+                    customerName?: string
+                    displayTime: string
+                    address?: string
+                    status: string
+                  }>
+                }
+                
+                if (!data.found || !data.bookings || data.bookings.length === 0) {
+                  result = { 
+                    result: data.message || 'No active appointments found for this phone number.',
+                    found: false
+                  }
+                } else {
+                  const booking = data.bookings[0] // Most recent
+                  result = {
+                    result: `You have an appointment${booking.customerName ? ` for ${booking.customerName}` : ''} on ${booking.displayTime}${booking.address ? ` at ${booking.address}` : ''}.`,
+                    found: true,
+                    bookings: data.bookings,
+                    currentBooking: booking,
+                  }
+                }
+                break
+              }
+              
               case 'reschedule_booking': {
-                // Reschedule by calling book_slot with the new time
-                // The /api/book endpoint automatically detects duplicate phone numbers and updates the booking
+                // Reschedule using dedicated reschedule endpoint
                 console.log(`[SessionManager] Calling reschedule_booking [attempt ${attempt}/${maxRetries}]`, params)
                 
-                const url = `${appUrl}/api/book?projectId=${session.projectId}`
+                const url = `${appUrl}/api/reschedule-booking`
                 const rescheduleParams = {
                   customerPhone: params.customerPhone,
-                  startTime: params.newStartTime,
-                  // We need to preserve other details from the existing booking
-                  // The /api/book endpoint will handle this by looking up the existing booking
-                  notes: params.reason ? `Rescheduled: ${params.reason}` : 'Rescheduled by customer request',
+                  projectId: session.projectId,
+                  newStartTime: params.newStartTime,
+                  reason: params.reason,
                 }
                 
                 const res = await fetch(url, {
@@ -306,14 +356,20 @@ export class CallSessionManager {
                 })
                 
                 if (!res.ok) {
-                  const errorData = await res.json().catch(() => ({})) as { error?: string }
+                  const errorData = await res.json().catch(() => ({})) as { error?: string; result?: string }
+                  // If booking not found, return friendly message
+                  if (res.status === 404 && errorData.result) {
+                    result = { result: errorData.result }
+                    break
+                  }
                   throw new Error(`HTTP ${res.status}: ${errorData.error || res.statusText}`)
                 }
                 
-                const data = await res.json() as { result?: string; message?: string; rescheduled?: boolean }
+                const data = await res.json() as { result?: string; success?: boolean; booking?: any }
                 result = { 
-                  result: data.result || data.message || 'Appointment rescheduled successfully',
-                  rescheduled: data.rescheduled || true
+                  result: data.result || 'Appointment rescheduled successfully',
+                  rescheduled: data.success || true,
+                  booking: data.booking,
                 }
                 break
               }

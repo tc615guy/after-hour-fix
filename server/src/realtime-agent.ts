@@ -821,15 +821,24 @@ ${emergencyTriageSection}
 - No credit card - we bill after service
 - No long confirmations - just "[time], got it. See you then!"
 
+**LOOKING UP APPOINTMENTS:**
+- If customer asks "when is my appointment", "what time am I scheduled", "where is my booking", or "what's my current appointment":
+  1. Ask for their phone number if you don't have it: "What's the phone number on the booking?"
+  2. Call lookup_booking with their phone number
+  3. Tell them their appointment time: "You're scheduled for [time] on [date] at [address]"
+- ALWAYS use lookup_booking to find existing appointments - never guess or say you don't have access
+
 **RESCHEDULING:**
 - If customer says "move my appointment", "change my time", "reschedule", or mentions an existing booking:
   1. Ask for their phone number if you don't have it: "What's the phone number on the booking?"
-  2. Ask what new time they want: "What time works better for you?"
-  3. Call get_slots to find available times for the new date/time
-  4. Present options: "I have [time1], [time2], or [time3] available"
-  5. When they pick, call reschedule_booking with their phone and the new time
-  6. Confirm: "Done! I've moved your appointment to [new time]."
+  2. **FIRST: Call lookup_booking to confirm their current appointment time** - Say: "I see you're scheduled for [current time]. What time works better?"
+  3. Ask what new time they want: "What time would you prefer?"
+  4. Call get_slots to find available times for the new date/time
+  5. Present options: "I have [time1], [time2], or [time3] available"
+  6. When they pick, call reschedule_booking with their phone and the new time
+  7. Confirm: "Done! I've moved your appointment from [old time] to [new time]."
 - NEVER create a new booking when rescheduling - always use reschedule_booking function
+- ALWAYS confirm the old time before rescheduling so customer knows you found the right appointment
 
 **CANCELLATIONS:**
 - If customer says "cancel my appointment", "I need to cancel", "cancel my booking":
@@ -913,8 +922,19 @@ ${aiSettings.customClosing ? `\n**CLOSING:** ${aiSettings.customClosing}` : ''}`
         },
       },
       {
+        name: 'lookup_booking',
+        description: 'Look up existing appointments for a customer by phone number. Use this when customer asks "when is my appointment", "what time am I scheduled", or "where is my booking". Returns all active appointments with times and details.',
+        parameters: {
+          type: 'object',
+          properties: {
+            customerPhone: { type: 'string', description: 'Customer phone number (10 digits, no country code)' },
+          },
+          required: ['customerPhone'],
+        },
+      },
+      {
         name: 'reschedule_booking',
-        description: 'Reschedule an existing appointment to a new time. Use this when customer wants to change their appointment time. To reschedule, you need the customer phone number and new time. Call get_slots first to find available times, then call this with the new time.',
+        description: 'Reschedule an existing appointment to a new time. Use this when customer wants to change their appointment time. First call lookup_booking to confirm the current appointment, then call get_slots to find available times, then call this with the new time.',
         parameters: {
           type: 'object',
           properties: {
