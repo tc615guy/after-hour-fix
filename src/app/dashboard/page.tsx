@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Phone, Calendar as CalendarIcon, DollarSign, Clock, Settings, LogOut, List, Download, Upload, Shield, Users } from 'lucide-react'
+import { Phone, Calendar as CalendarIcon, DollarSign, Clock, Settings, LogOut, List, Download, Upload, Shield, Users, Brain, TrendingUp } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import MobileNav from '@/components/MobileNav'
 import { formatCurrency, formatDuration, formatPhoneNumber } from '@/lib/utils'
@@ -859,6 +859,35 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* AI Insights & Learning */}
+        {selectedProject && (
+          <Card className="mb-3 sm:mb-4 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+            <CardHeader className="pb-2 px-3 py-3">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                    <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                    AI Insights & Learning
+                    <Badge className="bg-green-500 text-white text-xs">NEW</Badge>
+                  </CardTitle>
+                  <CardDescription className="text-[10px] sm:text-xs mt-1">
+                    Your AI is getting smarter with every call. Review knowledge gaps, suggestions, and auto-generated FAQs.
+                  </CardDescription>
+                </div>
+                <TrendingUp className="w-8 h-8 text-blue-400 hidden sm:block" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-3 py-2">
+              <Link href={`/dashboard/ai-insights?projectId=${selectedProject.id}`}>
+                <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700">
+                  <Brain className="w-4 h-4 mr-2" />
+                  View AI Insights
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Missed Opportunity Calculator */}
         {selectedProject && (
