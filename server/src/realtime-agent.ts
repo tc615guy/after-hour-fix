@@ -25,6 +25,7 @@ export class RealtimeAgent {
   private projectId: string
   private agentId: string
   private projectName: string = '' // Store project name for greeting
+  private customGreeting: string = '' // Store custom greeting from AI settings
   private ws: WebSocket | null = null
   private audioCallbacks: Array<(audio: Buffer) => void> = []
   private functionCallCallbacks: Array<(name: string, args: any) => Promise<any>> = []
@@ -87,11 +88,18 @@ export class RealtimeAgent {
         throw new Error(`Agent or project not found: agentId=${this.agentId}, projectId=${this.projectId}`)
       }
 
+      // Store project info for custom greeting
+      this.projectName = agent.project.name
+      const aiSettings = (agent.project.aiSettings as any) || {}
+      this.customGreeting = aiSettings.customGreeting || ''
+      
+      console.log(`[RealtimeAgent] Custom greeting: ${this.customGreeting ? 'SET' : 'NOT SET'}`)
+
       // Get the most recently assigned phone number
       const mostRecentNumber = agent.project.numbers[0]?.e164 || null
 
       // Build system prompt and tools (similar to Vapi setup)
-      let systemPrompt = this.buildSystemPrompt(agent.project.name, agent.project.trade, mostRecentNumber)
+      let systemPrompt = this.buildSystemPrompt(agent.project.name, agent.project.trade, mostRecentNumber, aiSettings)
       
       // Append pricing data from agent.basePrompt if available (set by push-pricing endpoint)
       if (agent.basePrompt) {
@@ -223,9 +231,9 @@ export class RealtimeAgent {
         },
         turn_detection: {
           type: 'server_vad', // Use server-side voice activity detection
-          threshold: 0.5,
+          threshold: 0.6, // Increased from 0.5 - less sensitive to background noise
           prefix_padding_ms: 300,
-          silence_duration_ms: 500,
+          silence_duration_ms: 1200, // Increased from 500ms to 1.2s - gives user more time to think/speak
         },
                  tools: tools.map(tool => ({
            type: 'function',
@@ -256,22 +264,24 @@ export class RealtimeAgent {
         break
 
       case 'session.updated':
-        console.log('[RealtimeAgent] Session updated - triggering initial greeting with company name')
+        console.log('[RealtimeAgent] Session updated - triggering initial greeting')
         // Session is ready - trigger initial greeting so assistant speaks first
-        // CRITICAL: Must include company name in greeting
-        const greeting = this.projectName 
-          ? `Thanks for calling ${this.projectName} — I'm your virtual assistant. How can I help you today?`
-          : 'Thanks for calling! I\'m your virtual assistant. How can I help you today?'
+        // Use custom greeting if set, otherwise use default
+        const greeting = this.customGreeting 
+          ? this.customGreeting
+          : this.projectName 
+            ? `Thanks for calling ${this.projectName}. How may I assist you?`
+            : 'Thanks for calling! How may I assist you?'
         
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           this.ws.send(JSON.stringify({
             type: 'response.create',
             response: {
               modalities: ['audio', 'text'],
-              instructions: `Greet the caller with: "${greeting}" Say this exactly as written, including the company name.`,
+              instructions: `Greet the caller with: "${greeting}" Say this exactly as written.`,
             }
           }))
-          console.log('[RealtimeAgent] Initial greeting triggered with company name:', this.projectName)
+          console.log('[RealtimeAgent] Initial greeting triggered:', greeting.substring(0, 50) + '...')
         }
         break
 
@@ -614,7 +624,7 @@ export class RealtimeAgent {
 
   // Helper methods to build prompt and tools (similar to Vapi implementation)
   // Note: In production, these should be imported from a shared utilities file
-  private buildSystemPrompt(projectName: string, trade: string, phoneNumber: string | null = null): string {
+  private buildSystemPrompt(projectName: string, trade: string, phoneNumber: string | null = null, aiSettings: any = {}): string {
     const normalizedTrade = trade.toLowerCase()
     
     // Trade-specific context and emergency indicators (Week 2, Day 6 - Emergency Triage)
@@ -724,47 +734,44 @@ If someone mentions an unrelated service, politely clarify: "Just to confirm, yo
 
 ${emergencyTriageSection}
 
-**CONVERSATION FLOW - MUST FOLLOW EXACTLY:**
-1. **ALWAYS START WITH COMPANY NAME** - You must open by saying: "Thanks for calling [Company Name] — I'm your virtual assistant. How can I help you today?"
+**CONVERSATION FLOW - SIMPLIFIED FOR SPEED:**
+1. **START WITH GREETING** ${aiSettings.customGreeting ? `- SAY EXACTLY: "${aiSettings.customGreeting}"` : `- "Thanks for calling ${projectName}. How may I assist you?"`}
 
-2. **Listen First** - Let customer explain the issue fully. Don't interrupt.
+2. **Listen & Triage** - Let customer explain. Classify as EMERGENCY or ROUTINE:
+   - EMERGENCY = "no heat", "burst pipe", "sparks", "flooding", "no power", "sewage backup"
+   - ROUTINE = everything else
 
-3. **Triage the Issue** - Use emergency triage process above to classify as EMERGENCY or ROUTINE
-   - For HVAC: "furnace down", "no heat", "furnace not working" = EMERGENCY (especially in winter)
-   - Ask 1-2 clarifying questions from emergency list if needed
+3. **Fast Path to Booking** - Collect info WHILE checking slots:
+   - After understanding issue, ask: "What's your name and phone number?" → Get both at once
+   - While they answer, think about time: EMERGENCY=today, ROUTINE=today if before 8 PM, otherwise tomorrow
+   - Then ask: "What's your address?" → Get it
+   - **IMMEDIATELY call get_slots** with the appropriate date
+   - Present top 2-3 slots: "I have [time1], [time2], or [time3]. Which works best?"
+   - Customer picks → **IMMEDIATELY call book_slot** 
+   - Confirm: "You're all set! See you at [time]."
 
-4. **Show Empathy** - Brief acknowledgment: "Oh man, that sounds stressful" or "I understand, let's get this sorted"
+**DATE LOGIC - CRITICAL:**
+- Current time: ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York', hour12: true })} (Eastern Time)
+- **EMERGENCY**: Always use TODAY's date
+- **ROUTINE before 8 PM**: Use TODAY's date (gives same-day service)
+- **ROUTINE after 8 PM**: Use TOMORROW's date (next business day)
+- **NEVER use "tomorrow" when today has availability unless it's after 8 PM**
 
-5. **Gather ALL REQUIRED INFO BEFORE BOOKING** - You MUST collect ALL of these before calling get_slots or book_slot:
-   - **Name**: "Who am I speaking with?" → WAIT for answer
-   - **Phone**: "What's the best number to reach you?" (10 digits, no country code) → WAIT for answer
-   - **Address**: "Where are you located?" (must include street number, street name, city) → WAIT for answer
-     * If address incomplete: "What's the street number and city?"
-     * Ask for apartment/unit if needed
-   - **Issue**: If not mentioned, ask: "What's going on?" → WAIT for answer
+**BOOKING RULES:**
+- Get name + phone in ONE question: "What's your name and phone number?"
+- Get address after: "What's your address?"
+- Call get_slots IMMEDIATELY after getting address - don't wait
+- Present 2-3 time options from the slots
+- When they pick a time, call book_slot IMMEDIATELY
+- Keep responses under 15 words
+- No credit card - we bill after service
+- No long confirmations - just "[time], got it. See you then!"
 
-6. **ONLY AFTER YOU HAVE: name, phone, address, and issue** → Check Availability & Book:
-   - For EMERGENCY calls: Call get_slots with date=today (YYYY-MM-DD), isEmergency=true
-   - For ROUTINE calls: Ask "Do you prefer morning or afternoon?" → WAIT for answer
-     * If they say "morning" → Call get_slots with date=tomorrow (YYYY-MM-DD), time_of_day="morning"
-     * If they say "afternoon" → Call get_slots with date=tomorrow (YYYY-MM-DD), time_of_day="afternoon"
-     * If they say "any" or no preference → Call get_slots with date=tomorrow, time_of_day="any"
-   - **CRITICAL**: When get_slots returns, read the "available_times" array from the result. Present 2-3 best options verbally to the customer.
-   - If no slots available, ask: "Would tomorrow morning or the following day [preference] work better?"
-   - When customer agrees to a time, call book_slot with ALL collected info: customerName, customerPhone, address, notes (issue), startTime (use exact ISO string from available_times)
-   - Wait for booking confirmation before continuing
+**EMERGENCY PRIORITY:**
+If customer says: "no heat", "furnace down", "burst pipe", "flooding", "sparks", "no power" → 
+Say: "That's urgent. I'll get someone out today. Name and phone?" → Get info → Book SAME DAY
 
-**CRITICAL RULES - NEVER VIOLATE:**
-- **NEVER call get_slots or book_slot until you have: name, phone, address, and issue**
-- Ask ONE question at a time - wait for answer before next question
-- Never invent availability - only use times from get_slots
-- Keep responses SHORT (1-2 sentences max)
-- Never ask for credit card info - say "We'll send a secure payment link"
-- EMERGENCY calls get priority booking (TODAY), ROUTINE calls get next-day slots
-- If customer says "furnace down" or "no heat" = EMERGENCY for HVAC (book today)
-
-**AFTER BOOKING:**
-Say: "Perfect! You're all set for [time]. We'll text you the details."`
+${aiSettings.customClosing ? `\n**CLOSING:** ${aiSettings.customClosing}` : ''}`
   }
 
   private async buildTools(project: any): Promise<any[]> {

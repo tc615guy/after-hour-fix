@@ -89,6 +89,7 @@ async function handleAvailabilityRequest(req: NextRequest) {
 
     // Try Cal.com v2 slots API first, fallback to v1 via CalComClient
     console.log(`[Cal.com Availability] Querying v2 slots for projectId=${projectId}, eventTypeId=${project.calcomEventTypeId}, start=${startIso}, end=${endIso}`)
+    console.log(`[Cal.com Availability] Project "${project.name}" using Cal.com Event Type ID: ${project.calcomEventTypeId}`)
     
     let calcomSlots: Array<{ start: string; end?: string }> = []
     
