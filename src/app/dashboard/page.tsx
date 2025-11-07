@@ -916,7 +916,7 @@ export default function DashboardPage() {
         {/* Recent Calls */}
         <Card className="mb-3 sm:mb-4">
           <CardHeader className="pb-2 px-2 py-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <CardTitle className="text-sm sm:text-base">Recent Calls</CardTitle>
                 <CardDescription className="text-[10px] sm:text-xs">Latest inbound and outbound calls</CardDescription>
@@ -1065,7 +1065,7 @@ export default function DashboardPage() {
                 <CardTitle className="text-sm sm:text-base">Bookings</CardTitle>
                 <CardDescription className="text-[10px] sm:text-xs">Upcoming and past appointments</CardDescription>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-2 md:justify-end w-full md:w-auto">
                 <Button
                   variant="outline"
                   size="sm"
@@ -1137,11 +1137,11 @@ export default function DashboardPage() {
                   }}
                   disabled={bookings.length === 0}
                   title="Delete all bookings (for re-import)"
-                  className="text-red-600 border-red-300 hover:bg-red-50"
+                  className="w-full md:w-auto justify-center text-red-600 border-red-300 hover:bg-red-50"
                 >
                   🗑️ Clear All
                 </Button>
-                <div className="border-l mx-1"></div>
+                <div className="hidden md:block border-l mx-1"></div>
                 {/* View Switcher - Compact */}
                 <div className="hidden md:flex items-center gap-1 border rounded-md p-1 bg-gray-50">
                   <Button
@@ -1222,15 +1222,80 @@ export default function DashboardPage() {
                     <option value="ahf">AfterHourFix Only</option>
                   </select>
                 </div>
-              </div>
-              {/* Mobile actions */}
-              <div className="flex md:hidden gap-2">
-                <Button size="sm" variant="outline" onClick={() => document.getElementById('filters-dialog-open')?.click()}>
-                  Filters
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => document.getElementById('actions-dialog-open')?.click()}>
-                  Actions
-                </Button>
+
+                {/* Mobile Controls */}
+                <div className="md:hidden w-full space-y-2">
+                  <div>
+                    <label htmlFor="mobile-view-select" className="sr-only">
+                      Calendar view
+                    </label>
+                    <select
+                      id="mobile-view-select"
+                      className="w-full border rounded px-3 py-2 text-sm bg-white"
+                      value={view}
+                      onChange={(e) => setView(e.target.value as 'list' | 'calendar' | 'daily' | 'gaps')}
+                    >
+                      <option value="list">List view</option>
+                      <option value="calendar">Month view</option>
+                      <option value="daily">Daily view</option>
+                      <option value="gaps">Smart schedule</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full justify-center"
+                      onClick={handleExportCSV}
+                      disabled={bookings.length === 0}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export CSV
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full justify-center"
+                      onClick={() => document.getElementById('csv-import')?.click()}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Import CSV
+                    </Button>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full justify-center"
+                    onClick={() => document.getElementById('csv-import-preview')?.click()}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Import &amp; Map
+                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="date"
+                      className="w-full border rounded px-2 py-2 text-sm"
+                      value={rangeFrom}
+                      onChange={(e) => setRangeFrom(e.target.value)}
+                      placeholder="From"
+                    />
+                    <input
+                      type="date"
+                      className="w-full border rounded px-2 py-2 text-sm"
+                      value={rangeTo}
+                      onChange={(e) => setRangeTo(e.target.value)}
+                      placeholder="To"
+                    />
+                  </div>
+                  <select
+                    className="w-full border rounded px-3 py-2 text-sm bg-white"
+                    value={exportSource}
+                    onChange={(e) => setExportSource(e.target.value as any)}
+                  >
+                    <option value="all">All jobs</option>
+                    <option value="ahf">AfterHourFix jobs</option>
+                  </select>
+                </div>
               </div>
             </div>
           </CardHeader>
