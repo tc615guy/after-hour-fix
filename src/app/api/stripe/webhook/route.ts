@@ -32,6 +32,29 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
+        
+        // Check if this is a setup fee payment
+        if (session.metadata?.type === 'setup_fee' && session.metadata?.userId) {
+          const userId = session.metadata.userId
+          
+          // Mark setup fee as paid
+          await prisma.user.update({
+            where: { id: userId },
+            data: { setupFee: 'paid' },
+          })
+          
+          console.log(`[Stripe Webhook] Setup fee paid for user ${userId}`)
+          
+          await prisma.eventLog.create({
+            data: {
+              type: 'setup_fee.paid',
+              payload: { userId, amount: 29900, sessionId: session.id },
+            },
+          })
+          break
+        }
+
+        // Handle subscription checkout
         const userId = session.client_reference_id
 
         if (!userId || !session.subscription) {
