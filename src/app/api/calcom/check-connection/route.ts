@@ -54,40 +54,59 @@ export async function GET(req: NextRequest) {
     }
 
     // Test 1: Verify user exists
+    console.log(`[Cal.com Check] Testing connection for project ${projectId}`)
+    console.log(`[Cal.com Check] Using ${apiKey ? 'API Key' : 'Access Token'}`)
+    console.log(`[Cal.com Check] Calling: ${baseUrl}/v1/me`)
+    
     const userRes = await fetch(`${baseUrl}/v1/me`, { 
       headers,
       method: 'GET',
     })
 
+    console.log(`[Cal.com Check] User fetch response status: ${userRes.status}`)
+
     if (!userRes.ok) {
+      const errorText = await userRes.text()
+      console.error(`[Cal.com Check] User fetch failed: ${errorText}`)
       return NextResponse.json({ 
         valid: false, 
         error: 'API key or access token is invalid',
-        statusCode: userRes.status 
+        statusCode: userRes.status,
+        details: errorText.substring(0, 200)
       })
     }
 
     const userData = await userRes.json()
+    console.log(`[Cal.com Check] User data:`, JSON.stringify(userData, null, 2))
     const username = userData.username || userData.user?.username || project.calcomUser
 
     // Test 2: Verify event type exists (if we have one)
     if (project.calcomEventTypeId) {
+      console.log(`[Cal.com Check] Checking event type: ${project.calcomEventTypeId}`)
       const eventTypeRes = await fetch(
         `${baseUrl}/v1/event-types/${project.calcomEventTypeId}`,
         { headers, method: 'GET' }
       )
 
+      console.log(`[Cal.com Check] Event type fetch response status: ${eventTypeRes.status}`)
+
       if (!eventTypeRes.ok) {
+        const errorText = await eventTypeRes.text()
+        console.error(`[Cal.com Check] Event type fetch failed: ${errorText}`)
         return NextResponse.json({ 
           valid: false, 
           error: 'Event type no longer exists',
-          username 
+          username,
+          statusCode: eventTypeRes.status,
+          details: errorText.substring(0, 200)
         })
       }
 
       const eventTypeData = await eventTypeRes.json()
+      console.log(`[Cal.com Check] Event type data:`, JSON.stringify(eventTypeData, null, 2))
       const eventTypeName = eventTypeData.title || eventTypeData.event_type?.title
 
+      console.log(`[Cal.com Check] ✅ Connection valid for ${username}`)
       return NextResponse.json({ 
         valid: true, 
         username,
@@ -97,6 +116,7 @@ export async function GET(req: NextRequest) {
     }
 
     // If no event type, just return user info
+    console.log(`[Cal.com Check] ⚠️  Connection valid but no event type configured for ${username}`)
     return NextResponse.json({ 
       valid: true, 
       username,

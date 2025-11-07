@@ -90,15 +90,23 @@ export default function CalendarSettings({ projectId }: Props) {
       const res = await fetch(`/api/calcom/check-connection?projectId=${projectId}`)
       const data = await res.json()
       
+      console.log('[CalendarSettings] Check connection response:', data)
+      
       if (data.valid) {
         setConnectionStatus('valid')
-        alert(`✅ Connection is active!\n\nUser: ${data.username}\nEvent Type: ${data.eventTypeName || 'Created'}`)
+        const message = `✅ Connection is active!\n\nUser: ${data.username}\nEvent Type: ${data.eventTypeName || 'Created'}${data.warning ? `\n\n⚠️ ${data.warning}` : ''}`
+        alert(message)
       } else {
         setConnectionStatus('invalid')
+        const errorMsg = `❌ Connection check failed\n\nError: ${data.error || 'Unknown error'}\nStatus: ${data.statusCode || 'N/A'}${data.details ? `\n\nDetails: ${data.details}` : ''}`
+        console.error('[CalendarSettings] Connection invalid:', data)
+        alert(errorMsg)
         setShowReconnectDialog(true)
       }
     } catch (e: any) {
       setConnectionStatus('invalid')
+      console.error('[CalendarSettings] Check connection error:', e)
+      alert(`❌ Failed to check connection\n\nError: ${e.message}`)
       setShowReconnectDialog(true)
     } finally {
       setChecking(false)
