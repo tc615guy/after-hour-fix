@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Phone, Calendar, MessageSquare, TrendingUp, Shield, Users, Navigation, DollarSign, Zap, Lock, Mic, AlertTriangle, Brain, Clock, CheckCircle, BarChart3, Settings, MapPin, FileText } from 'lucide-react'
 import type { Metadata } from 'next'
+import { PhoneCTA } from '@/components/PhoneCTA'
 
 export const metadata: Metadata = {
   title: 'AI Receptionist Features for Trades | 24/7 Call Answering & Auto-Booking',
@@ -204,6 +205,10 @@ export default function FeaturesPage() {
         </div>
       </section>
 
+      <div className="container mx-auto px-4">
+        <PhoneCTA className="mb-16" title="Want a walkthrough of the feature stack?" />
+      </div>
+
       {/* Core Features Grid */}
       <section className="container mx-auto px-4 py-20">
         <div className="text-center mb-12">
@@ -366,6 +371,7 @@ export default function FeaturesPage() {
             <div>
               <h4 className="text-white font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-sm">
+                <li><a href="tel:8446075052" className="hover:text-white transition">Call 844-607-5052</a></li>
                 <li><a href="mailto:support@afterhourfix.com" className="hover:text-white transition">support@afterhourfix.com</a></li>
               </ul>
             </div>

@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Metadata } from 'next'
+import { PhoneCTA } from '@/components/PhoneCTA'
 
 export const metadata: Metadata = {
   title: 'FAQ: AI Receptionist for Trades | Common Questions Answered',
@@ -159,6 +160,8 @@ export default function FAQPage() {
           <p className="text-xl text-gray-600">Everything you need to know about AI receptionist services for trade professionals</p>
         </div>
 
+        <PhoneCTA className="mb-10" title="Want to talk through your questions?" description="Call and we'll answer anything we missed in the FAQs." />
+
         <div className="space-y-4">
           {faqs.map((faq, i) => (
             <Card key={i}>
@@ -182,6 +185,42 @@ export default function FAQPage() {
           </div>
         </div>
       </section>
+
+      <footer className="bg-gray-900 text-gray-400 py-12">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div>
+              <div className="text-white font-bold text-xl mb-4">AfterHourFix</div>
+              <p className="text-sm">AI receptionist for trade professionals.</p>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-4">Product</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/features" className="hover:text-white transition">Features</Link></li>
+                <li><Link href="/pricing" className="hover:text-white transition">Pricing</Link></li>
+                <li><Link href="/faq" className="hover:text-white transition">FAQ</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-4">Legal</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/privacy" className="hover:text-white transition">Privacy</Link></li>
+                <li><Link href="/terms" className="hover:text-white transition">Terms</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-4">Support</h4>
+              <ul className="space-y-2 text-sm">
+                <li><a href="tel:8446075052" className="hover:text-white transition">Call 844-607-5052</a></li>
+                <li><a href="mailto:support@afterhourfix.com" className="hover:text-white transition">support@afterhourfix.com</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm">
+            © {new Date().getFullYear()} AfterHourFix. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

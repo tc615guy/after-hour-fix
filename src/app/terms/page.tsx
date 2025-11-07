@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import type { Metadata } from 'next'
+import { PhoneCTA } from '@/components/PhoneCTA'
 
 export const metadata: Metadata = {
   title: 'Terms of Service | AfterHourFix',
@@ -40,6 +41,8 @@ export default function TermsPage() {
       <article className="container mx-auto px-4 py-20 max-w-3xl prose prose-blue">
         <h1>Terms of Service</h1>
         <p className="text-gray-600">Last updated: {new Date().toLocaleDateString()}</p>
+
+        <PhoneCTA className="not-prose my-8" title="Have a question about our terms?" description="Call us anytime to review any clause or requirement." />
 
         <h2>Agreement to Terms</h2>
         <p>
@@ -128,6 +131,42 @@ export default function TermsPage() {
           Email: support@afterhourfix.com
         </p>
       </article>
+
+      <footer className="bg-gray-900 text-gray-400 py-12">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div>
+              <div className="text-white font-bold text-xl mb-4">AfterHourFix</div>
+              <p className="text-sm">AI receptionist for trade professionals.</p>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-4">Product</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/features" className="hover:text-white transition">Features</Link></li>
+                <li><Link href="/pricing" className="hover:text-white transition">Pricing</Link></li>
+                <li><Link href="/faq" className="hover:text-white transition">FAQ</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-4">Legal</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/privacy" className="hover:text-white transition">Privacy</Link></li>
+                <li><Link href="/terms" className="hover:text-white transition">Terms</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-4">Support</h4>
+              <ul className="space-y-2 text-sm">
+                <li><a href="tel:8446075052" className="hover:text-white transition">Call 844-607-5052</a></li>
+                <li><a href="mailto:support@afterhourfix.com" className="hover:text-white transition">support@afterhourfix.com</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm">
+            © {new Date().getFullYear()} AfterHourFix. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Mail, MessageSquare, Phone, CheckCircle } from 'lucide-react'
+import { PhoneCTA } from '@/components/PhoneCTA'
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -88,6 +89,8 @@ export default function ContactPage() {
               Have questions about AfterHourFix? We're here to help you revolutionize your after-hours service.
             </p>
           </div>
+
+          <PhoneCTA className="mb-12" title="Need an answer right now?" description="Call 844-607-5052 and talk with a specialist immediately." />
 
           <div className="grid md:grid-cols-2 gap-8">
             {/* Contact Form */}
@@ -195,6 +198,27 @@ export default function ContactPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
+                    <Phone className="w-5 h-5" />
+                    Call Our Team
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600 mb-3">
+                    Need immediate help with setup, pricing, or troubleshooting? Call us 24/7.
+                  </p>
+                  <a
+                    href="tel:8446075052"
+                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
+                  >
+                    <Phone className="w-4 h-4" />
+                    844-607-5052
+                  </a>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
                     <Mail className="w-5 h-5" />
                     Email Support
                   </CardTitle>
@@ -279,11 +303,18 @@ export default function ContactPage() {
             </div>
             <div>
               <h4 className="font-semibold mb-4">Support</h4>
-              <p className="text-gray-400">
-                <a href="mailto:support@afterhourfix.com" className="hover:text-white">
-                  support@afterhourfix.com
-                </a>
-              </p>
+              <ul className="space-y-2 text-gray-400">
+                <li>
+                  <a href="tel:8446075052" className="hover:text-white">
+                    Call 844-607-5052
+                  </a>
+                </li>
+                <li>
+                  <a href="mailto:support@afterhourfix.com" className="hover:text-white">
+                    support@afterhourfix.com
+                  </a>
+                </li>
+              </ul>
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">

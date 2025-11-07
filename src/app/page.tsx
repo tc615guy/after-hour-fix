@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Phone, Calendar, MessageSquare, TrendingUp, CheckCircle, Shield, Users, Navigation, DollarSign, Zap, Lock, Mic, AlertTriangle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import AuthRedirect from '@/components/AuthRedirect'
+import { PhoneCTA } from '@/components/PhoneCTA'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -177,6 +178,10 @@ export default function HomePage() {
         </div>
         <p className="text-sm text-gray-500 mt-4">Setup in 10 minutes</p>
       </section>
+
+      <div className="container mx-auto px-4">
+        <PhoneCTA className="mb-16" />
+      </div>
 
       {/* Security & Privacy */}
       <section className="py-20 bg-white">
@@ -735,6 +740,7 @@ export default function HomePage() {
             <div>
               <h4 className="text-white font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-sm">
+                <li><a href="tel:8446075052" className="hover:text-white transition">Call 844-607-5052</a></li>
                 <li><a href="mailto:support@afterhourfix.com" className="hover:text-white transition">support@afterhourfix.com</a></li>
               </ul>
             </div>
