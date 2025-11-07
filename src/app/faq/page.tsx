@@ -140,6 +140,7 @@ export default function FAQPage() {
             <Link href="/" className="text-sm hover:text-blue-600 transition">Home</Link>
             <Link href="/features" className="text-sm hover:text-blue-600 transition">Features</Link>
             <Link href="/pricing" className="text-sm hover:text-blue-600 transition">Pricing</Link>
+            <Link href="/contact" className="text-sm hover:text-blue-600 transition">Contact</Link>
           </nav>
           <div className="flex gap-3">
             <Link href="/auth/login">
