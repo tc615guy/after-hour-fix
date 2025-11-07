@@ -28,9 +28,10 @@ export async function POST(req: NextRequest) {
 
     // Send email using Postmark API
     // Use support@ as sender (verified in Postmark), set Reply-To to customer
+    // TEMP: Sending to joshlanius@yahoo.com for testing (GoDaddy email issues)
     const emailPayload = {
       From: 'support@afterhourfix.com',
-      To: 'support@afterhourfix.com',
+      To: 'joshlanius@yahoo.com',
       ReplyTo: email,
       Subject: `Contact Form: ${name}${company ? ` - ${company}` : ''}`,
       TextBody: `
