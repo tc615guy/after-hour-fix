@@ -13,7 +13,7 @@ export async function GET(
     const today = new Date(Date.now() - 24 * 60 * 60 * 1000)
     const weekStart = startOfWeek(new Date())
 
-    const [callsToday, bookingsWeek, agents, bookingsThisWeek, project, sub] = await Promise.all([
+    const [callsToday, bookingsWeek, callsThisPeriod, bookingsThisWeek, project, sub] = await Promise.all([
       prisma.call.count({
         where: {
           projectId: id,
@@ -26,9 +26,14 @@ export async function GET(
           createdAt: { gte: weekStart },
         },
       }),
-      prisma.agent.findMany({
-        where: { projectId: id },
-        select: { minutesThisPeriod: true },
+      // CRITICAL FIX: Calculate minutes from Call table, not agent.minutesThisPeriod
+      // This works for both OpenAI Realtime and Vapi calls
+      prisma.call.findMany({
+        where: { 
+          projectId: id,
+          deletedAt: null,
+        },
+        select: { durationSec: true, createdAt: true },
       }),
       prisma.booking.findMany({
         where: {
@@ -49,7 +54,12 @@ export async function GET(
       })(),
     ])
 
-    const minutesUsed = agents.reduce((sum, a) => sum + a.minutesThisPeriod, 0)
+    // Calculate total minutes from all calls with durationSec
+    // This is the SOURCE OF TRUTH for AI minutes usage
+    const totalSeconds = callsThisPeriod
+      .filter(c => c.durationSec !== null && c.durationSec !== undefined)
+      .reduce((sum, c) => sum + c.durationSec!, 0)
+    const minutesUsed = Math.ceil(totalSeconds / 60) // Round up to nearest minute
     const estRevenue = bookingsThisWeek.reduce((sum, b) => sum + (b.priceCents || 0), 0)
 
     const proId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
