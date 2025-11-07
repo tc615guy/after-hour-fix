@@ -1060,7 +1060,7 @@ export default function DashboardPage() {
         {/* Bookings Section */}
         <Card className="mb-3 sm:mb-4">
           <CardHeader className="pb-2 px-2 py-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <CardTitle className="text-sm sm:text-base">Bookings</CardTitle>
                 <CardDescription className="text-[10px] sm:text-xs">Upcoming and past appointments</CardDescription>
