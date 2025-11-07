@@ -217,24 +217,39 @@ async function handleAvailabilityRequest(req: NextRequest) {
     console.log(`[Cal.com Availability] Checking availability against ${technicians.length} technicians`)
     console.log(`[Cal.com Availability] Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`)
     
-    // Log technician bookings for debugging
+    // Log technician bookings for debugging (with duration + travel buffer)
     let totalBookings = 0
     for (const tech of technicians) {
       if (tech.bookings.length > 0) {
         totalBookings += tech.bookings.length
         console.log(`[Cal.com Availability] Tech ${tech.name} has ${tech.bookings.length} bookings in range`)
         tech.bookings.forEach(b => {
-          const startStr = b.slotStart ? new Date(b.slotStart).toLocaleString('en-US', {
+          if (!b.slotStart) return
+          const startStr = new Date(b.slotStart).toLocaleString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
             hour12: true,
             timeZone: project.timezone || 'America/Chicago',
-          }) : 'NO START'
-          console.log(`  - ${b.customerName}: ${startStr} (${b.slotStart?.toISOString()})`)
+          })
+          
+          // Calculate actual end time with travel buffer
+          const bStart = new Date(b.slotStart).getTime()
+          let bEnd = b.slotEnd ? new Date(b.slotEnd).getTime() : bStart + 90 * 60 * 1000
+          const durationMin = Math.round((bEnd - bStart) / 60000)
+          const bufferedEnd = new Date(bEnd + 30 * 60 * 1000) // Add 30 min travel buffer
+          const bufferedEndStr = bufferedEnd.toLocaleString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: project.timezone || 'America/Chicago',
+          })
+          
+          console.log(`  - ${b.customerName}: ${startStr} (${durationMin} min) → blocked until ${bufferedEndStr} (includes 30 min travel buffer)`)
         })
       }
     }
     console.log(`[Cal.com Availability] Total bookings to check against: ${totalBookings}`)
+    console.log(`[Cal.com Availability] Using 30-minute travel buffer between appointments`)
 
     // Filter slots to only those where at least one technician is free
     // OPTIMIZED: Return capacity + candidates (not assigned tech) to prevent race conditions
@@ -242,14 +257,34 @@ async function handleAvailabilityRequest(req: NextRequest) {
     type BusyInterval = { start: number; end: number }
     type TechAvailability = { id: string; name: string; priority: number; busyIntervals: BusyInterval[] }
     
+    // TRAVEL TIME BUFFER: Add 30 minutes between appointments for drive time
+    const TRAVEL_BUFFER_MS = 30 * 60 * 1000 // 30 minutes
+    
     // Pre-merge each tech's busy intervals (sorted by start time)
     const techAvailability: TechAvailability[] = technicians.map(tech => {
       const intervals: BusyInterval[] = []
       for (const b of tech.bookings) {
         if (!b.slotStart) continue
         const bStart = new Date(b.slotStart).getTime()
-        const bEnd = b.slotEnd ? new Date(b.slotEnd).getTime() : bStart + 90 * 60 * 1000
-        intervals.push({ start: bStart, end: bEnd })
+        
+        // Calculate end time:
+        // 1. Use slotEnd if available
+        // 2. Otherwise, use duration from booking (if specified)
+        // 3. Otherwise, default to 90 minutes
+        let bEnd: number
+        if (b.slotEnd) {
+          bEnd = new Date(b.slotEnd).getTime()
+        } else {
+          // Check if booking has duration specified in notes or duration field
+          const durationMin = (b as any).duration || 90 // Default 90 min if not specified
+          bEnd = bStart + durationMin * 60 * 1000
+        }
+        
+        // CRITICAL: Add travel buffer AFTER the appointment ends
+        // This prevents booking another appointment too soon after this one
+        const bufferedEnd = bEnd + TRAVEL_BUFFER_MS
+        
+        intervals.push({ start: bStart, end: bufferedEnd })
       }
       // Merge overlapping intervals
       intervals.sort((a, b) => a.start - b.start)
