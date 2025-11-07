@@ -6,6 +6,19 @@ import { prisma } from '@/lib/db'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
+// Whitelist of allowed emails for beta access
+const ALLOWED_EMAILS = [
+  'josh.lanius@gmail.com',
+  'joshlanius@yahoo.com',
+  'thundercatcrypto@gmail.com',
+]
+
+// Admin emails (subset of allowed emails)
+const ADMIN_EMAILS = [
+  'josh.lanius@gmail.com',
+  'joshlanius@yahoo.com',
+]
+
 export async function GET() {
   try {
     // Get the access token from cookies
@@ -28,6 +41,15 @@ export async function GET() {
     if (error || !supabaseUser) {
       console.log('[/api/auth/me] Invalid Supabase session')
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
+    }
+
+    // Check if email is whitelisted (server-side security check)
+    const normalizedEmail = supabaseUser.email?.toLowerCase().trim()
+    if (!normalizedEmail || !ALLOWED_EMAILS.includes(normalizedEmail)) {
+      console.log('[/api/auth/me] Email not whitelisted:', normalizedEmail)
+      return NextResponse.json({ 
+        error: 'Access denied. AfterHourFix is currently in private beta.' 
+      }, { status: 403 })
     }
 
     // Get or create user in Prisma
@@ -56,15 +78,20 @@ export async function GET() {
       } else {
         // User doesn't exist at all - create new
         console.log('[/api/auth/me] Creating new user in Prisma:', supabaseUser.email)
+        
+        // Determine role based on admin list
+        const isAdmin = ADMIN_EMAILS.includes(normalizedEmail!)
+        const role = isAdmin ? 'admin' : 'user'
+        
         user = await prisma.user.create({
           data: {
             id: supabaseUser.id,
             email: supabaseUser.email!,
             name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
-            role: 'user'
+            role: role
           }
         })
-        console.log('[/api/auth/me] User created successfully:', user.id)
+        console.log('[/api/auth/me] User created successfully:', user.id, 'Role:', role)
       }
     }
 

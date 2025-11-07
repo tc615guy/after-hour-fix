@@ -19,7 +19,20 @@ export async function getUser() {
   return session?.user || null
 }
 
+// Whitelist of allowed emails for beta access
+const ALLOWED_EMAILS = [
+  'josh.lanius@gmail.com',
+  'joshlanius@yahoo.com',
+  'thundercatcrypto@gmail.com',
+]
+
 export async function signInWithEmail(email: string) {
+  // Check if email is whitelisted
+  const normalizedEmail = email.toLowerCase().trim()
+  if (!ALLOWED_EMAILS.includes(normalizedEmail)) {
+    throw new Error('AfterHourFix is currently in private beta. Access is by invitation only. Please contact support@afterhourfix.com for access.')
+  }
+
   const { data, error } = await supabase.auth.signInWithOtp({
     email,
     options: {
