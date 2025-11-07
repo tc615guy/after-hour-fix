@@ -14,6 +14,7 @@ model User {
   image                    String?
   phone                    String?
   role                     String                     @default("user") // "user" | "admin"
+  setupFee                 String                     @default("unpaid") // "unpaid" | "paid" - $299 one-time setup fee
   createdAt                DateTime                   @default(now())
   projects                 Project[]
   subscriptions            Subscription[]
