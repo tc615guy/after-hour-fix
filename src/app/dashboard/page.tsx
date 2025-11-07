@@ -1073,7 +1073,7 @@ export default function DashboardPage() {
                   disabled={bookings.length === 0}
                   title="Export bookings to CSV"
                 >
-                  <Download className="w-4 h-4 mr-2" />
+                  <Upload className="w-4 h-4 mr-2" />
                   Export
                 </Button>
                 {/* Removed ServiceTitan export per request */}
@@ -1085,7 +1085,7 @@ export default function DashboardPage() {
                     title="Import bookings from CSV"
                   >
                     <span>
-                      <Upload className="w-4 h-4 mr-2" />
+                      <Download className="w-4 h-4 mr-2" />
                       Import
                     </span>
                   </Button>
@@ -1105,7 +1105,7 @@ export default function DashboardPage() {
                     title="Preview and map CSV columns before import"
                   >
                     <span>
-                      <Upload className="w-4 h-4 mr-2" />
+                      <Download className="w-4 h-4 mr-2" />
                       Import (Preview)
                     </span>
                   </Button>
@@ -1185,11 +1185,11 @@ export default function DashboardPage() {
                 {/* Import/Export - Compact */}
                 <div className="hidden md:flex items-center gap-1 border rounded-md p-1 bg-gray-50">
                   <Button size="sm" variant="ghost" className="h-7 px-2" onClick={handleExportCSV} title="Export CSV">
-                    <Download className="w-4 h-4" />
+                    <Upload className="w-4 h-4" />
                   </Button>
                   <label className="cursor-pointer">
                     <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => document.getElementById('csv-import-preview')?.click()} title="Import CSV">
-                      <Upload className="w-4 h-4" />
+                      <Download className="w-4 h-4" />
                     </Button>
                     <input type="file" id="csv-import-preview" className="hidden" accept=".csv" onChange={handleImportCSVPreview} />
                   </label>
@@ -1249,7 +1249,7 @@ export default function DashboardPage() {
                       onClick={handleExportCSV}
                       disabled={bookings.length === 0}
                     >
-                      <Download className="w-4 h-4 mr-2" />
+                    <Upload className="w-4 h-4 mr-2" />
                       Export CSV
                     </Button>
                     <Button
@@ -1258,7 +1258,7 @@ export default function DashboardPage() {
                       className="w-full justify-center"
                       onClick={() => document.getElementById('csv-import')?.click()}
                     >
-                      <Upload className="w-4 h-4 mr-2" />
+                    <Download className="w-4 h-4 mr-2" />
                       Import CSV
                     </Button>
                   </div>
@@ -1268,7 +1268,7 @@ export default function DashboardPage() {
                     className="w-full justify-center"
                     onClick={() => document.getElementById('csv-import-preview')?.click()}
                   >
-                    <Upload className="w-4 h-4 mr-2" />
+                  <Download className="w-4 h-4 mr-2" />
                     Import &amp; Map
                   </Button>
                   <div className="grid grid-cols-2 gap-2">

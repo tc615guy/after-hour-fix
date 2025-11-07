@@ -55,9 +55,18 @@ export async function POST(
     const Schema = z.object({
       name: z.string().min(1),
       phone: z.string().min(7),
-      email: z.string().email().optional().or(z.literal('').transform(() => undefined)),
+      email: z
+        .string()
+        .email()
+        .optional()
+        .or(z.literal('').transform(() => undefined)),
+      address: z
+        .string()
+        .min(3)
+        .optional()
+        .or(z.literal('').transform(() => undefined)),
     })
-    const { name, phone, email } = Schema.parse(body)
+    const { name, phone, email, address } = Schema.parse(body)
 
     const technician = await prisma.technician.create({
       data: {
@@ -65,10 +74,11 @@ export async function POST(
         name,
         phone,
         email,
+        address,
       },
     })
 
-    await audit({ projectId, type: 'technician.create', payload: { id: technician.id, name, phone, email } })
+    await audit({ projectId, type: 'technician.create', payload: { id: technician.id, name, phone, email, address } })
 
     return NextResponse.json({ technician })
   } catch (error: any) {

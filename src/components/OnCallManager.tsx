@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, ChangeEvent, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,14 +8,16 @@ import PhoneInput from '@/components/PhoneInput'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Trash2, Phone, AlertCircle, CheckCircle2, Clock, Download, Upload } from 'lucide-react'
+import { Plus, Trash2, Phone, AlertCircle, CheckCircle2, Download, Upload, MapPin } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
+import AddressAutocomplete from '@/components/AddressAutocomplete'
 
 interface Technician {
   id: string
   name: string
   phone: string
   email?: string
+  address?: string
   isActive: boolean
   isOnCall: boolean
   emergencyOnly: boolean
@@ -30,12 +32,12 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [technicians, setTechnicians] = useState<Technician[]>([])
-  const [newTech, setNewTech] = useState({ name: '', phone: '', email: '' })
+  const [newTech, setNewTech] = useState({ name: '', phone: '', email: '', address: '' })
   const [showAddForm, setShowAddForm] = useState(false)
-  const [csvFile, setCsvFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
   const [selectedTechs, setSelectedTechs] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadTechnicians()
@@ -74,7 +76,7 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
 
       const { technician } = await res.json()
       setTechnicians([...technicians, technician])
-      setNewTech({ name: '', phone: '', email: '' })
+      setNewTech({ name: '', phone: '', email: '', address: '' })
       setShowAddForm(false)
     } catch (error: any) {
       alert(error.message)
@@ -177,6 +179,176 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
     })
   }
 
+  const parseCSV = (text: string): string[][] => {
+    const rows: string[][] = []
+    let row: string[] = []
+    let field = ''
+    let inQuotes = false
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i]
+      if (inQuotes) {
+        if (char === '"') {
+          if (text[i + 1] === '"') {
+            field += '"'
+            i++
+          } else {
+            inQuotes = false
+          }
+        } else {
+          field += char
+        }
+      } else {
+        if (char === '"') {
+          inQuotes = true
+        } else if (char === ',') {
+          row.push(field)
+          field = ''
+        } else if (char === '\n') {
+          row.push(field)
+          rows.push(row)
+          row = []
+          field = ''
+        } else if (char === '\r') {
+          // Ignore carriage returns
+        } else {
+          field += char
+        }
+      }
+    }
+
+    if (field.length > 0 || row.length > 0) {
+      row.push(field)
+      rows.push(row)
+    }
+
+    return rows
+  }
+
+  const normalizeKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+  const parseBoolean = (value?: string | null) => {
+    if (!value) return undefined
+    const normalized = value.trim().toLowerCase()
+    if (['yes', 'y', 'true', '1', 'on', 'active'].includes(normalized)) return true
+    if (['no', 'n', 'false', '0', 'off', 'inactive'].includes(normalized)) return false
+    return undefined
+  }
+
+  const handleImportCSV = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      setImporting(true)
+      const text = await file.text()
+      const table = parseCSV(text)
+
+      if (table.length === 0) {
+        throw new Error('The CSV file is empty.')
+      }
+
+      const header = table[0]
+      const normalizedHeader = header.map((h) => normalizeKey(h))
+
+      const findIndex = (...candidates: string[]) => {
+        for (const candidate of candidates) {
+          const idx = normalizedHeader.indexOf(normalizeKey(candidate))
+          if (idx >= 0) return idx
+        }
+        return -1
+      }
+
+      const idxName = findIndex('name', 'technician', 'tech', 'fullname', 'employee', 'technicianname')
+      const idxPhone = findIndex('phone', 'phonenumber', 'mobile', 'cell', 'contactnumber')
+      const idxEmail = findIndex('email', 'emailaddress', 'mail')
+      const idxAddress = findIndex('address', 'fulladdress', 'location')
+      const idxStreet = findIndex('street', 'address1', 'addressline1')
+      const idxCity = findIndex('city', 'town')
+      const idxState = findIndex('state', 'region', 'province')
+      const idxZip = findIndex('zip', 'zipcode', 'postal', 'postalcode')
+      const idxOnCall = findIndex('oncall', 'isoncall', 'oncallnow')
+      const idxActive = findIndex('active', 'isactive', 'status')
+      const idxEmergency = findIndex('emergencyonly', 'emergency', 'emergency_only')
+      const idxPriority = findIndex('priority', 'rank', 'order')
+
+      if (idxName < 0 || idxPhone < 0) {
+        throw new Error('CSV must include at least name and phone columns.')
+      }
+
+      const rows: Array<Record<string, any>> = []
+
+      for (let i = 1; i < table.length; i++) {
+        const row = table[i]
+        if (!row || row.length === 0) continue
+
+        const name = (row[idxName] || '').trim()
+        const phone = (row[idxPhone] || '').trim()
+        if (!name || !phone) continue
+
+        const payload: Record<string, any> = { name, phone }
+
+        const email = idxEmail >= 0 ? (row[idxEmail] || '').trim() : ''
+        if (email) payload.email = email
+
+        let address = idxAddress >= 0 ? (row[idxAddress] || '').trim() : ''
+        if (!address) {
+          const parts = [idxStreet >= 0 ? row[idxStreet] : '', idxCity >= 0 ? row[idxCity] : '', idxState >= 0 ? row[idxState] : '', idxZip >= 0 ? row[idxZip] : '']
+            .map((part) => (part || '').trim())
+            .filter(Boolean)
+          address = parts.join(', ')
+        }
+        if (address) payload.address = address
+
+        const isOnCall = idxOnCall >= 0 ? parseBoolean(row[idxOnCall]) : undefined
+        if (typeof isOnCall === 'boolean') payload.isOnCall = isOnCall
+
+        const isActive = idxActive >= 0 ? parseBoolean(row[idxActive]) : undefined
+        if (typeof isActive === 'boolean') payload.isActive = isActive
+
+        const emergencyOnly = idxEmergency >= 0 ? parseBoolean(row[idxEmergency]) : undefined
+        if (typeof emergencyOnly === 'boolean') payload.emergencyOnly = emergencyOnly
+
+        if (idxPriority >= 0) {
+          const rawPriority = (row[idxPriority] || '').trim()
+          if (rawPriority) {
+            const parsed = parseInt(rawPriority, 10)
+            if (!Number.isNaN(parsed)) {
+              payload.priority = Math.min(100, Math.max(0, parsed))
+            }
+          }
+        }
+
+        rows.push(payload)
+      }
+
+      if (rows.length === 0) {
+        throw new Error('No technician rows found in CSV. Make sure name and phone columns are populated.')
+      }
+
+      const response = await fetch(`/api/projects/${projectId}/technicians/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows }),
+      })
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}))
+        throw new Error(errorBody.error || 'Import failed')
+      }
+
+      const result = await response.json()
+      await loadTechnicians()
+      alert(`Import complete: ${result.created || 0} added, ${result.updated || 0} updated, ${result.skipped || 0} skipped.`)
+    } catch (error: any) {
+      console.error('Technician import failed:', error)
+      alert(error.message || 'Failed to import technicians.')
+    } finally {
+      setImporting(false)
+      event.target.value = ''
+    }
+  }
+
   const exportTechnicians = () => {
     if (technicians.length === 0) {
       alert('No technicians to export')
@@ -184,11 +356,12 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
     }
 
     // Create CSV content
-    const headers = ['Name', 'Phone', 'Email', 'Status', 'On-Call', 'Priority']
+    const headers = ['Name', 'Phone', 'Email', 'Address', 'Status', 'On-Call', 'Priority']
     const rows = technicians.map(tech => [
       tech.name,
       tech.phone,
       tech.email || '',
+      tech.address || '',
       tech.isActive ? 'Active' : 'Inactive',
       tech.isOnCall ? 'Yes' : 'No',
       tech.priority.toString()
@@ -352,9 +525,29 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
                 variant="outline"
                 disabled={technicians.length === 0}
               >
-                <Download className="w-4 h-4 mr-2" />
+                <Upload className="w-4 h-4 mr-2" />
                 Export CSV
               </Button>
+              <Button
+                onClick={() => {
+                  if (importing) return
+                  fileInputRef.current?.click()
+                }}
+                size="sm"
+                variant="outline"
+                disabled={importing}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                {importing ? 'Importing...' : 'Import CSV'}
+              </Button>
+              <input
+                ref={fileInputRef}
+                id="tech-csv-import"
+                type="file"
+                accept=".csv"
+                onChange={handleImportCSV}
+                className="hidden"
+              />
               <Button onClick={() => setShowAddForm(!showAddForm)} size="sm">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Technician
@@ -367,7 +560,7 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
           {showAddForm && (
             <div className="p-4 border border-blue-200 bg-blue-50 rounded-lg space-y-3">
               <h4 className="font-semibold">Add New Technician</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div>
                   <Label htmlFor="newName">Name *</Label>
                   <Input
@@ -391,7 +584,17 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
                     placeholder="john@example.com"
                   />
                 </div>
+                <AddressAutocomplete
+                  value={newTech.address}
+                  onChange={(address) => setNewTech({ ...newTech, address })}
+                  label="Home/Base Address"
+                  placeholder="123 Main St, City, State"
+                  className="md:col-span-2 lg:col-span-3"
+                />
               </div>
+              <p className="text-xs text-gray-600 -mt-2">
+                The emergency dispatcher uses this address to route the closest on-call technician.
+              </p>
               <div className="flex gap-2">
                 <Button onClick={addTechnician} disabled={saving}>
                   {saving ? 'Adding...' : 'Add Technician'}
@@ -462,6 +665,12 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
                           {tech.phone}
                         </div>
                         {tech.email && <div className="ml-5">{tech.email}</div>}
+                        {tech.address && (
+                          <div className="flex items-center gap-2 ml-0">
+                            <MapPin className="w-3 h-3 text-gray-500" />
+                            <span>{tech.address}</span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="mt-3 flex flex-wrap gap-4">

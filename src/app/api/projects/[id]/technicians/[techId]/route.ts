@@ -21,6 +21,11 @@ export async function PUT(
       name: z.string().min(1).optional(),
       phone: z.string().min(7).optional(),
       email: z.string().email().optional().or(z.literal('').transform(() => undefined)),
+      address: z
+        .string()
+        .min(3)
+        .optional()
+        .or(z.literal('').transform(() => undefined)),
       isActive: z.boolean().optional(),
       isOnCall: z.boolean().optional(),
       emergencyOnly: z.boolean().optional(),
