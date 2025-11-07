@@ -4,13 +4,81 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { CreditCard, Check, ArrowRight } from 'lucide-react'
+import { CreditCard, Check, ArrowRight, Star } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { Badge } from '@/components/ui/badge'
+
+const PLANS = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    description: 'Perfect for solo operators',
+    price: 199,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
+    minutes: 300,
+    features: [
+      '300 AI minutes/month',
+      '1 phone number',
+      'OpenAI Realtime AI assistant',
+      'Auto-syncs business data',
+      'Cal.com integration',
+      'Email & SMS confirmations',
+      'Call transcripts',
+      'Smart reports & tracking',
+      '7-day pro-rated refund',
+    ],
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    description: 'For growing businesses',
+    price: 399,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
+    minutes: 800,
+    popular: true,
+    features: [
+      '800 AI minutes/month',
+      '1 phone number',
+      'OpenAI Realtime AI assistant',
+      'Auto-syncs business data',
+      'Cal.com integration',
+      'Email & SMS confirmations',
+      'Call transcripts',
+      'Smart reports & tracking',
+      'Priority support',
+      'Custom conversation scripts',
+      '7-day pro-rated refund',
+    ],
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    description: 'For high-volume operations',
+    price: 599,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ULTRA,
+    minutes: 1200,
+    features: [
+      '1,200 AI minutes/month',
+      '1 phone number',
+      'OpenAI Realtime AI assistant',
+      'Auto-syncs business data',
+      'Cal.com integration',
+      'Email & SMS confirmations',
+      'Call transcripts',
+      'Smart reports & tracking',
+      'Priority support',
+      'Custom conversation scripts',
+      'Dedicated account manager',
+      '7-day pro-rated refund',
+    ],
+  },
+]
 
 export default function PaymentRequiredPage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState<string | null>(null)
   const [checkingStatus, setCheckingStatus] = useState(true)
+  const [selectedPlan, setSelectedPlan] = useState('pro')
 
   useEffect(() => {
     // Check if user has already paid
@@ -35,13 +103,15 @@ export default function PaymentRequiredPage() {
     }
   }
 
-  const handleCheckout = async () => {
-    setLoading(true)
+  const handleCheckout = async (planId: string, priceId: string) => {
+    setLoading(planId)
     try {
-      // Create Stripe checkout session for setup fee
+      // Create Stripe checkout session for setup fee + subscription
       const res = await fetch('/api/stripe/create-setup-checkout', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        body: JSON.stringify({ priceId }),
       })
 
       if (!res.ok) {
@@ -54,7 +124,7 @@ export default function PaymentRequiredPage() {
       window.location.href = data.url
     } catch (error: any) {
       alert(error.message || 'Failed to start checkout')
-      setLoading(false)
+      setLoading(null)
     }
   }
 
@@ -67,75 +137,99 @@ export default function PaymentRequiredPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
-      <Card className="max-w-2xl w-full">
-        <CardHeader className="text-center">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4 py-12">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
           <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
             <CreditCard className="w-8 h-8 text-blue-600" />
           </div>
-          <CardTitle className="text-3xl">One-Time Setup Fee</CardTitle>
-          <CardDescription className="text-lg mt-2">
-            Complete your AfterHourFix setup to start taking after-hours calls
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Pricing */}
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg p-8 text-center">
-            <div className="text-5xl font-bold mb-2">$299</div>
-            <div className="text-blue-100">One-time setup fee</div>
-            <div className="text-sm text-blue-200 mt-2">Then choose your monthly plan</div>
-          </div>
+          <h1 className="text-4xl font-bold mb-3">Complete Your Setup</h1>
+          <p className="text-xl text-gray-600 mb-6">
+            $299 one-time setup fee + choose your monthly plan
+          </p>
+        </div>
 
-          {/* What's Included */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-lg">What's Included:</h3>
-            <ul className="space-y-2">
-              {[
-                'AI receptionist configured for your business',
-                'Cal.com calendar integration',
-                'Custom pricing & service setup',
-                'Business hours configuration',
-                'Emergency routing setup',
-                'SMS & email notifications',
-                'Complete dashboard access',
-              ].map((item, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+        {/* Plans */}
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
+          {PLANS.map((plan) => (
+            <Card
+              key={plan.id}
+              className={`relative ${
+                plan.popular ? 'border-blue-500 border-2 shadow-xl' : ''
+              }`}
+            >
+              {plan.popular && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <Badge className="bg-blue-500 text-white px-4 py-1">
+                    <Star className="w-3 h-3 mr-1" />
+                    Most Popular
+                  </Badge>
+                </div>
+              )}
+              <CardHeader>
+                <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                <CardDescription>{plan.description}</CardDescription>
+                <div className="mt-4">
+                  <div className="text-4xl font-bold">${plan.price}</div>
+                  <div className="text-gray-500">/month</div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3 mb-6">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  onClick={() => handleCheckout(plan.id, plan.priceId!)}
+                  disabled={loading !== null}
+                  className="w-full"
+                  variant={plan.popular ? 'default' : 'outline'}
+                >
+                  {loading === plan.id ? (
+                    'Processing...'
+                  ) : (
+                    <>
+                      Get Started
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-          {/* CTA */}
-          <Button
-            onClick={handleCheckout}
-            disabled={loading}
-            size="lg"
-            className="w-full text-lg py-6"
-          >
-            {loading ? (
-              'Redirecting to checkout...'
-            ) : (
-              <>
-                Pay Setup Fee & Get Started
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </>
-            )}
-          </Button>
-
-          {/* Footer */}
-          <div className="text-center text-sm text-gray-500 space-y-2">
-            <p>Secure payment powered by Stripe</p>
-            <p>
-              Questions?{' '}
-              <Link href="/contact" className="text-blue-600 hover:underline">
-                Contact us
-              </Link>
-            </p>
+        {/* Setup Fee Notice */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+          <h3 className="font-semibold text-lg mb-2">What's Included in Setup ($299)</h3>
+          <div className="grid md:grid-cols-4 gap-4 text-sm text-gray-700">
+            <div>✓ AI receptionist configured</div>
+            <div>✓ Cal.com integration</div>
+            <div>✓ Custom pricing setup</div>
+            <div>✓ Business hours config</div>
+            <div>✓ Emergency routing</div>
+            <div>✓ SMS & email notifications</div>
+            <div>✓ Complete dashboard access</div>
+            <div>✓ Dedicated onboarding</div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center text-sm text-gray-500 mt-8 space-y-2">
+          <p>Secure payment powered by Stripe • 7-day pro-rated refund policy</p>
+          <p>
+            Questions?{' '}
+            <Link href="/contact" className="text-blue-600 hover:underline">
+              Contact us
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
