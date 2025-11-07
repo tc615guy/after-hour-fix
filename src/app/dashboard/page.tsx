@@ -90,6 +90,16 @@ export default function DashboardPage() {
         setLoading(false)
         return
       }
+      
+      const data = await res.json()
+      
+      // Check if user needs to pay setup fee
+      if (data.user?.setupFee !== 'paid') {
+        console.log('[Dashboard] Setup fee not paid, redirecting to payment')
+        router.push('/payment-required')
+        return
+      }
+      
       setIsAuthenticated(true)
       await loadProjects()
     } catch (error) {

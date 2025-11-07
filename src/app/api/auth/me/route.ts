@@ -6,14 +6,14 @@ import { prisma } from '@/lib/db'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-// Whitelist of allowed emails for beta access
-const ALLOWED_EMAILS = [
+// Free access emails (don't need to pay)
+const FREE_ACCESS_EMAILS = [
   'josh.lanius@gmail.com',
   'joshlanius@yahoo.com',
   'thundercatcrypto@gmail.com',
 ]
 
-// Admin emails (subset of allowed emails)
+// Admin emails
 const ADMIN_EMAILS = [
   'josh.lanius@gmail.com',
   'joshlanius@yahoo.com',
@@ -43,14 +43,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
     }
 
-    // Check if email is whitelisted (server-side security check)
     const normalizedEmail = supabaseUser.email?.toLowerCase().trim()
-    if (!normalizedEmail || !ALLOWED_EMAILS.includes(normalizedEmail)) {
-      console.log('[/api/auth/me] Email not whitelisted:', normalizedEmail)
-      return NextResponse.json({ 
-        error: 'Access denied. AfterHourFix is currently in private beta.' 
-      }, { status: 403 })
-    }
 
     // Get or create user in Prisma
     // First try to find by Supabase ID
@@ -79,8 +72,9 @@ export async function GET() {
         // User doesn't exist at all - create new
         console.log('[/api/auth/me] Creating new user in Prisma:', supabaseUser.email)
         
-        // Determine role based on admin list
+        // Determine role and payment status
         const isAdmin = ADMIN_EMAILS.includes(normalizedEmail!)
+        const hasFreeAccess = FREE_ACCESS_EMAILS.includes(normalizedEmail!)
         const role = isAdmin ? 'admin' : 'user'
         
         user = await prisma.user.create({
@@ -88,10 +82,11 @@ export async function GET() {
             id: supabaseUser.id,
             email: supabaseUser.email!,
             name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
-            role: role
+            role: role,
+            setupFee: hasFreeAccess ? 'paid' : 'unpaid' // Free access users marked as paid
           }
         })
-        console.log('[/api/auth/me] User created successfully:', user.id, 'Role:', role)
+        console.log('[/api/auth/me] User created:', user.id, 'Role:', role, 'SetupFee:', user.setupFee)
       }
     }
 
@@ -100,7 +95,8 @@ export async function GET() {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        setupFee: user.setupFee
       }
     })
   } catch (e: any) {
