@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Trash2, Phone, AlertCircle, CheckCircle2, Clock, Download, Upload } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
 
 interface Technician {
   id: string
@@ -33,6 +34,8 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
+  const [selectedTechs, setSelectedTechs] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     loadTechnicians()
@@ -107,9 +110,71 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
       if (!res.ok) throw new Error('Failed to delete technician')
 
       setTechnicians(technicians.filter((t) => t.id !== id))
+      setSelectedTechs(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
     } catch (error: any) {
       alert(error.message)
     }
+  }
+
+  const deleteSelectedTechnicians = async () => {
+    if (selectedTechs.size === 0) return
+    
+    const count = selectedTechs.size
+    if (!window.confirm(`Delete ${count} selected technician${count > 1 ? 's' : ''}? This cannot be undone.`)) return
+
+    try {
+      setDeleting(true)
+      const ids = Array.from(selectedTechs)
+      
+      // Delete each technician
+      const results = await Promise.allSettled(
+        ids.map(id =>
+          fetch(`/api/projects/${projectId}/technicians/${id}`, {
+            method: 'DELETE',
+          })
+        )
+      )
+
+      // Check for failures
+      const failures = results.filter(r => r.status === 'rejected').length
+      if (failures > 0) {
+        alert(`${failures} technician(s) failed to delete. Please try again.`)
+      }
+
+      // Reload technicians to get fresh list
+      await loadTechnicians()
+      setSelectedTechs(new Set())
+    } catch (error: any) {
+      alert(error.message)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedTechs.size === technicians.length) {
+      // Deselect all
+      setSelectedTechs(new Set())
+    } else {
+      // Select all
+      setSelectedTechs(new Set(technicians.map(t => t.id)))
+    }
+  }
+
+  const toggleSelectTech = (id: string) => {
+    setSelectedTechs(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
   }
 
   const exportTechnicians = () => {
@@ -270,6 +335,17 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
               <CardDescription>Manage your team and on-call status</CardDescription>
             </div>
             <div className="flex gap-2">
+              {selectedTechs.size > 0 && (
+                <Button
+                  onClick={deleteSelectedTechnicians}
+                  size="sm"
+                  variant="destructive"
+                  disabled={deleting}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {deleting ? 'Deleting...' : `Delete Selected (${selectedTechs.size})`}
+                </Button>
+              )}
               <Button
                 onClick={exportTechnicians}
                 size="sm"
@@ -334,14 +410,38 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
             </div>
           ) : (
             <div className="space-y-3">
+              {/* Select All Header */}
+              <div className="flex items-center gap-2 p-3 bg-gray-50 border rounded-lg">
+                <Checkbox
+                  id="select-all"
+                  checked={technicians.length > 0 && selectedTechs.size === technicians.length}
+                  onCheckedChange={toggleSelectAll}
+                />
+                <Label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
+                  Select All ({technicians.length})
+                </Label>
+                {selectedTechs.size > 0 && (
+                  <span className="text-xs text-gray-500 ml-2">
+                    {selectedTechs.size} selected
+                  </span>
+                )}
+              </div>
+
               {technicians.map((tech) => (
                 <div
                   key={tech.id}
                   className={`p-4 border rounded-lg ${
                     tech.isOnCall ? 'border-green-500 bg-green-50' : 'border-gray-200'
-                  }`}
+                  } ${selectedTechs.has(tech.id) ? 'ring-2 ring-blue-500' : ''}`}
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="pt-1">
+                      <Checkbox
+                        id={`select-${tech.id}`}
+                        checked={selectedTechs.has(tech.id)}
+                        onCheckedChange={() => toggleSelectTech(tech.id)}
+                      />
+                    </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h4 className="font-semibold">{tech.name}</h4>
