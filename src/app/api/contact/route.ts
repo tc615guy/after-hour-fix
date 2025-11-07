@@ -22,11 +22,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Send email using Postmark API
+    // Use noreply@ as sender (must be verified in Postmark), set Reply-To to customer
     const emailPayload = {
-      From: 'support@afterhourfix.com',
+      From: 'noreply@afterhourfix.com',
       To: 'support@afterhourfix.com',
       ReplyTo: email,
-      Subject: `Contact Form Submission from ${name}`,
+      Subject: `Contact Form: ${name}${company ? ` - ${company}` : ''}`,
       TextBody: `
 New contact form submission from AfterHourFix website:
 
