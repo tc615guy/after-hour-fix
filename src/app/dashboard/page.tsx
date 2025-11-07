@@ -1174,14 +1174,14 @@ export default function DashboardPage() {
                 
                 {/* Import/Export - Compact */}
                 <div className="hidden md:flex items-center gap-1 border rounded-md p-1 bg-gray-50">
-                  <Button size="sm" variant="ghost" className="h-7 px-2" onClick={exportCsv} title="Export CSV">
+                  <Button size="sm" variant="ghost" className="h-7 px-2" onClick={handleExportCSV} title="Export CSV">
                     <Download className="w-4 h-4" />
                   </Button>
                   <label className="cursor-pointer">
-                    <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => document.getElementById('csv-upload')?.click()} title="Import CSV">
+                    <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => document.getElementById('csv-import-preview')?.click()} title="Import CSV">
                       <Upload className="w-4 h-4" />
                     </Button>
-                    <input type="file" id="csv-upload" className="hidden" accept=".csv" onChange={handleCsvUpload} />
+                    <input type="file" id="csv-import-preview" className="hidden" accept=".csv" onChange={handleImportCSVPreview} />
                   </label>
                 </div>
                 
