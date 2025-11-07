@@ -14,27 +14,31 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const postmarkApiKey = process.env.POSTMARK_API_KEY || process.env.POSTMARK_API_TOKEN
+    const resendApiKey = process.env.RESEND_API_KEY
 
-    if (!postmarkApiKey) {
-      console.error('[Contact Form] POSTMARK_API_KEY not configured in environment')
+    if (!resendApiKey) {
+      console.error('[Contact Form] RESEND_API_KEY not configured in environment')
       return NextResponse.json(
         { error: 'Email service not configured. Please contact support@afterhourfix.com directly.' },
         { status: 503 }
       )
     }
 
-    console.log('[Contact Form] Postmark API key found, preparing email...')
+    const toAddress = process.env.CONTACT_FORM_TO_EMAIL || 'support@afterhourfix.com'
+    const forwardList = toAddress.split(',').map((addr) => addr.trim()).filter(Boolean)
 
-    // Send email using Postmark API
-    // Use support@ as sender (verified in Postmark), set Reply-To to customer
-    // TEMP: Sending to joshlanius@yahoo.com for testing (GoDaddy email issues)
-    const emailPayload = {
-      From: 'support@afterhourfix.com',
-      To: 'joshlanius@yahoo.com',
-      ReplyTo: email,
-      Subject: `Contact Form: ${name}${company ? ` - ${company}` : ''}`,
-      TextBody: `
+    if (forwardList.length === 0) {
+      console.error('[Contact Form] CONTACT_FORM_TO_EMAIL produced no valid recipients')
+      return NextResponse.json(
+        { error: 'Email service not configured. Please contact support@afterhourfix.com directly.' },
+        { status: 503 }
+      )
+    }
+
+    console.log('[Contact Form] Resend API key found, preparing email...', { to: forwardList })
+
+    const subject = `Contact Form: ${name}${company ? ` - ${company}` : ''}`
+    const textBody = `
 New contact form submission from AfterHourFix website:
 
 Name: ${name}
@@ -46,8 +50,9 @@ ${message}
 
 ---
 Reply directly to this email to respond to ${name}.
-      `.trim(),
-      HtmlBody: `
+    `.trim()
+
+    const htmlBody = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -76,44 +81,40 @@ Reply directly to this email to respond to ${name}.
   </div>
 </body>
 </html>
-      `.trim(),
-    }
+    `.trim()
 
-    console.log('[Contact Form] Sending to Postmark API...')
-    const postmarkResponse = await fetch('https://api.postmarkapp.com/email', {
+    const resendResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Postmark-Server-Token': postmarkApiKey,
-        'Accept': 'application/json',
+        Authorization: `Bearer ${resendApiKey}`,
       },
-      body: JSON.stringify(emailPayload),
+      body: JSON.stringify({
+        from: 'AfterHourFix Support <support@afterhourfix.com>',
+        to: forwardList,
+        reply_to: email,
+        subject,
+        html: htmlBody,
+        text: textBody,
+      }),
     })
 
-    console.log('[Contact Form] Postmark response status:', postmarkResponse.status)
+    console.log('[Contact Form] Resend response status:', resendResponse.status)
 
-    if (!postmarkResponse.ok) {
-      const errorData = await postmarkResponse.json().catch(() => ({}))
-      console.error('[Contact Form] Postmark API error:', {
-        status: postmarkResponse.status,
-        statusText: postmarkResponse.statusText,
-        errorData
+    if (!resendResponse.ok) {
+      const errorData = await resendResponse.json().catch(() => ({}))
+      console.error('[Contact Form] Resend API error:', {
+        status: resendResponse.status,
+        statusText: resendResponse.statusText,
+        errorData,
       })
-      
-      // Provide specific error messages based on Postmark error codes
-      if (errorData.ErrorCode === 300) {
-        throw new Error('Invalid email template. Please contact support.')
-      } else if (errorData.ErrorCode === 400) {
-        throw new Error('Sender email not verified. Please contact support.')
-      } else if (errorData.ErrorCode === 401) {
-        throw new Error('Email service authentication failed. Please contact support.')
-      } else {
-        throw new Error(errorData.Message || 'Failed to send email. Please try again or contact support@afterhourfix.com')
-      }
+
+      const messageDetail = errorData?.message || errorData?.error || 'Failed to send email. Please try again or contact support@afterhourfix.com'
+      throw new Error(messageDetail)
     }
 
-    const postmarkData = await postmarkResponse.json()
-    console.log('[Contact Form] Email sent successfully. MessageID:', postmarkData.MessageID)
+    const resendData = await resendResponse.json().catch(() => ({}))
+    console.log('[Contact Form] Email sent successfully via Resend:', resendData?.id || 'no-id')
 
     return NextResponse.json({
       success: true,
@@ -123,7 +124,7 @@ Reply directly to this email to respond to ${name}.
     console.error('[Contact Form] Caught error:', {
       name: error.name,
       message: error.message,
-      stack: error.stack
+      stack: error.stack,
     })
     return NextResponse.json(
       { error: error.message || 'Failed to send message. Please try again or contact support@afterhourfix.com directly.' },
