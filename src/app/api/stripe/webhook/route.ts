@@ -82,7 +82,11 @@ export async function POST(req: NextRequest) {
           await prisma.eventLog.create({
             data: {
               type: 'setup_with_subscription.completed',
-              payload: { userId, sessionId: session.id, subscriptionId: session.subscription },
+              payload: { 
+                userId, 
+                sessionId: session.id, 
+                subscriptionId: typeof session.subscription === 'string' ? session.subscription : session.subscription?.id || null 
+              },
             },
           })
           break
