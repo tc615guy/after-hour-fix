@@ -35,7 +35,15 @@ export async function GET(req: NextRequest) {
       const totalBookings = project.bookings.length
       const bookingConversionRate = totalCalls > 0 ? (totalBookings / totalCalls) * 100 : 0
 
-      const aiMinutesUsed = project.agents.reduce((sum, agent) => sum + agent.minutesThisPeriod, 0)
+      // CRITICAL FIX: Calculate AI minutes from Call table, not agent.minutesThisPeriod
+      const projectCalls = await prisma.call.findMany({
+        where: { projectId: project.id, deletedAt: null },
+        select: { durationSec: true },
+      })
+      const totalSeconds = projectCalls
+        .filter(c => c.durationSec !== null && c.durationSec !== undefined)
+        .reduce((sum, c) => sum + c.durationSec!, 0)
+      const aiMinutesUsed = Math.ceil(totalSeconds / 60)
 
       // Determine plan cap based on active subscription
       const sub = await prisma.subscription.findFirst({
