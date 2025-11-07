@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { QueryMode } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { requireSession, ensureProjectAccess, rateLimit, captureException } from '@/lib/api-guard'
 import { audit } from '@/lib/audit'
@@ -78,7 +78,7 @@ export async function POST(
                     {
                       email: {
                         equals: parsed.email,
-                        mode: QueryMode.insensitive,
+                        mode: Prisma.QueryMode.insensitive,
                       },
                     },
                   ]
