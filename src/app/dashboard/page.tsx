@@ -1132,64 +1132,86 @@ export default function DashboardPage() {
                   🗑️ Clear All
                 </Button>
                 <div className="border-l mx-1"></div>
-                <div className="hidden md:flex items-center gap-2 mr-2">
-                  <label className="text-xs text-gray-600">From</label>
+                {/* View Switcher - Compact */}
+                <div className="hidden md:flex items-center gap-1 border rounded-md p-1 bg-gray-50">
+                  <Button
+                    variant={view === 'list' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={() => setView('list')}
+                    title="List View"
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={view === 'calendar' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={() => setView('calendar')}
+                    title="Month View"
+                  >
+                    <CalendarIcon className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={view === 'daily' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={() => setView('daily')}
+                    title="Daily View"
+                  >
+                    <Clock className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={view === 'gaps' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={() => setView('gaps')}
+                    title="Smart Schedule"
+                  >
+                    <Users className="w-4 h-4" />
+                  </Button>
+                </div>
+                
+                {/* Import/Export - Compact */}
+                <div className="hidden md:flex items-center gap-1 border rounded-md p-1 bg-gray-50">
+                  <Button size="sm" variant="ghost" className="h-7 px-2" onClick={exportCsv} title="Export CSV">
+                    <Download className="w-4 h-4" />
+                  </Button>
+                  <label className="cursor-pointer">
+                    <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => document.getElementById('csv-upload')?.click()} title="Import CSV">
+                      <Upload className="w-4 h-4" />
+                    </Button>
+                    <input type="file" id="csv-upload" className="hidden" accept=".csv" onChange={handleCsvUpload} />
+                  </label>
+                </div>
+                
+                {/* Date Range & Filters */}
+                <div className="hidden md:flex items-center gap-2 text-xs">
                   <input
                     type="date"
-                    className="border rounded px-2 py-1 text-sm"
+                    className="border rounded px-2 py-1.5 text-xs"
                     value={rangeFrom}
                     onChange={(e) => setRangeFrom(e.target.value)}
+                    placeholder="From"
                   />
-                  <label className="text-xs text-gray-600">To</label>
+                  <span className="text-gray-400">→</span>
                   <input
                     type="date"
-                    className="border rounded px-2 py-1 text-sm"
+                    className="border rounded px-2 py-1.5 text-xs"
                     value={rangeTo}
                     onChange={(e) => setRangeTo(e.target.value)}
+                    placeholder="To"
                   />
-                  <label className="text-xs text-gray-600">Source</label>
                   <select
-                    className="border rounded px-2 py-1 text-sm"
+                    className="border rounded px-2 py-1.5 text-xs bg-white"
                     value={exportSource}
                     onChange={(e) => setExportSource(e.target.value as any)}
-                    title="Choose jobs to export"
+                    title="Export source filter"
                   >
-                    <option value="all">All jobs</option>
-                    <option value="ahf">AfterHourFix jobs only</option>
+                    <option value="all">All Jobs</option>
+                    <option value="ahf">AfterHourFix Only</option>
                   </select>
                 </div>
-                <Button
-                  variant={view === 'list' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setView('list')}
-                >
-                  <List className="w-4 h-4 mr-2" />
-                  List
-                </Button>
-                <Button
-                  variant={view === 'calendar' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setView('calendar')}
-                >
-                  <CalendarIcon className="w-4 h-4 mr-2" />
-                  Month
-                </Button>
-                <Button
-                  variant={view === 'daily' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setView('daily')}
-                >
-                  <Clock className="w-4 h-4 mr-2" />
-                  Daily
-                </Button>
-                <Button
-                  variant={view === 'gaps' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setView('gaps')}
-                >
-                  <Users className="w-4 h-4 mr-2" />
-                  Smart Schedule
-                </Button>
               </div>
               {/* Mobile actions */}
               <div className="flex md:hidden gap-2">
