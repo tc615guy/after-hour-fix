@@ -27,9 +27,9 @@ export async function POST(req: NextRequest) {
     console.log('[Contact Form] Postmark API key found, preparing email...')
 
     // Send email using Postmark API
-    // Use noreply@ as sender (must be verified in Postmark), set Reply-To to customer
+    // Use support@ as sender (verified in Postmark), set Reply-To to customer
     const emailPayload = {
-      From: 'noreply@afterhourfix.com',
+      From: 'support@afterhourfix.com',
       To: 'support@afterhourfix.com',
       ReplyTo: email,
       Subject: `Contact Form: ${name}${company ? ` - ${company}` : ''}`,
