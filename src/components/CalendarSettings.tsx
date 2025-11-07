@@ -110,27 +110,31 @@ export default function CalendarSettings({ projectId }: Props) {
     
     try {
       setLoading(true)
-      const res = await fetch(`/api/projects/${projectId}`, {
-        method: 'PUT',
+      const res = await fetch('/api/calcom/disconnect', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          calcomApiKey: null,
-          calcomAccessToken: null,
-          calcomRefreshToken: null,
-          calcomTokenExpiry: null,
-          calcomEventTypeId: null,
-          calcomUserId: null,
-          calcomUser: null,
-          calcomConnectedAt: null,
-        }),
+        body: JSON.stringify({ projectId }),
       })
-      if (!res.ok) throw new Error('Failed to disconnect')
+      
+      const data = await res.json()
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to disconnect')
+      }
+      
+      // Update UI state
       setConnected(false)
       setUsername(null)
       setConnectionStatus(null)
-      alert('Disconnected successfully')
+      setCalApiKey('') // Clear the input field too
+      
+      alert('✅ Cal.com disconnected successfully! You can now reconnect with a new API key.')
+      
+      // Reload the page to ensure everything is fresh
+      window.location.reload()
     } catch (e: any) {
-      alert(e.message)
+      console.error('Disconnect error:', e)
+      alert(`Failed to disconnect: ${e.message}`)
     } finally {
       setLoading(false)
     }
