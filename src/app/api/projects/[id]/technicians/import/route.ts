@@ -87,34 +87,41 @@ export async function POST(
           },
         })
 
-        const data: Record<string, any> = {
+        const baseData = {
           name: parsed.name,
           phone: normalizedPhone,
+          email: parsed.email,
+          address: parsed.address,
         }
 
-        if (parsed.email) data.email = parsed.email
-        if (parsed.address) data.address = parsed.address
-        if (typeof parsed.isOnCall === 'boolean') data.isOnCall = parsed.isOnCall
-        if (typeof parsed.isActive === 'boolean') data.isActive = parsed.isActive
-        if (typeof parsed.emergencyOnly === 'boolean') data.emergencyOnly = parsed.emergencyOnly
-        if (typeof parsed.priority === 'number') data.priority = parsed.priority
+        const stateData: Record<string, any> = {}
+        if (typeof parsed.isOnCall === 'boolean') stateData.isOnCall = parsed.isOnCall
+        if (typeof parsed.isActive === 'boolean') stateData.isActive = parsed.isActive
+        if (typeof parsed.emergencyOnly === 'boolean') stateData.emergencyOnly = parsed.emergencyOnly
+        if (typeof parsed.priority === 'number') stateData.priority = parsed.priority
 
         if (match) {
-          await prisma.technician.update({ where: { id: match.id }, data })
-          await audit({ projectId, type: 'technician.import.update', payload: { id: match.id, data } })
+          await prisma.technician.update({
+            where: { id: match.id },
+            data: {
+              ...baseData,
+              ...stateData,
+            },
+          })
+          await audit({ projectId, type: 'technician.import.update', payload: { id: match.id, data: { ...baseData, ...stateData } } })
           updated++
         } else {
           const technician = await prisma.technician.create({
             data: {
               projectId,
-              ...data,
-              isActive: data.isActive ?? true,
-              isOnCall: data.isOnCall ?? false,
-              emergencyOnly: data.emergencyOnly ?? false,
-              priority: data.priority ?? 0,
+              ...baseData,
+              isActive: typeof stateData.isActive === 'boolean' ? stateData.isActive : true,
+              isOnCall: typeof stateData.isOnCall === 'boolean' ? stateData.isOnCall : false,
+              emergencyOnly: typeof stateData.emergencyOnly === 'boolean' ? stateData.emergencyOnly : false,
+              priority: typeof stateData.priority === 'number' ? stateData.priority : 0,
             },
           })
-          await audit({ projectId, type: 'technician.import.create', payload: { id: technician.id, name: data.name } })
+          await audit({ projectId, type: 'technician.import.create', payload: { id: technician.id, name: baseData.name } })
           created++
         }
       } catch (error: any) {
