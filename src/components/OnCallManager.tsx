@@ -251,13 +251,23 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
       const header = table[0]
       const normalizedHeader = header.map((h) => normalizeKey(h))
 
-      const findIndex = (...candidates: string[]) => {
-        for (const candidate of candidates) {
-          const idx = normalizedHeader.indexOf(normalizeKey(candidate))
-          if (idx >= 0) return idx
+  const findIndex = (...candidates: string[]) => {
+    for (const candidate of candidates) {
+      const normalizedCandidate = normalizeKey(candidate)
+      for (let i = 0; i < normalizedHeader.length; i++) {
+        const headerValue = normalizedHeader[i]
+        if (!headerValue) continue
+        if (
+          headerValue === normalizedCandidate ||
+          headerValue.includes(normalizedCandidate) ||
+          normalizedCandidate.includes(headerValue)
+        ) {
+          return i
         }
-        return -1
       }
+    }
+    return -1
+  }
 
       const idxName = findIndex('name', 'technician', 'tech', 'fullname', 'employee', 'technicianname')
       const idxPhone = findIndex('phone', 'phonenumber', 'mobile', 'cell', 'contactnumber')
