@@ -277,7 +277,7 @@ export default function OnCallManager({ projectId }: OnCallManagerProps) {
       const idxCity = findIndex('city', 'town')
       const idxState = findIndex('state', 'region', 'province')
       const idxZip = findIndex('zip', 'zipcode', 'postal', 'postalcode')
-      const idxOnCall = findIndex('oncall', 'isoncall', 'oncallnow')
+      const idxOnCall = findIndex('oncall', 'isoncall', 'oncallnow', 'oncalltoday')
       const idxActive = findIndex('active', 'isactive', 'status')
       const idxEmergency = findIndex('emergencyonly', 'emergency', 'emergency_only')
       const idxPriority = findIndex('priority', 'rank', 'order')
