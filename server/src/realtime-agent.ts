@@ -907,6 +907,10 @@ For: **GAS LEAK**, **CARBON MONOXIDE**, **ELECTRICAL FIRE**, **BURST MAIN**, **S
    - service: "Emergency Service"
 4. System will auto-dispatch nearest on-call tech with ETA
 5. Say: "Got it. A technician will call you within minutes with their arrival time. Stay safe!"
+6. **IMPORTANT**: If customer asks for "something sooner" or complains about arrival time:
+   - Do NOT call get_slots again (you already dispatched the emergency)
+   - Say: "That's the soonest our nearest on-call tech can arrive based on their current location and drive time. They're being dispatched right now."
+   - If customer is concerned, reassure them: "They'll call you as soon as they're on the way."
 
 For regular emergencies (no heat, AC out), follow normal flow but book TODAY
 
