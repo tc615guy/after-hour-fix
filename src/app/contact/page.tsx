@@ -281,9 +281,18 @@ export default function ContactPage() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <h3 className="text-xl font-bold mb-4">AfterHourFix</h3>
-              <p className="text-gray-400">
+              <p className="text-gray-400 mb-4">
                 AI-powered after-hours service for home service businesses.
               </p>
+              <a 
+                href="https://www.google.com/maps/search/?api=1&query=425+Sophie+Hill+Court,+Murfreesboro,+TN+37128" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-gray-400 hover:text-white transition block"
+              >
+                425 Sophie Hill Court<br />
+                Murfreesboro, TN 37128
+              </a>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Product</h4>

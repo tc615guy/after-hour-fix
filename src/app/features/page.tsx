@@ -351,7 +351,16 @@ export default function FeaturesPage() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="text-white font-bold text-xl mb-4">AfterHourFix</div>
-              <p className="text-sm">AI receptionist for trade professionals.</p>
+              <p className="text-sm mb-4">AI receptionist for trade professionals.</p>
+              <a 
+                href="https://www.google.com/maps/search/?api=1&query=425+Sophie+Hill+Court,+Murfreesboro,+TN+37128" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm hover:text-white transition block"
+              >
+                425 Sophie Hill Court<br />
+                Murfreesboro, TN 37128
+              </a>
             </div>
             <div>
               <h4 className="text-white font-semibold mb-4">Product</h4>
