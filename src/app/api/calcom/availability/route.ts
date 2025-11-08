@@ -465,9 +465,11 @@ async function handleAvailabilityRequest(req: NextRequest) {
               }
               
               // CRITICAL: Determine tech's location at the start of this slot
-              // 1. Find the last booking BEFORE this slot
-              // 2. If found, use that booking's address (they'll be finishing up there)
-              // 3. If not found, use tech's home address
+              // BUSINESS HOURS LOGIC:
+              // 1. Find the last booking BEFORE this slot (with cleanup buffer)
+              // 2. If found: Tech is at that job location
+              // 3. If NOT found AND it's the first booking of the day (slot is in morning): Tech is at home
+              // 4. If NOT found AND it's during business hours (slot is afternoon/later): Skip this tech (no valid location)
               
               const CLEANUP_BUFFER_MIN = 20 // Time to wrap up and get ready for next job
               let techLocationAddress: string | null = null
@@ -482,9 +484,19 @@ async function handleAvailabilityRequest(req: NextRequest) {
                 techLocationAddress = lastBooking.address
                 console.log(`[Availability]   Tech ${techData.name}: at job site (${lastBooking.address})`)
               } else {
-                // Tech will be at home (no prior bookings)
-                techLocationAddress = techData.address
-                console.log(`[Availability]   Tech ${techData.name}: at home (${techData.address || 'no address'})`)
+                // No prior bookings - check if this is the first booking of the day
+                const slotDate = new Date(slotStart)
+                const slotHour = slotDate.getHours()
+                
+                // Only use home address if slot is in the morning (before 11 AM) - first job of day
+                if (slotHour < 11) {
+                  techLocationAddress = techData.address
+                  console.log(`[Availability]   Tech ${techData.name}: at home - first job of day (${techData.address || 'no address'})`)
+                } else {
+                  // During business hours with no prior bookings: Can't determine location, skip this tech
+                  console.log(`[Availability]   Tech ${techData.name}: SKIPPED - no prior bookings during business hours (can't determine location)`)
+                  techLocationAddress = null
+                }
               }
               
               // Calculate drive time from tech's location to customer
