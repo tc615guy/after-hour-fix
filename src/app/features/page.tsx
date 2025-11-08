@@ -169,6 +169,7 @@ export default function FeaturesPage() {
           <Link href="/" className="text-2xl font-bold text-blue-600">AfterHourFix</Link>
           <nav className="hidden md:flex gap-6">
             <Link href="/" className="text-sm hover:text-blue-600 transition">Home</Link>
+            <Link href="/why-us" className="text-sm hover:text-blue-600 transition">Why Us</Link>
             <Link href="/pricing" className="text-sm hover:text-blue-600 transition">Pricing</Link>
             <Link href="/faq" className="text-sm hover:text-blue-600 transition">FAQ</Link>
             <Link href="/contact" className="text-sm hover:text-blue-600 transition">Contact</Link>
@@ -366,6 +367,7 @@ export default function FeaturesPage() {
               <h4 className="text-white font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-sm">
                 <li><Link href="/features" className="hover:text-white transition">Features</Link></li>
+                <li><Link href="/why-us" className="hover:text-white transition">Why Us</Link></li>
                 <li><Link href="/pricing" className="hover:text-white transition">Pricing</Link></li>
                 <li><Link href="/faq" className="hover:text-white transition">FAQ</Link></li>
               </ul>

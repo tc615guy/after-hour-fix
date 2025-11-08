@@ -66,6 +66,7 @@ export default function ContactPage() {
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <Link href="/features" className="text-gray-600 hover:text-gray-900">Features</Link>
+              <Link href="/why-us" className="text-gray-600 hover:text-gray-900">Why Us</Link>
               <Link href="/pricing" className="text-gray-600 hover:text-gray-900">Pricing</Link>
               <Link href="/faq" className="text-gray-600 hover:text-gray-900">FAQ</Link>
               <Link href="/contact" className="text-blue-600 font-semibold">Contact</Link>
@@ -298,6 +299,7 @@ export default function ContactPage() {
               <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-gray-400">
                 <li><Link href="/features" className="hover:text-white">Features</Link></li>
+                <li><Link href="/why-us" className="hover:text-white">Why Us</Link></li>
                 <li><Link href="/pricing" className="hover:text-white">Pricing</Link></li>
                 <li><Link href="/faq" className="hover:text-white">FAQ</Link></li>
               </ul>

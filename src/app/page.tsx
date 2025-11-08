@@ -50,9 +50,9 @@ export default function HomePage() {
     offers: {
       '@type': 'AggregateOffer',
       priceCurrency: 'USD',
-      lowPrice: '149',
-      highPrice: '299',
-      offerCount: '2'
+      lowPrice: '249',
+      highPrice: '999',
+      offerCount: '3'
     },
     aggregateRating: {
       '@type': 'AggregateRating',
@@ -134,6 +134,7 @@ export default function HomePage() {
           <div className="text-2xl font-bold text-blue-600">AfterHourFix</div>
           <nav className="hidden md:flex gap-6">
             <Link href="/features" className="text-sm hover:text-blue-600 transition">Features</Link>
+            <Link href="/why-us" className="text-sm hover:text-blue-600 transition">Why Us</Link>
             <Link href="/pricing" className="text-sm hover:text-blue-600 transition">Pricing</Link>
             <Link href="/faq" className="text-sm hover:text-blue-600 transition">FAQ</Link>
             <Link href="/contact" className="text-sm hover:text-blue-600 transition">Contact</Link>
@@ -168,9 +169,12 @@ export default function HomePage() {
         <p className="text-sm text-blue-600 font-medium mb-8 max-w-2xl mx-auto">
           ✨ Intelligent call handling that works exactly how you want it—faster, smarter, and always reliable
         </p>
-        <div className="flex gap-4 justify-center">
+        <div className="flex gap-4 justify-center flex-wrap">
           <Link href="/auth/signup">
             <Button size="lg" className="text-lg px-8">Get Started</Button>
+          </Link>
+          <Link href="/why-us">
+            <Button size="lg" variant="secondary" className="text-lg px-8">Why AfterHourFix</Button>
           </Link>
           <Link href="/pricing">
             <Button size="lg" variant="outline" className="text-lg px-8">View Pricing</Button>
@@ -735,6 +739,7 @@ export default function HomePage() {
               <h4 className="text-white font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-sm">
                 <li><Link href="/features" className="hover:text-white transition">Features</Link></li>
+                <li><Link href="/why-us" className="hover:text-white transition">Why Us</Link></li>
                 <li><Link href="/pricing" className="hover:text-white transition">Pricing</Link></li>
                 <li><Link href="/faq" className="hover:text-white transition">FAQ</Link></li>
               </ul>
