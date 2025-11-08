@@ -2,6 +2,72 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { createCalComClient } from '@/lib/calcom'
 
+// SMART ROUTING: Geocoding and distance calculation utilities
+const googleApiKey = process.env.GOOGLE_MAPS_API_KEY
+
+// Haversine formula for calculating distance between two coordinates (in miles)
+function calculateDistance(
+  coord1: { lat: number; lng: number },
+  coord2: { lat: number; lng: number }
+): number {
+  const R = 3959 // Earth's radius in miles
+  const dLat = ((coord2.lat - coord1.lat) * Math.PI) / 180
+  const dLon = ((coord2.lng - coord1.lng) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((coord1.lat * Math.PI) / 180) *
+      Math.cos((coord2.lat * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+
+// Geocode an address to lat/lng coordinates
+async function geocodeAddress(addressStr: string): Promise<{ lat: number; lng: number } | null> {
+  if (!googleApiKey) return null
+  try {
+    const encoded = encodeURIComponent(addressStr)
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encoded}&key=${googleApiKey}`
+    const response = await fetch(url)
+    const data = await response.json()
+    if (data.status === 'OK' && data.results && data.results.length > 0) {
+      const location = data.results[0].geometry.location
+      return { lat: location.lat, lng: location.lng }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+// Get drive time between two addresses using Google Maps Distance Matrix API
+async function getDriveTime(origin: string, destination: string): Promise<number | null> {
+  if (!googleApiKey) return null
+  try {
+    const originEncoded = encodeURIComponent(origin)
+    const destEncoded = encodeURIComponent(destination)
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${originEncoded}&destinations=${destEncoded}&mode=driving&key=${googleApiKey}`
+    const response = await fetch(url)
+    const data = await response.json()
+    
+    if (data.status === 'OK' && 
+        data.rows && 
+        data.rows.length > 0 && 
+        data.rows[0].elements && 
+        data.rows[0].elements.length > 0 &&
+        data.rows[0].elements[0].status === 'OK') {
+      // Duration is in seconds, convert to minutes
+      const durationSeconds = data.rows[0].elements[0].duration.value
+      return Math.ceil(durationSeconds / 60) // Round up to nearest minute
+    }
+    return null
+  } catch (error) {
+    console.error('[Availability] Drive time calculation error:', error)
+    return null
+  }
+}
+
 /**
  * GET/POST /api/calcom/availability?projectId=...&start=ISO&end=ISO
  * Returns available time slots for the project's Cal.com event type
@@ -19,8 +85,9 @@ async function handleAvailabilityRequest(req: NextRequest) {
     const isEmergency = url.searchParams.get('isEmergency') === 'true'
     const durationMinutes = parseInt(url.searchParams.get('durationMinutes') || '60', 10) // Default 60 min
     const serviceType = url.searchParams.get('serviceType') || undefined
+    const customerAddress = url.searchParams.get('address') || undefined // SMART ROUTING: Customer address for proximity scoring
     
-    decisionTrace.push(`Query: projectId=${projectId}, start=${start}, end=${end}, emergency=${isEmergency}, duration=${durationMinutes}min, service=${serviceType || 'any'}`)
+    decisionTrace.push(`Query: projectId=${projectId}, start=${start}, end=${end}, emergency=${isEmergency}, duration=${durationMinutes}min, service=${serviceType || 'any'}, address=${customerAddress || 'none'}`)
     
     if (!projectId) return NextResponse.json({ error: 'Missing projectId' }, { status: 400 })
 
@@ -271,9 +338,17 @@ async function handleAvailabilityRequest(req: NextRequest) {
     // TRAVEL TIME BUFFER: Add 30 minutes between appointments for drive time
     const TRAVEL_BUFFER_MS = 30 * 60 * 1000 // 30 minutes
     
-    // Pre-merge each tech's busy intervals (sorted by start time)
-    const techAvailability: TechAvailability[] = technicians.map(tech => {
+    // SMART ROUTING: Enhanced tech availability with location tracking
+    type TechAvailabilityExtended = TechAvailability & {
+      address: string | null // Home address
+      bookingsWithAddress: Array<{ start: number; end: number; address: string }> // Bookings with service addresses
+    }
+    
+    // Pre-merge each tech's busy intervals (sorted by start time) + track booking locations
+    const techAvailability: TechAvailabilityExtended[] = technicians.map(tech => {
       const intervals: BusyInterval[] = []
+      const bookingsWithAddress: Array<{ start: number; end: number; address: string }> = []
+      
       for (const b of tech.bookings) {
         if (!b.slotStart) continue
         const bStart = new Date(b.slotStart).getTime()
@@ -296,7 +371,13 @@ async function handleAvailabilityRequest(req: NextRequest) {
         const bufferedEnd = bEnd + TRAVEL_BUFFER_MS
         
         intervals.push({ start: bStart, end: bufferedEnd })
+        
+        // SMART ROUTING: Track booking location for position calculation
+        if (b.address) {
+          bookingsWithAddress.push({ start: bStart, end: bEnd, address: b.address })
+        }
       }
+      
       // Merge overlapping intervals
       intervals.sort((a, b) => a.start - b.start)
       const merged: BusyInterval[] = []
@@ -307,11 +388,14 @@ async function handleAvailabilityRequest(req: NextRequest) {
           merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, interval.end)
         }
       }
+      
       return {
         id: tech.id,
         name: tech.name,
         priority: tech.priority || 0,
         busyIntervals: merged,
+        address: tech.address || null,
+        bookingsWithAddress: bookingsWithAddress.sort((a, b) => a.start - b.start),
       }
     })
     
@@ -362,30 +446,135 @@ async function handleAvailabilityRequest(req: NextRequest) {
       
       // If at least one tech is available, include this slot
       if (availableTechs.length > 0) {
-        // Sort candidates by priority (higher first), then by ID for consistency
-        availableTechs.sort((a, b) => {
-          if (b.priority !== a.priority) return b.priority - a.priority
-          return a.id.localeCompare(b.id)
-        })
-        
-        // TODO: Filter by serviceType/skills if provided
-        // For now, include all available techs
-        
-        // PROXIMITY SCORING: If we have an address, score candidates by proximity
-        // (This is optional - if no address provided, just use priority/load balancing)
-        const candidateAddress = req.headers.get('x-booking-address') || undefined
-        if (candidateAddress && availableTechs.length > 1) {
-          // Note: Proximity scoring requires geocoding, which is async
-          // For now, we'll keep priority-based sorting and add proximity as enhancement
-          // Full proximity scoring happens at booking time when we have the address
+        // SMART ROUTING: If customer address provided, calculate proximity scores
+        if (customerAddress && googleApiKey && availableTechs.length > 1) {
+          console.log(`[Availability] SMART ROUTING: Calculating proximity for slot ${slot.start}`)
+          
+          // Geocode customer address once
+          const customerCoords = await geocodeAddress(customerAddress)
+          
+          if (customerCoords) {
+            // Calculate proximity score for each available tech
+            const techsWithProximity: Array<{ id: string; priority: number; driveTimeMin: number | null; distance: number | null }> = []
+            
+            for (const techCandidate of availableTechs) {
+              const techData = techAvailability.find(t => t.id === techCandidate.id)
+              if (!techData) {
+                techsWithProximity.push({ ...techCandidate, driveTimeMin: null, distance: null })
+                continue
+              }
+              
+              // CRITICAL: Determine tech's location at the start of this slot
+              // 1. Find the last booking BEFORE this slot
+              // 2. If found, use that booking's address (they'll be finishing up there)
+              // 3. If not found, use tech's home address
+              
+              const CLEANUP_BUFFER_MIN = 20 // Time to wrap up and get ready for next job
+              let techLocationAddress: string | null = null
+              
+              // Find last booking before this slot (with cleanup buffer)
+              const slotStartWithBuffer = slotStart - (CLEANUP_BUFFER_MIN * 60 * 1000)
+              const previousBookings = techData.bookingsWithAddress.filter(b => b.end <= slotStartWithBuffer)
+              
+              if (previousBookings.length > 0) {
+                // Tech will be at their last job location
+                const lastBooking = previousBookings[previousBookings.length - 1]
+                techLocationAddress = lastBooking.address
+                console.log(`[Availability]   Tech ${techData.name}: at job site (${lastBooking.address})`)
+              } else {
+                // Tech will be at home (no prior bookings)
+                techLocationAddress = techData.address
+                console.log(`[Availability]   Tech ${techData.name}: at home (${techData.address || 'no address'})`)
+              }
+              
+              // Calculate drive time from tech's location to customer
+              let driveTimeMin: number | null = null
+              let distance: number | null = null
+              
+              if (techLocationAddress) {
+                // Try to get actual drive time from Google Maps
+                driveTimeMin = await getDriveTime(techLocationAddress, customerAddress)
+                
+                // If drive time fails, fall back to straight-line distance
+                if (!driveTimeMin) {
+                  const techCoords = await geocodeAddress(techLocationAddress)
+                  if (techCoords) {
+                    distance = calculateDistance(techCoords, customerCoords)
+                    // Estimate drive time: ~30 mph average in city (2 min per mile)
+                    driveTimeMin = Math.ceil(distance * 2)
+                  }
+                }
+                
+                console.log(`[Availability]     → Drive time: ${driveTimeMin || 'unknown'} min, Distance: ${distance?.toFixed(1) || 'unknown'} mi`)
+              }
+              
+              techsWithProximity.push({
+                id: techCandidate.id,
+                priority: techCandidate.priority,
+                driveTimeMin,
+                distance,
+              })
+            }
+            
+            // Sort by proximity (shortest drive time first), then priority, then ID
+            techsWithProximity.sort((a, b) => {
+              // Techs with known drive time come first
+              if (a.driveTimeMin !== null && b.driveTimeMin === null) return -1
+              if (a.driveTimeMin === null && b.driveTimeMin !== null) return 1
+              
+              // Both have drive time: sort by drive time (shortest first)
+              if (a.driveTimeMin !== null && b.driveTimeMin !== null) {
+                if (a.driveTimeMin !== b.driveTimeMin) return a.driveTimeMin - b.driveTimeMin
+              }
+              
+              // Fall back to priority
+              if (b.priority !== a.priority) return b.priority - a.priority
+              
+              // Finally, consistent ordering by ID
+              return a.id.localeCompare(b.id)
+            })
+            
+            console.log(`[Availability] SMART ROUTING: Sorted techs by proximity for slot ${slot.start}`)
+            techsWithProximity.forEach((t, i) => {
+              const techData = techAvailability.find(td => td.id === t.id)
+              console.log(`[Availability]   ${i + 1}. ${techData?.name}: ${t.driveTimeMin || '?'} min drive`)
+            })
+            
+            availableSlots.push({
+              start: slot.start,
+              end: slot.end || new Date(slotStart + requestedDurationMs).toISOString(),
+              capacity: techsWithProximity.length,
+              candidates: techsWithProximity.map(t => t.id), // Sorted by proximity!
+            })
+          } else {
+            // Geocoding failed, fall back to priority-based sorting
+            console.log(`[Availability] SMART ROUTING: Geocoding failed for ${customerAddress}, using priority`)
+            availableTechs.sort((a, b) => {
+              if (b.priority !== a.priority) return b.priority - a.priority
+              return a.id.localeCompare(b.id)
+            })
+            
+            availableSlots.push({
+              start: slot.start,
+              end: slot.end || new Date(slotStart + requestedDurationMs).toISOString(),
+              capacity: availableTechs.length,
+              candidates: availableTechs.map(t => t.id),
+            })
+          }
+        } else {
+          // No customer address or only one tech: use priority-based sorting
+          availableTechs.sort((a, b) => {
+            if (b.priority !== a.priority) return b.priority - a.priority
+            return a.id.localeCompare(b.id)
+          })
+          
+          availableSlots.push({
+            start: slot.start,
+            end: slot.end || new Date(slotStart + requestedDurationMs).toISOString(),
+            capacity: availableTechs.length,
+            candidates: availableTechs.map(t => t.id), // Sorted by priority
+          })
         }
-        
-        availableSlots.push({
-          start: slot.start,
-          end: slot.end || new Date(slotStart + requestedDurationMs).toISOString(),
-          capacity: availableTechs.length, // Number of available techs
-          candidates: availableTechs.map(t => t.id), // Sorted candidate IDs (priority-based)
-        })
       } else {
         decisionTrace.push(`Slot ${slot.start} filtered: no available technicians`)
       }

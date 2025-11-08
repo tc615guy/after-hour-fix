@@ -171,6 +171,7 @@ export class CallSessionManager {
                 const date = params.date // YYYY-MM-DD format
                 const timeOfDay = params.time_of_day || 'any' // morning/afternoon/evening/any
                 const durationMin = params.duration_min || 60
+                const customerAddress = params.address // SMART ROUTING: Customer address for proximity scoring
                 
                 // Convert date to ISO datetime range
                 let start: string | undefined
@@ -217,10 +218,11 @@ export class CallSessionManager {
                   ...(end && { end }),
                   ...(isEmergency && { isEmergency: 'true' }),
                   durationMinutes: durationMin.toString(),
+                  ...(customerAddress && { address: customerAddress }), // SMART ROUTING: Pass address for proximity scoring
                 })
                 
                 const url = `${appUrl}/api/calcom/availability?${urlParams.toString()}`
-                console.log(`[SessionManager] Calling get_slots: ${url} (date: ${date}, time_of_day: ${timeOfDay}, emergency: ${isEmergency}) [attempt ${attempt}/${maxRetries}]`)
+                console.log(`[SessionManager] Calling get_slots: ${url} (date: ${date}, time_of_day: ${timeOfDay}, emergency: ${isEmergency}, address: ${customerAddress || 'none'}) [attempt ${attempt}/${maxRetries}]`)
                 
                 const res = await fetch(url, {
                   signal: AbortSignal.timeout(10000), // 10 second timeout

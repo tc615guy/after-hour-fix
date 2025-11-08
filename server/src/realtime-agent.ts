@@ -959,7 +959,7 @@ ${aiSettings.customClosing ? `\n**CLOSING:** ${aiSettings.customClosing}` : ''}`
     return [
       {
         name: 'get_slots',
-        description: 'Get available booking time slots. ALWAYS call this BEFORE calling book_slot. Returns an available_times array with slots containing: "start" (ISO timestamp for booking), "displayTime" (human-readable time for speaking to customer). Use date (YYYY-MM-DD) and time_of_day (morning/afternoon/evening/any) to find slots.',
+        description: 'Get available booking time slots. ALWAYS call this BEFORE calling book_slot. Returns an available_times array with slots containing: "start" (ISO timestamp for booking), "displayTime" (human-readable time for speaking to customer). Use date (YYYY-MM-DD) and time_of_day (morning/afternoon/evening/any) to find slots. CRITICAL: Always include the customer address for smart routing (closest tech prioritized).',
         parameters: {
           type: 'object',
           properties: {
@@ -967,8 +967,9 @@ ${aiSettings.customClosing ? `\n**CLOSING:** ${aiSettings.customClosing}` : ''}`
             time_of_day: { type: 'string', enum: ['morning', 'afternoon', 'evening', 'any'], description: 'Preferred time of day. Morning = before 12pm, Afternoon = 12pm-5pm, Evening = after 5pm, Any = no preference' },
             duration_min: { type: 'number', description: 'Duration in minutes (default: 60)' },
             isEmergency: { type: 'boolean', description: 'Set true for emergency calls (no heat, burst pipe, flooding, etc.) to prioritize same-day availability and show ASAP slots' },
+            address: { type: 'string', description: 'Customer service address for smart routing. System will prioritize technicians closest to this location to minimize drive time and fuel costs.' },
           },
-          required: ['date', 'time_of_day'],
+          required: ['date', 'time_of_day', 'address'],
         },
       },
       {
