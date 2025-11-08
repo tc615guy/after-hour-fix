@@ -197,9 +197,9 @@ export async function POST(req: NextRequest) {
           tech = selectedTech.tech
           assignmentReason = selectedTech.reason
           
-          // Calculate estimated arrival time with 20-minute buffer + drive time
+          // Calculate estimated arrival time with 30-minute buffer + drive time
           if (selectedTech.driveTimeMin !== undefined) {
-            const PREP_BUFFER_MIN = 20 // 20 minutes for tech to get ready
+            const PREP_BUFFER_MIN = 30 // 30 minutes for tech to get ready (if at home)
             const totalMinutes = PREP_BUFFER_MIN + selectedTech.driveTimeMin
             const estimatedArrival = new Date(Date.now() + totalMinutes * 60 * 1000)
             const roundedSlot = roundToNext30MinSlot(estimatedArrival)
@@ -254,8 +254,8 @@ export async function POST(req: NextRequest) {
       } else if (slotStartIso) {
         slotStart = new Date(slotStartIso)
       } else {
-        // Fallback: current time + 20 min buffer, rounded to 30-min slot
-        const fallbackTime = new Date(Date.now() + 20 * 60 * 1000)
+        // Fallback: current time + 30 min buffer, rounded to 30-min slot
+        const fallbackTime = new Date(Date.now() + 30 * 60 * 1000)
         slotStart = roundToNext30MinSlot(fallbackTime)
       }
       

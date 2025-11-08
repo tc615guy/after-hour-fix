@@ -225,6 +225,51 @@ export async function POST(req: NextRequest) {
 
     const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000)
 
+    // EMERGENCY DISPATCH: Check for life-threatening emergencies (gas leak, etc.)
+    const isLifeThreateningEmergency = /(gas\s+leak|carbon\s+monoxide|electrical\s+fire|burst.*main|flooding|no\s+heat.*freeze)/i.test(input.notes || '')
+    if (isLifeThreateningEmergency) {
+      console.log('[BOOK] 🚨 LIFE-THREATENING EMERGENCY DETECTED - Triggering emergency dispatch')
+      
+      // Check if we have on-call techs
+      const hasOnCallTech = await prisma.technician.findFirst({
+        where: { projectId, isOnCall: true, isActive: true }
+      })
+      
+      if (hasOnCallTech) {
+        // Trigger emergency dispatch
+        try {
+          const dispatchResponse = await fetch(`${req.nextUrl.origin}/api/emergency/dispatch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              projectId,
+              customerName: input.customerName,
+              customerPhone: input.customerPhone,
+              address: input.address,
+              notes: input.notes,
+              slotStart: input.startTime,
+            })
+          })
+          
+          const dispatchResult = await dispatchResponse.json()
+          
+          if (dispatchResult.dispatched) {
+            console.log('[BOOK] ✅ Emergency dispatch successful')
+            return NextResponse.json({
+              result: dispatchResult.result || `Got it. This is urgent - I'm dispatching a technician to you right away. You'll get a call from them within minutes. Stay safe!`,
+              success: true,
+              dispatched: true,
+              bookingId: dispatchResult.bookingId
+            })
+          }
+          console.log('[BOOK] ⚠️ Emergency dispatch returned false - falling back to calendar booking')
+        } catch (dispatchError) {
+          console.error('[BOOK] ❌ Emergency dispatch failed:', dispatchError)
+          // Fall through to regular booking
+        }
+      }
+    }
+
     // DEDUPE: If an upcoming booking exists within 7 days for same phone, check if it's a reschedule request
     try {
       const phoneDigits = (input.customerPhone || '').replace(/\D/g, '')
