@@ -182,6 +182,16 @@ async function handleAvailabilityRequest(req: NextRequest) {
     })
     
     console.log(`[Cal.com Availability] After business hours filter: ${businessHoursFiltered.length} slots (from ${calcomSlots.length})`)
+    
+    // CRITICAL: Filter out slots that are in the past (for same-day bookings)
+    // Add a 5-minute buffer to account for processing time
+    const nowWithBuffer = new Date(now.getTime() + 5 * 60 * 1000) // 5 minutes from now
+    const futureOnlyFiltered = businessHoursFiltered.filter(slot => {
+      const slotTime = new Date(slot.start)
+      return slotTime > nowWithBuffer
+    })
+    
+    console.log(`[Cal.com Availability] After past-time filter: ${futureOnlyFiltered.length} slots (removed ${businessHoursFiltered.length - futureOnlyFiltered.length} past slots, cutoff: ${nowWithBuffer.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: tz })})`)
 
     // SMART ROUTING: Filter slots to only include those where at least one technician is available
     // Get all active technicians and their bookings that could overlap with our time range
@@ -336,7 +346,7 @@ async function handleAvailabilityRequest(req: NextRequest) {
     // Use requested duration (or default 60 min) instead of slot duration
     const requestedDurationMs = durationMinutes * 60 * 1000
     
-    for (const slot of businessHoursFiltered) {
+    for (const slot of futureOnlyFiltered) {
       // Use requested duration, not slot duration
       const slotStart = new Date(slot.start).getTime()
       const slotEnd = slot.end ? new Date(slot.end).getTime() : slotStart + requestedDurationMs
@@ -505,7 +515,7 @@ async function handleAvailabilityRequest(req: NextRequest) {
     // Observability fields
     _metrics: {
       responseTimeMs: responseTime,
-      slotsChecked: businessHoursFiltered.length,
+      slotsChecked: futureOnlyFiltered.length,
       slotsAvailable: availableSlots.length,
       techniciansChecked: technicians.length,
     },
