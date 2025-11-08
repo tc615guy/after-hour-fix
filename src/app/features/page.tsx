@@ -375,6 +375,7 @@ export default function FeaturesPage() {
               <ul className="space-y-2 text-sm">
                 <li><Link href="/privacy" className="hover:text-white transition">Privacy</Link></li>
                 <li><Link href="/terms" className="hover:text-white transition">Terms</Link></li>
+                <li><Link href="/opt-in" className="hover:text-white transition">SMS Opt-In</Link></li>
               </ul>
             </div>
             <div>

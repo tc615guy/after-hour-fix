@@ -308,6 +308,7 @@ export default function ContactPage() {
                 <li><Link href="/contact" className="hover:text-white">Contact</Link></li>
                 <li><Link href="/terms" className="hover:text-white">Terms</Link></li>
                 <li><Link href="/privacy" className="hover:text-white">Privacy</Link></li>
+                <li><Link href="/opt-in" className="hover:text-white">SMS Opt-In</Link></li>
               </ul>
             </div>
             <div>
