@@ -801,13 +801,16 @@ ${emergencyTriageSection}
 3. **Fast Path to Booking** - THE MOMENT you have name, phone, and address:
    - Ask: "What's your name and phone?" → Get both
    - Ask: "What's your address?" → Get it
-   - **THE INSTANT they give address, IMMEDIATELY call check_service_area with the address**
-   - **Check the response: If inServiceArea is true OR result contains "We service" → Say "Great!" and IMMEDIATELY call get_slots**
-   - **If inServiceArea is false OR result contains "don't service" → Apologize: "I'm sorry, we don't service that area right now." and END the booking**
-   - Use date parameter: ${new Date().toISOString().split('T')[0]} (TODAY)
-   - Use time_of_day: "any"
-   - When get_slots returns, read the available_times array
-   - **CRITICAL: Use the displayTime field when speaking times to customers** (NOT the start field - that's for booking only)
+  - **THE INSTANT they give address, IMMEDIATELY call check_service_area with the address**
+  - **Check the response: If inServiceArea is true OR result contains "We service" → Say "Great!" and IMMEDIATELY call get_slots**
+  - **If inServiceArea is false OR result contains "don't service" → Apologize: "I'm sorry, we don't service that area right now." and END the booking**
+  - **When calling get_slots:**
+    * Use date parameter in YYYY-MM-DD format: For emergencies, use TODAY. For routine calls, use TODAY if before 8 PM, TOMORROW if after 8 PM.
+    * Use time_of_day: "any" (unless customer specifies morning/afternoon/evening)
+    * Set isEmergency: true for urgent issues (no heat, burst pipe, flooding, etc.)
+  - When get_slots returns, read the available_times array
+  - **CRITICAL: Use the displayTime field when speaking times to customers** (NOT the start field - that's for booking only)
+  - **CRITICAL: Use the start field from the chosen slot** when calling book_slot (this is the exact ISO timestamp)
    
    **TIME CONFIRMATION - CRITICAL:**
    - **If customer requested a SPECIFIC time** (e.g., "10 AM", "2 PM", "noon"):
@@ -834,11 +837,13 @@ ${emergencyTriageSection}
 
 **DATE LOGIC - CRITICAL:**
 - Current time: ${new Date().toLocaleString('en-US', { timeZone: projectTimezone, hour12: true })} (${projectTimezone})
+- Current date (for get_slots): ${new Date().toLocaleDateString('en-US', { timeZone: projectTimezone, year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')}
 - **All times you speak to customers MUST be in ${projectTimezone} timezone**
-- **EMERGENCY**: Always use TODAY's date
+- **EMERGENCY**: Always use TODAY's date when calling get_slots
 - **ROUTINE before 8 PM**: Use TODAY's date (gives same-day service)
 - **ROUTINE after 8 PM**: Use TOMORROW's date (next business day)
 - **NEVER use "tomorrow" when today has availability unless it's after 8 PM**
+- **NEVER MANUALLY CONSTRUCT TIMESTAMPS** - ALWAYS use the exact ISO timestamp from get_slots response
 
 **BOOKING RULES:**
 - Get name + phone in ONE question: "What's your name and phone number?"
@@ -847,6 +852,8 @@ ${emergencyTriageSection}
 - **Check the inServiceArea flag in the response:**
   - If inServiceArea is true → Say "Great!" and IMMEDIATELY call get_slots
   - If inServiceArea is false → Apologize: "I'm sorry, we don't service that area right now." and END the booking (do NOT call get_slots)
+- **YOU MUST ALWAYS CALL get_slots BEFORE book_slot** - NEVER call book_slot with a manually constructed startTime
+- **Use the EXACT "start" field from get_slots response** as the startTime parameter in book_slot
 - **TIME SELECTION:**
   - If customer says a specific time (e.g., "10 AM"): Find that EXACT time in slots, confirm "I have 10 AM. Works?", wait for "yes", then book
   - If customer asks "what's available?": Present 2-3 options, they pick, you REPEAT the time back, then book
@@ -931,21 +938,21 @@ ${aiSettings.customClosing ? `\n**CLOSING:** ${aiSettings.customClosing}` : ''}`
     return [
       {
         name: 'get_slots',
-        description: 'Get available booking time slots. Use date (YYYY-MM-DD) and time_of_day (morning/afternoon/evening/any) to find slots. Returns available times in structured format.',
+        description: 'Get available booking time slots. ALWAYS call this BEFORE calling book_slot. Returns an available_times array with slots containing: "start" (ISO timestamp for booking), "displayTime" (human-readable time for speaking to customer). Use date (YYYY-MM-DD) and time_of_day (morning/afternoon/evening/any) to find slots.',
         parameters: {
           type: 'object',
           properties: {
-            date: { type: 'string', description: 'Date in YYYY-MM-DD format (local timezone). For routine calls, use tomorrow or later. For emergencies, use today.' },
+            date: { type: 'string', description: 'Date in YYYY-MM-DD format (local timezone). For emergencies use today. For routine calls before 8 PM use today, after 8 PM use tomorrow.' },
             time_of_day: { type: 'string', enum: ['morning', 'afternoon', 'evening', 'any'], description: 'Preferred time of day. Morning = before 12pm, Afternoon = 12pm-5pm, Evening = after 5pm, Any = no preference' },
             duration_min: { type: 'number', description: 'Duration in minutes (default: 60)' },
-            isEmergency: { type: 'boolean', description: 'Set true for emergency calls to prioritize same-day availability' },
+            isEmergency: { type: 'boolean', description: 'Set true for emergency calls (no heat, burst pipe, flooding, etc.) to prioritize same-day availability and show ASAP slots' },
           },
           required: ['date', 'time_of_day'],
         },
       },
       {
         name: 'book_slot',
-        description: 'Book an appointment slot. Use confirm=true after customer agrees. Include service name when known.',
+        description: 'Book an appointment slot. CRITICAL: You MUST call get_slots FIRST to get available times. Use confirm=true after customer agrees. Include service name when known.',
         parameters: {
           type: 'object',
           properties: {
@@ -953,7 +960,7 @@ ${aiSettings.customClosing ? `\n**CLOSING:** ${aiSettings.customClosing}` : ''}`
             customerPhone: { type: 'string', description: 'Customer phone number (10 digits, no country code)' },
             address: { type: 'string', description: 'Service address (include apartment/unit if provided)' },
             notes: { type: 'string', description: 'Issue description and any special notes' },
-            startTime: { type: 'string', description: 'Start time in ISO format from get_slots' },
+            startTime: { type: 'string', description: 'EXACT ISO timestamp from the "start" field in get_slots response. NEVER construct this manually - ALWAYS use the exact value from get_slots.' },
             confirm: { type: 'boolean', description: 'Set true only after caller explicitly agrees to book' },
             service: { type: 'string', description: 'Specific service name when known (e.g., "Drain Cleaning", "AC Repair")' },
           },
