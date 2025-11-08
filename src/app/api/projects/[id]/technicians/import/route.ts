@@ -66,11 +66,31 @@ export async function POST(
             projectId,
             deletedAt: null,
             OR: [
-              { phone: normalizedPhone },
+              {
+                AND: [
+                  {
+                    name: {
+                      equals: parsed.name,
+                      mode: Prisma.QueryMode.insensitive,
+                    },
+                  },
+                  { phone: normalizedPhone },
+                ],
+              },
               ...(phoneDigits
                 ? [
-                    { phone: { contains: phoneDigits } },
-                    { phone: { contains: phoneDigits.slice(-10) } },
+                    {
+                      AND: [
+                        { name: { equals: parsed.name, mode: Prisma.QueryMode.insensitive } },
+                        { phone: { contains: phoneDigits } },
+                      ],
+                    },
+                    {
+                      AND: [
+                        { name: { equals: parsed.name, mode: Prisma.QueryMode.insensitive } },
+                        { phone: { contains: phoneDigits.slice(-10) } },
+                      ],
+                    },
                   ]
                 : []),
               ...(parsed.email
