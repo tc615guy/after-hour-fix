@@ -17,6 +17,8 @@ export async function POST(req: NextRequest) {
       slotStart: z.string().optional(),
     })
     const { projectId, customerName, customerPhone, address, notes, callId, bookingId, slotStart: slotStartIso } = Schema.parse(await req.json())
+    
+    console.log(`[Emergency Dispatch] 🚨 EMERGENCY REQUEST - Customer: ${customerName}, Notes: ${notes}`)
 
     const project = await prisma.project.findUnique({ where: { id: projectId } })
     if (!project) {
@@ -204,8 +206,12 @@ export async function POST(req: NextRequest) {
             const estimatedArrival = new Date(Date.now() + totalMinutes * 60 * 1000)
             const roundedSlot = roundToNext30MinSlot(estimatedArrival)
             
+            // Log calculated arrival time
+            console.log(`[Emergency Dispatch] 📍 Calculated arrival: Now + ${totalMinutes}min = ${roundedSlot.toISOString()} (${roundedSlot.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: project.timezone || 'America/Chicago' })})`)
+            
             // Store calculated slot time to use for booking
-            assignmentReason += ` | Arrival: ${roundedSlot.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} (${PREP_BUFFER_MIN}min prep + ${selectedTech.driveTimeMin}min drive)`
+            const arrivalTimeStr = roundedSlot.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: project.timezone || 'America/Chicago' })
+            assignmentReason += ` | Arrival: ${arrivalTimeStr} (${PREP_BUFFER_MIN}min prep + ${selectedTech.driveTimeMin}min drive)`
             
             // Store on tech object for use in booking creation
             ;(tech as any).calculatedSlotTime = roundedSlot
@@ -297,13 +303,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Notify the technician by SMS AND phone call
+    // Notify the technician by SMS AND phone call (using project timezone)
+    const projectTz = project.timezone || 'America/Chicago' // Default to CST
     let apptTime: string
     if (booking?.slotStart) {
       const slotTime = new Date(booking.slotStart)
       apptTime = slotTime.toLocaleString('en-US', { 
         hour: 'numeric', 
-        minute: '2-digit', 
+        minute: '2-digit',
+        timeZone: projectTz, 
         hour12: true 
       })
     } else {
@@ -365,15 +373,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Generate customer-facing message with arrival time
+    // Generate customer-facing message with arrival time IN PROJECT'S TIMEZONE
     let customerMessage: string
     if (booking?.slotStart) {
       const slotTime = new Date(booking.slotStart)
+      const projectTz = project.timezone || 'America/Chicago' // Default to CST
       const timeStr = slotTime.toLocaleString('en-US', { 
         hour: 'numeric', 
         minute: '2-digit', 
-        hour12: true 
+        hour12: true,
+        timeZone: projectTz // CRITICAL: Use project timezone
       })
+      console.log(`[Emergency Dispatch] 🕐 Arrival time: ${timeStr} ${projectTz} (UTC: ${slotTime.toISOString()})`)
       customerMessage = `You're booked. I've dispatched ${tech.name}. They'll call you on the way and should arrive by ${timeStr}.`
     } else {
       customerMessage = `You're booked. I've dispatched ${tech.name}. They'll call you on the way and arrive within 30–60 minutes.`
