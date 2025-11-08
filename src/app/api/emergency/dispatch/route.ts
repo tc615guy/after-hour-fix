@@ -194,30 +194,89 @@ export async function POST(req: NextRequest) {
           return 0
         })
 
+        // CRITICAL: Check for booking conflicts before assigning tech
+        // Emergency jobs require 90 minutes (30min prep + drive + 90min job duration)
+        const EMERGENCY_DURATION_MIN = 90
+        
         if (scoredTechs.length > 0) {
-          const selectedTech = scoredTechs[0]
-          tech = selectedTech.tech
-          assignmentReason = selectedTech.reason
-          
-          // Calculate estimated arrival time with 30-minute buffer + drive time
-          if (selectedTech.driveTimeMin !== undefined) {
-            const PREP_BUFFER_MIN = 30 // 30 minutes for tech to get ready (if at home)
-            const totalMinutes = PREP_BUFFER_MIN + selectedTech.driveTimeMin
-            const estimatedArrival = new Date(Date.now() + totalMinutes * 60 * 1000)
-            const roundedSlot = roundToNext30MinSlot(estimatedArrival)
+          // Loop through techs until we find one without conflicts
+          for (const selectedTech of scoredTechs) {
+            // Calculate estimated arrival time with 30-minute buffer + drive time
+            let slotStart: Date
+            if (selectedTech.driveTimeMin !== undefined) {
+              const PREP_BUFFER_MIN = 30 // 30 minutes for tech to get ready (if at home)
+              const totalMinutes = PREP_BUFFER_MIN + selectedTech.driveTimeMin
+              const estimatedArrival = new Date(Date.now() + totalMinutes * 60 * 1000)
+              slotStart = roundToNext30MinSlot(estimatedArrival)
+              
+              console.log(`[Emergency Dispatch] 📍 Checking ${selectedTech.tech.name}: Arrival ${slotStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: project.timezone || 'America/Chicago' })} (${PREP_BUFFER_MIN}min prep + ${selectedTech.driveTimeMin}min drive)`)
+            } else {
+              // Fallback if no drive time calculated
+              const fallbackTime = new Date(Date.now() + 30 * 60 * 1000)
+              slotStart = roundToNext30MinSlot(fallbackTime)
+            }
             
-            // Log calculated arrival time
-            console.log(`[Emergency Dispatch] 📍 Calculated arrival: Now + ${totalMinutes}min = ${roundedSlot.toISOString()} (${roundedSlot.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: project.timezone || 'America/Chicago' })})`)
+            const slotEnd = new Date(slotStart.getTime() + EMERGENCY_DURATION_MIN * 60 * 1000) // 90 minutes
             
-            // Store calculated slot time to use for booking
-            const arrivalTimeStr = roundedSlot.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: project.timezone || 'America/Chicago' })
-            assignmentReason += ` | Arrival: ${arrivalTimeStr} (${PREP_BUFFER_MIN}min prep + ${selectedTech.driveTimeMin}min drive)`
+            // Check for conflicting bookings
+            const conflictingBookings = await prisma.booking.findMany({
+              where: {
+                technicianId: selectedTech.tech.id,
+                status: { in: ['pending', 'confirmed'] },
+                OR: [
+                  // Existing booking starts during our emergency window
+                  {
+                    slotStart: {
+                      gte: slotStart,
+                      lt: slotEnd
+                    }
+                  },
+                  // Existing booking ends during our emergency window
+                  {
+                    slotEnd: {
+                      gt: slotStart,
+                      lte: slotEnd
+                    }
+                  },
+                  // Existing booking completely overlaps our emergency window
+                  {
+                    AND: [
+                      { slotStart: { lte: slotStart } },
+                      { slotEnd: { gte: slotEnd } }
+                    ]
+                  }
+                ]
+              },
+              select: {
+                id: true,
+                slotStart: true,
+                slotEnd: true,
+                customerName: true
+              }
+            })
+            
+            if (conflictingBookings.length > 0) {
+              console.log(`[Emergency Dispatch] ⚠️  ${selectedTech.tech.name} has ${conflictingBookings.length} conflicting booking(s) at ${slotStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: project.timezone || 'America/Chicago' })} - trying next tech`)
+              continue // Skip this tech, try next one
+            }
+            
+            // No conflicts! Assign this tech
+            tech = selectedTech.tech
+            assignmentReason = selectedTech.reason
+            
+            const arrivalTimeStr = slotStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: project.timezone || 'America/Chicago' })
+            if (selectedTech.driveTimeMin !== undefined) {
+              assignmentReason += ` | Arrival: ${arrivalTimeStr} (30min prep + ${selectedTech.driveTimeMin}min drive)`
+            } else {
+              assignmentReason += ` | Arrival: ${arrivalTimeStr}`
+            }
             
             // Store on tech object for use in booking creation
-            ;(tech as any).calculatedSlotTime = roundedSlot
+            ;(tech as any).calculatedSlotTime = slotStart
+            
+            console.log(`[Emergency Dispatch] ✅ Selected: ${tech.name} - ${assignmentReason} (no conflicts, score: ${selectedTech.score})`)
+            break // Found a tech, exit loop
           }
-          
-          console.log(`[Emergency Dispatch] Selected tech: ${tech.name} - ${assignmentReason} (score: ${selectedTech.score})`)
         }
       } else {
         // Geocoding failed - fall back to priority only
@@ -265,7 +324,7 @@ export async function POST(req: NextRequest) {
         slotStart = roundToNext30MinSlot(fallbackTime)
       }
       
-      const slotEnd = new Date(slotStart.getTime() + 60 * 60 * 1000) // 1 hour duration
+      const slotEnd = new Date(slotStart.getTime() + 90 * 60 * 1000) // 90 minutes duration for emergencies
       
       const created = await prisma.booking.create({
         data: {
@@ -289,7 +348,7 @@ export async function POST(req: NextRequest) {
       
       if (calculatedSlotTime) {
         updateData.slotStart = calculatedSlotTime
-        updateData.slotEnd = new Date(calculatedSlotTime.getTime() + 60 * 60 * 1000)
+        updateData.slotEnd = new Date(calculatedSlotTime.getTime() + 90 * 60 * 1000) // 90 minutes duration for emergencies
       }
       
       await prisma.booking.update({
