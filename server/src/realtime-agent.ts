@@ -837,7 +837,10 @@ ${emergencyTriageSection}
 
 **DATE LOGIC - CRITICAL:**
 - Current time: ${new Date().toLocaleString('en-US', { timeZone: projectTimezone, hour12: true })} (${projectTimezone})
-- Current date (for get_slots): ${new Date().toLocaleDateString('en-US', { timeZone: projectTimezone, year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')}
+- Current date (for get_slots): ${(() => {
+    const parts = new Date().toLocaleDateString('en-US', { timeZone: projectTimezone, year: 'numeric', month: '2-digit', day: '2-digit' }).split('/');
+    return `${parts[2]}-${parts[0]}-${parts[1]}`;
+  })()}
 - **All times you speak to customers MUST be in ${projectTimezone} timezone**
 - **EMERGENCY**: Always use TODAY's date when calling get_slots
 - **ROUTINE before 8 PM**: Use TODAY's date (gives same-day service)
