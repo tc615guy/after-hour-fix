@@ -10,6 +10,24 @@ import { Badge } from '@/components/ui/badge'
 
 const PLANS = [
   {
+    id: 'standard',
+    name: 'Standard',
+    description: 'Great for solo and small teams',
+    price: 249,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
+    minutes: 300,
+    features: [
+      '300 AI minutes/month',
+      '1 phone number included',
+      'OpenAI Realtime AI assistant',
+      'Auto-syncs business data',
+      'Cal.com integration',
+      'Email & SMS confirmations',
+      'Call transcripts',
+      'Smart reports & tracking',
+    ],
+  },
+  {
     id: 'pro',
     name: 'Pro',
     description: 'For growing businesses',
@@ -19,7 +37,7 @@ const PLANS = [
     popular: true,
     features: [
       '800 AI minutes/month',
-      'Up to 3 phone numbers included',
+      '1 phone number included',
       'OpenAI Realtime AI assistant',
       'Auto-syncs business data',
       'Cal.com integration',
@@ -39,7 +57,7 @@ const PLANS = [
     minutes: 1200,
     features: [
       '1,200 AI minutes/month',
-      'Unlimited phone numbers included',
+      '1 phone number included',
       'OpenAI Realtime AI assistant',
       'Auto-syncs business data',
       'Cal.com integration',

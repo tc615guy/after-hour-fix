@@ -7,7 +7,7 @@ import { PhoneCTA } from '@/components/PhoneCTA'
 
 export const metadata: Metadata = {
   title: 'Pricing: AI Receptionist for Trades | Affordable 24/7 Call Answering',
-  description: 'Simple, transparent pricing for AI receptionist services. Plans from $699/month with premium coverage options. Includes 24/7 call answering, automatic booking, and calendar integration.',
+  description: 'Simple, transparent pricing for AI receptionist services. Plans from $249/month with premium coverage options. Includes 24/7 call answering, automatic booking, and calendar integration.',
   keywords: [
     'AI receptionist pricing',
     'answering service cost',
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Pricing: AI Receptionist for Trade Professionals',
-    description: 'Simple, transparent pricing starting at $699/month. No hidden fees.',
+    description: 'Simple, transparent pricing starting at $249/month. No hidden fees.',
     type: 'website',
     url: '/pricing',
   },
@@ -36,6 +36,24 @@ export const metadata: Metadata = {
 export default function PricingPage() {
   const activePlans = [
     {
+      name: 'Standard',
+      priceDisplay: '$249',
+      billingUnit: '/month',
+      priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
+      description: 'Great fit for solo and small teams',
+      features: [
+        '300 AI minutes/month included',
+        '1 phone number included',
+        'OpenAI Realtime AI assistant',
+        'Auto-syncs business data (pricing, hours, technicians)',
+        'Cal.com integration',
+        'Email & SMS confirmations',
+        'Call transcripts',
+        'Smart reports & tracking',
+      ],
+      taxCategory: 'General - Electronically Supplied Services',
+    },
+    {
       name: 'Pro',
       priceDisplay: '$699',
       billingUnit: '/month',
@@ -43,7 +61,7 @@ export default function PricingPage() {
       description: 'For busy multi-tech teams',
       features: [
         '800 AI minutes/month included',
-        'Up to 3 phone numbers',
+        '1 phone number included',
         'OpenAI Realtime AI assistant',
         'Auto-syncs business data (pricing, hours, technicians)',
         'Cal.com integration',
@@ -64,7 +82,7 @@ export default function PricingPage() {
       description: 'For high-volume operations',
       features: [
         '1,200 AI minutes/month included',
-        'Unlimited phone numbers',
+        '1 phone number included',
         'OpenAI Realtime AI assistant',
         'Auto-syncs business data (pricing, hours, technicians)',
         'Cal.com integration',
@@ -97,13 +115,6 @@ export default function PricingPage() {
     {
       name: 'Pro (Archived)',
       priceDisplay: '$399',
-      billingUnit: '/month',
-      description: 'Legacy pricing for existing customers',
-      taxCategory: 'General - Electronically Supplied Services',
-    },
-    {
-      name: 'Starter (Archived)',
-      priceDisplay: '$249',
       billingUnit: '/month',
       description: 'Legacy pricing for existing customers',
       taxCategory: 'General - Electronically Supplied Services',

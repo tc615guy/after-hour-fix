@@ -84,7 +84,7 @@ export default function FAQPage() {
     },
     {
       q: 'How much does an AI receptionist cost for a plumbing business?',
-      a: 'AfterHourFix plans currently start at $699/month for the Pro plan (800 AI minutes) and $999/month for Premium (1,200 AI minutes). Additional minutes are billed at $0.749/min, and there\'s a one-time $299 setup fee for professional configuration (non-refundable). Compare this to hiring a receptionist at $2,000–3,000/month and you\'ll see significant savings.',
+      a: 'AfterHourFix plans currently start at $249/month for the Standard plan (300 AI minutes). Pro is $699/month for 800 AI minutes and Premium is $999/month for 1,200 AI minutes. Additional minutes are billed at $0.749/min, and there\'s a one-time $299 setup fee for professional configuration (non-refundable). Compare this to hiring a receptionist at $2,000–3,000/month and you\'ll see significant savings.',
     },
     {
       q: 'Will AI receptionist work for my HVAC company during peak season?',
@@ -96,7 +96,7 @@ export default function FAQPage() {
     },
     {
       q: 'Can the AI handle multiple phone numbers?',
-      a: 'Yes! The Pro plan includes up to 3 numbers and the Premium plan includes unlimited numbers. Each number can be configured independently with different business hours, routing rules, and settings.',
+      a: 'Each subscription includes one phone number. You can route multiple business lines by forwarding them into that number, and additional numbers can be requested through support if needed.',
     },
     {
       q: 'What trades does AfterHourFix support?',
