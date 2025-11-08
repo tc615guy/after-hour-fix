@@ -7,7 +7,7 @@ import { PhoneCTA } from '@/components/PhoneCTA'
 
 export const metadata: Metadata = {
   title: 'Pricing: AI Receptionist for Trades | Affordable 24/7 Call Answering',
-  description: 'Simple, transparent pricing for AI receptionist services. Plans from $199/month for plumbers, HVAC contractors, and electricians. Includes 24/7 call answering, automatic booking, and calendar integration.',
+  description: 'Simple, transparent pricing for AI receptionist services. Plans from $699/month with premium coverage options. Includes 24/7 call answering, automatic booking, and calendar integration.',
   keywords: [
     'AI receptionist pricing',
     'answering service cost',
@@ -27,39 +27,23 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Pricing: AI Receptionist for Trade Professionals',
-    description: 'Simple, transparent pricing starting at $199/month. No hidden fees.',
+    description: 'Simple, transparent pricing starting at $699/month. No hidden fees.',
     type: 'website',
     url: '/pricing',
   },
 }
 
 export default function PricingPage() {
-  const plans = [
-    {
-      name: 'Starter',
-      price: 199,
-      priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
-      description: 'Perfect for solo operators',
-      features: [
-        '300 AI minutes/month',
-        '1 phone number',
-        'OpenAI Realtime AI assistant',
-        'Auto-syncs business data (pricing, hours, technicians)',
-        'Cal.com integration',
-        'Email & SMS confirmations',
-        'Call transcripts',
-        'Smart reports & tracking',
-        '7-day pro-rated refund',
-      ],
-    },
+  const activePlans = [
     {
       name: 'Pro',
-      price: 399,
+      priceDisplay: '$699',
+      billingUnit: '/month',
       priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
-      description: 'For growing businesses',
+      description: 'For busy multi-tech teams',
       features: [
-        '800 AI minutes/month',
-        '3 phone numbers',
+        '800 AI minutes/month included',
+        'Up to 3 phone numbers',
         'OpenAI Realtime AI assistant',
         'Auto-syncs business data (pricing, hours, technicians)',
         'Cal.com integration',
@@ -68,17 +52,18 @@ export default function PricingPage() {
         'Smart reports & tracking',
         'Priority support',
         'Custom conversation scripts',
-        '7-day pro-rated refund',
       ],
+      taxCategory: 'General - Electronically Supplied Services',
       popular: true,
     },
     {
       name: 'Premium',
-      price: 599,
+      priceDisplay: '$999',
+      billingUnit: '/month',
       priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ULTRA,
       description: 'For high-volume operations',
       features: [
-        '1,200 AI minutes/month',
+        '1,200 AI minutes/month included',
         'Unlimited phone numbers',
         'OpenAI Realtime AI assistant',
         'Auto-syncs business data (pricing, hours, technicians)',
@@ -89,8 +74,39 @@ export default function PricingPage() {
         'Priority support',
         'Custom conversation scripts',
         'Dedicated account manager',
-        '7-day pro-rated refund',
       ],
+      taxCategory: 'General - Electronically Supplied Services',
+    },
+    {
+      name: 'Overage',
+      priceDisplay: '$0.749',
+      billingUnit: '/min',
+      description: 'Pay-as-you-go minutes beyond plan allowances',
+      features: [
+        'Billed only on actual usage',
+        'Applies automatically once plan minutes are exhausted',
+        'Includes call recording, transcripts, & notifications',
+        'Matches plan-level routing rules',
+      ],
+      taxCategory: 'General - Electronically Supplied Services',
+      ctaLabel: 'Contact Sales',
+    },
+  ]
+
+  const archivedPlans = [
+    {
+      name: 'Pro (Archived)',
+      priceDisplay: '$399',
+      billingUnit: '/month',
+      description: 'Legacy pricing for existing customers',
+      taxCategory: 'General - Electronically Supplied Services',
+    },
+    {
+      name: 'Starter (Archived)',
+      priceDisplay: '$249',
+      billingUnit: '/month',
+      description: 'Legacy pricing for existing customers',
+      taxCategory: 'General - Electronically Supplied Services',
     },
   ]
 
@@ -125,7 +141,7 @@ export default function PricingPage() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {plans.map((plan) => (
+          {activePlans.map((plan) => (
             <Card key={plan.name} className={plan.popular ? 'border-blue-600 border-2 relative' : ''}>
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
@@ -136,29 +152,73 @@ export default function PricingPage() {
                 <CardTitle className="text-2xl">{plan.name}</CardTitle>
                 <CardDescription>{plan.description}</CardDescription>
                 <div className="mt-4">
-                  <span className="text-4xl font-bold">${plan.price}</span>
-                  <span className="text-gray-600">/month</span>
+                  <span className="text-4xl font-bold">{plan.priceDisplay}</span>
+                  <span className="text-gray-600">{plan.billingUnit}</span>
                 </div>
+                {plan.taxCategory && (
+                  <p className="text-xs text-gray-500 mt-2">{plan.taxCategory}</p>
+                )}
               </CardHeader>
               <CardContent>
-                <ul className="space-y-3">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                      <span className="text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                {plan.features ? (
+                  <ul className="space-y-3">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        <span className="text-sm">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-600">
+                    Contact our team to learn more about this plan.
+                  </p>
+                )}
               </CardContent>
               <CardFooter>
-                <Link href="/auth/signup" className="w-full">
-                  <Button className="w-full" variant={plan.popular ? 'default' : 'outline'}>
-                    Get Started
-                  </Button>
-                </Link>
+                {plan.ctaLabel ? (
+                  <a href="mailto:sales@afterhourfix.com" className="w-full">
+                    <Button className="w-full" variant="outline">
+                      {plan.ctaLabel}
+                    </Button>
+                  </a>
+                ) : (
+                  <Link href="/auth/signup" className="w-full">
+                    <Button className="w-full" variant={plan.popular ? 'default' : 'outline'}>
+                      Get Started
+                    </Button>
+                  </Link>
+                )}
               </CardFooter>
             </Card>
           ))}
+        </div>
+
+        {/* Archived Plans */}
+        <div className="max-w-4xl mx-auto mt-16">
+          <h2 className="text-2xl font-semibold text-center mb-6">Archived Plans</h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            {archivedPlans.map((plan) => (
+              <Card key={plan.name} className="border-dashed border-gray-300">
+                <CardHeader>
+                  <CardTitle className="text-xl">{plan.name}</CardTitle>
+                  <CardDescription>{plan.description}</CardDescription>
+                  <div className="mt-3">
+                    <span className="text-3xl font-bold">{plan.priceDisplay}</span>
+                    <span className="text-gray-600">{plan.billingUnit}</span>
+                  </div>
+                  {plan.taxCategory && (
+                    <p className="text-xs text-gray-500 mt-2">{plan.taxCategory}</p>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">
+                    Archived plans remain available for existing customers only. Contact support for questions about legacy pricing.
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
 
         {/* One-Time Setup Fee */}
@@ -168,7 +228,7 @@ export default function PricingPage() {
               <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="w-8 h-8 text-white" />
               </div>
-              <CardTitle className="text-3xl mb-2">One-Time Setup Fee: $299</CardTitle>
+              <CardTitle className="text-3xl mb-2">One-Time Setup Fee: $299 (non-refundable)</CardTitle>
               <CardDescription className="text-base">
                 Professional setup by our team to ensure your OpenAI Realtime AI assistant is configured perfectly and automatically receives all your business data
               </CardDescription>
@@ -217,6 +277,8 @@ export default function PricingPage() {
                 <p className="text-sm text-center text-gray-700">
                   <strong className="text-blue-600">Setup typically takes 2-3 business days</strong> after payment. 
                   You'll receive a dedicated onboarding specialist to guide you through every step and ensure everything works perfectly.
+                  <br />
+                  <span className="mt-2 block text-xs text-gray-500">Setup fees are non-refundable.</span>
                 </p>
               </div>
             </CardContent>
@@ -224,8 +286,7 @@ export default function PricingPage() {
         </div>
 
         <div className="mt-12 text-center">
-          <p className="text-gray-600">All plans include a 7-day money-back guarantee. Cancel within 7 days for a pro-rated refund.</p>
-          <p className="text-sm text-gray-500 mt-2">One-time setup fee applies to all new accounts.</p>
+          <p className="text-sm text-gray-500">One-time setup fee applies to all new accounts.</p>
         </div>
       </section>
 

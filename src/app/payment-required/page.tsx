@@ -10,35 +10,16 @@ import { Badge } from '@/components/ui/badge'
 
 const PLANS = [
   {
-    id: 'starter',
-    name: 'Starter',
-    description: 'Perfect for solo operators',
-    price: 199,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
-    minutes: 300,
-    features: [
-      '300 AI minutes/month',
-      '1 phone number',
-      'OpenAI Realtime AI assistant',
-      'Auto-syncs business data',
-      'Cal.com integration',
-      'Email & SMS confirmations',
-      'Call transcripts',
-      'Smart reports & tracking',
-      '7-day pro-rated refund',
-    ],
-  },
-  {
     id: 'pro',
     name: 'Pro',
     description: 'For growing businesses',
-    price: 399,
+    price: 699,
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
     minutes: 800,
     popular: true,
     features: [
       '800 AI minutes/month',
-      '1 phone number',
+      'Up to 3 phone numbers included',
       'OpenAI Realtime AI assistant',
       'Auto-syncs business data',
       'Cal.com integration',
@@ -47,19 +28,18 @@ const PLANS = [
       'Smart reports & tracking',
       'Priority support',
       'Custom conversation scripts',
-      '7-day pro-rated refund',
     ],
   },
   {
     id: 'premium',
     name: 'Premium',
     description: 'For high-volume operations',
-    price: 599,
+    price: 999,
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ULTRA,
     minutes: 1200,
     features: [
       '1,200 AI minutes/month',
-      '1 phone number',
+      'Unlimited phone numbers included',
       'OpenAI Realtime AI assistant',
       'Auto-syncs business data',
       'Cal.com integration',
@@ -69,7 +49,6 @@ const PLANS = [
       'Priority support',
       'Custom conversation scripts',
       'Dedicated account manager',
-      '7-day pro-rated refund',
     ],
   },
 ]
@@ -146,7 +125,7 @@ export default function PaymentRequiredPage() {
           </div>
           <h1 className="text-4xl font-bold mb-3">Complete Your Setup</h1>
           <p className="text-xl text-gray-600 mb-6">
-            $299 one-time setup fee + choose your monthly plan
+            $299 one-time setup fee (non-refundable) + choose your monthly plan
           </p>
         </div>
 
@@ -221,7 +200,7 @@ export default function PaymentRequiredPage() {
 
         {/* Footer */}
         <div className="text-center text-sm text-gray-500 mt-8 space-y-2">
-          <p>Secure payment powered by Stripe • 7-day pro-rated refund policy</p>
+          <p>Secure payment powered by Stripe • Setup fees are non-refundable • Overage minutes billed at $0.749/min</p>
           <p>
             Questions?{' '}
             <Link href="/contact" className="text-blue-600 hover:underline">
