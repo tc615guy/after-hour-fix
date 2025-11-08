@@ -1,11 +1,10 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import type { Metadata } from 'next'
-import { PhoneCTA } from '@/components/PhoneCTA'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | AfterHourFix',
-  description: 'Terms of Service for AfterHourFix AI receptionist platform. Read our terms and conditions for using our 24/7 call answering and automatic booking services.',
+  title: 'Terms & Conditions | AfterHourFix',
+  description: 'Program terms for AfterHourFix call handling, scheduling, and SMS message delivery services.',
   alternates: {
     canonical: '/terms',
   },
@@ -17,155 +16,91 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-white">
-      <header className="border-b sticky top-0 bg-white z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-blue-600">AfterHourFix</Link>
-          <nav className="hidden md:flex gap-6">
-            <Link href="/" className="text-sm hover:text-blue-600 transition">Home</Link>
-            <Link href="/features" className="text-sm hover:text-blue-600 transition">Features</Link>
-            <Link href="/pricing" className="text-sm hover:text-blue-600 transition">Pricing</Link>
-            <Link href="/faq" className="text-sm hover:text-blue-600 transition">FAQ</Link>
-          </nav>
-          <div className="flex gap-3">
-            <Link href="/auth/login">
-              <Button variant="ghost" size="sm">Sign In</Button>
-            </Link>
-            <Link href="/auth/signup">
-              <Button size="sm">Get Started</Button>
-            </Link>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <header className="max-w-3xl mx-auto p-6">
+        <Link href="/" className="text-2xl font-bold text-blue-600">AfterHourFix</Link>
+        <h1 className="text-3xl font-bold mt-6">Terms & Conditions</h1>
+        <p className="mt-2 text-gray-600">Program terms for AfterHourFix call handling, scheduling, and SMS message delivery.</p>
       </header>
 
-      <article className="container mx-auto px-4 py-20 max-w-3xl prose prose-blue">
-        <h1>Terms of Service</h1>
-        <p className="text-gray-600">Last updated: {new Date().toLocaleDateString()}</p>
+      <main className="max-w-3xl mx-auto p-6 bg-white shadow-sm rounded-2xl prose prose-gray max-w-none">
+        <p><strong>Effective date:</strong> November 7, 2025</p>
 
-        <PhoneCTA className="not-prose my-8" title="Have a question about our terms?" description="Call us anytime to review any clause or requirement." />
-
-        <h2>Agreement to Terms</h2>
+        <h2>1. Agreement to Terms</h2>
         <p>
-          By accessing or using AfterHourFix, you agree to be bound by these Terms of Service. If you disagree with any part
-          of these terms, you may not access the service.
+          These Terms govern your access to and use of AfterHourFix services (the "Services"). By using the Services, you agree to these Terms and our <Link href="/privacy">Privacy Policy</Link>.
         </p>
 
-        <h2>Description of Service</h2>
+        <h2>2. Services</h2>
         <p>
-          AfterHourFix provides an AI-powered phone receptionist service that answers calls, books appointments via Cal.com,
-          and sends confirmations to customers. The service is designed for trade professionals including plumbers, HVAC
-          technicians, locksmiths, and towing services.
+          AfterHourFix provides a 24/7 virtual receptionist that answers calls, triages emergencies, books appointments, and sends transactional SMS updates on behalf of participating businesses.
         </p>
 
-        <h2>Account Registration</h2>
+        <h2>3. Messaging Program</h2>
         <ul>
-          <li>You must provide accurate and complete information</li>
-          <li>You are responsible for maintaining the security of your account</li>
-          <li>You must be at least 18 years old to use this service</li>
-          <li>One account per business is permitted</li>
+          <li>Transactional only; no promotional content.</li>
+          <li>Message frequency varies by interaction; msg & data rates may apply.</li>
+          <li>Reply <strong>STOP</strong> to cancel; <strong>HELP</strong> for help. For assistance, email <a href="mailto:support@afterhourfix.com">support@afterhourfix.com</a>.</li>
+          <li>Carriers are not liable for delayed or undelivered messages.</li>
+          <li>Consent is not a condition of purchase; however, certain service updates may be necessary to fulfill your request.</li>
         </ul>
 
-        <h2>Subscription and Billing</h2>
-        <h3>Payment</h3>
+        <h2>4. User Responsibilities</h2>
         <ul>
-          <li>All plans are billed monthly via Stripe</li>
-          <li>One-time setup fee of $299 applies to all new accounts</li>
-          <li>Pricing is subject to change with 30 days notice</li>
-          <li>Additional AI minutes beyond your plan are charged at $0.425/minute</li>
+          <li>Provide accurate contact and service information, and keep it up to date.</li>
+          <li>Do not use the Services for unlawful, harmful, or abusive purposes.</li>
+          <li>Respect the privacy and rights of technicians and businesses.</li>
         </ul>
 
-        <h3>Cancellation</h3>
-        <ul>
-          <li>You may cancel your subscription at any time</li>
-          <li>No refunds for partial months</li>
-          <li>Data retained for 30 days after cancellation</li>
-        </ul>
-
-        <h2>Acceptable Use</h2>
-        <p>You agree NOT to use AfterHourFix to:</p>
-        <ul>
-          <li>Violate any laws or regulations</li>
-          <li>Harass, abuse, or harm others</li>
-          <li>Distribute spam or unsolicited messages</li>
-          <li>Impersonate others or provide false information</li>
-          <li>Interfere with the service or other users</li>
-        </ul>
-
-        <h2>Service Availability</h2>
+        <h2>5. Business Customers</h2>
         <p>
-          We strive for 99.9% uptime but cannot guarantee uninterrupted service. We are not liable for:
-        </p>
-        <ul>
-          <li>Missed calls due to service outages</li>
-          <li>Third-party service failures (Vapi, Cal.com, etc.)</li>
-          <li>Network or connectivity issues</li>
-        </ul>
-
-        <h2>Intellectual Property</h2>
-        <p>
-          AfterHourFix and its original content, features, and functionality are owned by AfterHourFix and are protected
-          by international copyright, trademark, and other intellectual property laws.
+          Businesses using AfterHourFix remain responsible for their own service delivery, pricing, warranties, and compliance with applicable laws. AfterHourFix facilitates communications and scheduling but does not provide trade services itself.
         </p>
 
-        <h2>Limitation of Liability</h2>
+        <h2>6. Recordings and Monitoring</h2>
         <p>
-          To the maximum extent permitted by law, AfterHourFix shall not be liable for any indirect, incidental, special,
-          consequential, or punitive damages resulting from your use of the service.
+          Where permitted by law, calls may be recorded for quality and training. Notice is provided where required. See the <Link href="/privacy">Privacy Policy</Link>.
         </p>
 
-        <h2>Indemnification</h2>
+        <h2>7. Disclaimers</h2>
         <p>
-          You agree to indemnify and hold AfterHourFix harmless from any claims arising from your use of the service or
-          violation of these terms.
+          The Services are provided "as is" and "as available" without warranties of any kind, express or implied, including merchantability, fitness for a particular purpose, or non‑infringement. We do not guarantee uninterrupted or error‑free operation or delivery.
         </p>
 
-        <h2>Changes to Terms</h2>
+        <h2>8. Limitation of Liability</h2>
         <p>
-          We reserve the right to modify these terms at any time. Continued use of the service after changes constitutes
-          acceptance of the new terms.
+          To the maximum extent permitted by law, AfterHourFix and its affiliates will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for lost profits, revenues, data, or goodwill. In all cases, our aggregate liability will not exceed $100 or the amount you paid to us for the Services in the 3 months preceding the claim, whichever is greater.
         </p>
 
-        <h2>Contact</h2>
+        <h2>9. Indemnification</h2>
         <p>
-          For questions about these Terms, contact us at:<br />
-          Email: support@afterhourfix.com
+          You agree to indemnify and hold harmless AfterHourFix from any claims arising out of your misuse of the Services or violation of these Terms.
         </p>
-      </article>
 
-      <footer className="bg-gray-900 text-gray-400 py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="text-white font-bold text-xl mb-4">AfterHourFix</div>
-              <p className="text-sm">AI receptionist for trade professionals.</p>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Link href="/features" className="hover:text-white transition">Features</Link></li>
-                <li><Link href="/pricing" className="hover:text-white transition">Pricing</Link></li>
-                <li><Link href="/faq" className="hover:text-white transition">FAQ</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Link href="/privacy" className="hover:text-white transition">Privacy</Link></li>
-                <li><Link href="/terms" className="hover:text-white transition">Terms</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="tel:8446075052" className="hover:text-white transition">Call 844-607-5052</a></li>
-                <li><a href="mailto:support@afterhourfix.com" className="hover:text-white transition">support@afterhourfix.com</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm">
-            © {new Date().getFullYear()} AfterHourFix. All rights reserved.
-          </div>
-        </div>
+        <h2>10. Changes; Termination</h2>
+        <p>
+          We may modify these Terms or the Services with notice where required. We may suspend or terminate access for conduct that violates these Terms or harms the Services.
+        </p>
+
+        <h2>11. Governing Law</h2>
+        <p>
+          These Terms are governed by the laws of the State of Tennessee, without regard to conflicts of law rules. Venue lies in state or federal courts located in Tennessee.
+        </p>
+
+        <h2>12. Contact</h2>
+        <p>
+          Questions? Email <a href="mailto:support@afterhourfix.com">support@afterhourfix.com</a>.
+        </p>
+      </main>
+
+      <footer className="max-w-3xl mx-auto p-6 text-sm text-gray-500 mt-12">
+        <Link href="/privacy" className="underline hover:text-gray-900">
+          Privacy
+        </Link>
+        {' · '}
+        <Link href="/opt-in" className="underline hover:text-gray-900">
+          Opt‑In
+        </Link>
       </footer>
     </div>
   )
