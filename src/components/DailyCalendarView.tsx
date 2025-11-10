@@ -5,6 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
+function getDateKey(date: Date): string {
+  const copy = new Date(date)
+  // Normalize to midday to avoid timezone roll-over issues
+  copy.setHours(12, 0, 0, 0)
+  return copy.toISOString().split('T')[0]
+}
+
 import {
   ChevronLeft,
   ChevronRight,
@@ -226,7 +233,7 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
 
   async function toggleTechAvailability(tech: Technician, makeAvailable: boolean) {
     if (!tech?.id) return
-    const dateKey = selectedDate.toISOString().split('T')[0]
+    const dateKey = getDateKey(selectedDate)
     const current = Array.isArray(tech.unavailableDates) ? [...tech.unavailableDates] : []
     let next: string[]
 
@@ -268,7 +275,7 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
     }
   }
 
-  const dateKey = selectedDate.toISOString().split('T')[0]
+  const dateKey = getDateKey(selectedDate)
 
   if (loading) {
     return (
