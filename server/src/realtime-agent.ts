@@ -825,6 +825,12 @@ ${emergencyTriageSection}
      2. They pick one → **REPEAT IT BACK**: "Okay, [their choice]. I'll get you booked."
      3. IMMEDIATELY call book_slot using the corresponding start time from that slot
    
+   - **If book_slot returns an error** (slot filled, no tech available):
+     1. Say: "That time just filled up. Let me check what else I have..."
+     2. IMMEDIATELY call get_slots again to get fresh availability
+     3. Offer 2-3 alternative times from the new results
+     4. When they pick, book the new time
+   
    - Say: "Done! See you at [time]."
    
 **CRITICAL - NEVER GO SILENT:**

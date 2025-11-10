@@ -559,15 +559,32 @@ export async function POST(req: NextRequest) {
       assignmentReason = result.reason
       
       if (!technicianId) {
-        console.log('[BOOK] No available technician found for this slot - booking will be unassigned')
-        bookingTrace.push('No technician assigned (all busy)')
+        console.log('[BOOK] No available technician found for this slot')
+        bookingTrace.push(`No technician available: ${assignmentReason}`)
+        
+        // CRITICAL: Don't create booking if no tech is available
+        // Return friendly message for AI to offer alternative times
+        const errorMsg = "That time slot just filled up. Let me find you another time that works—I have several options available today and tomorrow."
+        return NextResponse.json({ 
+          result: errorMsg, 
+          error: 'No technician available',
+          reason: assignmentReason,
+          _trace: bookingTrace,
+        }, { status: 200 })
       } else {
         bookingTrace.push(`Technician assigned: ${technicianId} (${assignmentReason})`)
       }
     } catch (techErr: any) {
-      console.warn('[BOOK] Error finding technician:', techErr)
+      console.error('[BOOK] Error finding technician:', techErr)
       bookingTrace.push(`Technician assignment error: ${techErr.message}`)
-      // Continue without technician assignment
+      
+      // CRITICAL: Don't create booking if assignment fails
+      const errorMsg = "I'm having a little trouble confirming that exact time. Let me offer you a couple other slots that I know are wide open."
+      return NextResponse.json({ 
+        result: errorMsg, 
+        error: 'Technician assignment failed',
+        _trace: bookingTrace,
+      }, { status: 200 })
     }
     
     // Log booking attempt with observability
