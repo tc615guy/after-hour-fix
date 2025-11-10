@@ -403,11 +403,27 @@ export async function POST(req: NextRequest) {
         })
         
         if (availableTechsForDay.length === 0) {
-          bookingTrace.push(`No technicians available on ${bookingDateStr}`)
-          return { technicianId: null, reason: `All technicians unavailable on ${bookingDateStr}` }
+          const dayUnavailableNames = allTechs
+            .filter((tech) => {
+              const unavailable = tech.unavailableDates as string[] | undefined
+              return Array.isArray(unavailable) && unavailable.includes(bookingDateStr)
+            })
+            .map((tech) => tech.name)
+
+          bookingTrace.push(
+            `No technicians marked available on ${bookingDateStr}${
+              dayUnavailableNames.length > 0
+                ? ` (off today: ${dayUnavailableNames.join(', ')})`
+                : ''
+            }. Falling back to highest priority active tech.`
+          )
+        } else {
+          bookingTrace.push(
+            `${availableTechsForDay.length} technicians available on ${bookingDateStr} (${allTechs.length - availableTechsForDay.length} filtered by date)`
+          )
         }
-        
-        bookingTrace.push(`${availableTechsForDay.length} technicians available on ${bookingDateStr} (${allTechs.length - availableTechsForDay.length} filtered by date)`)
+
+        const techPool = availableTechsForDay.length > 0 ? availableTechsForDay : allTechs
         
         // Check availability with conflict detection (re-check at booking time!)
         const slotStartTime = startTime.getTime()
@@ -462,7 +478,7 @@ export async function POST(req: NextRequest) {
         // Score each available tech (only those available on the booking date)
         const availableTechs: Array<{ tech: typeof allTechs[0]; score: number; reasons: string[] }> = []
         
-        for (const tech of availableTechsForDay) {
+        for (const tech of techPool) {
           // Check for conflicts
           const hasConflict = tech.bookings.some((b: any) => {
             if (!b.slotStart) return false
