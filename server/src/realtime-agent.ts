@@ -852,6 +852,10 @@ ${emergencyTriageSection}
 - Get name + phone in ONE question: "What's your name and phone number?"
 - Get address after: "What's your address?"
 - Call check_service_area IMMEDIATELY after getting address
+- **NOTES ARE REQUIRED** before booking:
+  - Ask: "What's going on with your ${trade.toLowerCase()} system so I can note it for the tech?"
+  - If they give any description, summarize it in notes
+  - If they say "I'm not sure" or give no details, set notes to: "Caller unsure - needs ${trade} check" and say "I'll note that you're unsure and have a tech take a look."
 - **Check the inServiceArea flag in the response:**
   - If inServiceArea is true → Say "Great!" and IMMEDIATELY call get_slots
   - If inServiceArea is false → Apologize: "I'm sorry, we don't service that area right now." and END the booking (do NOT call get_slots)
