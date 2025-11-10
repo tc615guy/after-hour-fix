@@ -31,6 +31,7 @@ export async function PUT(
       emergencyOnly: z.boolean().optional(),
       priority: z.number().int().min(0).max(100).optional(),
       onCallSchedule: z.any().optional(),
+      unavailableDates: z.array(z.string()).optional(),
     })
     const data = Schema.parse(body)
 

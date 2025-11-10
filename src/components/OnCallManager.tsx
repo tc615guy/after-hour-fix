@@ -22,6 +22,7 @@ interface Technician {
   isOnCall: boolean
   emergencyOnly: boolean
   priority: number
+  unavailableDates?: string[]
 }
 
 interface OnCallManagerProps {

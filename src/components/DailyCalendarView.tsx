@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import {
   ChevronLeft,
   ChevronRight,
@@ -35,6 +36,7 @@ type Booking = {
 type Technician = {
   id: string
   name: string
+  unavailableDates?: string[] | null
 }
 
 type DailyCalendarViewProps = {
@@ -45,6 +47,7 @@ type TechRowProps = {
   tech: { id: string; name: string }
   bookings: Booking[]
   isUnassigned?: boolean
+  isUnavailable?: boolean
   onBookingClick: (booking: Booking) => void
   selectedDate: Date
 }
@@ -71,7 +74,7 @@ function getTechColor(techId: string): string {
   return colors[Math.abs(hash) % colors.length]
 }
 
-function TechRow({ tech, bookings, isUnassigned, onBookingClick, selectedDate }: TechRowProps) {
+function TechRow({ tech, bookings, isUnassigned, isUnavailable, onBookingClick, selectedDate }: TechRowProps) {
   // Get bookings for each hour
   const hourSlots = Array(DAY_END_HOUR - DAY_START_HOUR + 1).fill(null).map((_, i) => {
     const hour = DAY_START_HOUR + i
@@ -99,11 +102,16 @@ function TechRow({ tech, bookings, isUnassigned, onBookingClick, selectedDate }:
   }
   
   return (
-    <tr className="border-b border-gray-200 hover:bg-gray-50">
+    <tr className={`border-b border-gray-200 ${isUnavailable ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
       <td className="p-3 bg-gray-50 font-semibold sticky left-0 z-10 border-r border-gray-200">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <User className={`w-4 h-4 ${isUnassigned ? 'text-gray-500' : 'text-blue-600'}`} />
           <span>{tech.name}</span>
+          {isUnavailable && (
+            <Badge variant="outline" className="text-xs border-yellow-400 text-yellow-700 bg-yellow-50">
+              Off today
+            </Badge>
+          )}
         </div>
       </td>
       {hourSlots.map((hourBookings, idx) => {
@@ -143,6 +151,7 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
   const [technicians, setTechnicians] = useState<Technician[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
+  const [updatingTechId, setUpdatingTechId] = useState<string | null>(null)
 
   useEffect(() => {
     void loadData()
@@ -215,6 +224,52 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
     return bookings.filter(b => b.technicianId === techId)
   }
 
+  async function toggleTechAvailability(tech: Technician, makeAvailable: boolean) {
+    if (!tech?.id) return
+    const dateKey = selectedDate.toISOString().split('T')[0]
+    const current = Array.isArray(tech.unavailableDates) ? [...tech.unavailableDates] : []
+    let next: string[]
+
+    if (makeAvailable) {
+      next = current.filter((d) => d !== dateKey)
+    } else {
+      if (current.includes(dateKey)) return
+      next = [...current, dateKey]
+    }
+
+    try {
+      setUpdatingTechId(tech.id)
+      const res = await fetch(`/api/projects/${projectId}/technicians/${tech.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unavailableDates: next })
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to update technician availability')
+      }
+
+      setTechnicians((prev) =>
+        prev.map((t) =>
+          t.id === tech.id
+            ? {
+                ...t,
+                unavailableDates: next
+              }
+            : t
+        )
+      )
+    } catch (err) {
+      console.error(err)
+      alert((err as Error).message || 'Failed to update technician availability')
+    } finally {
+      setUpdatingTechId(null)
+    }
+  }
+
+  const dateKey = selectedDate.toISOString().split('T')[0]
+
   if (loading) {
     return (
       <Card>
@@ -249,6 +304,40 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
           </Button>
         </div>
       </div>
+
+      {technicians.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">Technician availability for {dateKey}</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-wrap gap-3">
+              {technicians.map((tech) => {
+                const unavailable = (tech.unavailableDates || []).includes(dateKey)
+                return (
+                  <div
+                    key={tech.id}
+                    className="flex items-center gap-2 rounded border border-gray-200 px-3 py-2 bg-white shadow-sm"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">{tech.name}</span>
+                      <span className="text-xs text-gray-500">
+                        {unavailable ? 'Off today' : 'Available today'}
+                      </span>
+                    </div>
+                    <Switch
+                      checked={!unavailable}
+                      onCheckedChange={(checked) => toggleTechAvailability(tech, checked)}
+                      disabled={updatingTechId === tech.id}
+                      aria-label={unavailable ? `Mark ${tech.name} available` : `Mark ${tech.name} off today`}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       <Card>
         <CardContent className="p-4">
@@ -282,15 +371,19 @@ export default function DailyCalendarView({ projectId }: DailyCalendarViewProps)
                     />
                   )}
                   {/* Technician rows */}
-                  {technicians.map((tech) => (
-                    <TechRow
-                      key={tech.id}
-                      tech={tech}
-                      bookings={getBookingsForTech(tech.id)}
-                      onBookingClick={setSelectedBooking}
-                      selectedDate={selectedDate}
-                    />
-                  ))}
+                  {technicians.map((tech) => {
+                    const unavailable = (tech.unavailableDates || []).includes(dateKey)
+                    return (
+                      <TechRow
+                        key={tech.id}
+                        tech={tech}
+                        bookings={getBookingsForTech(tech.id)}
+                        onBookingClick={setSelectedBooking}
+                        selectedDate={selectedDate}
+                        isUnavailable={unavailable}
+                      />
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
