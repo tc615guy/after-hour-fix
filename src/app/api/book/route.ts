@@ -127,6 +127,24 @@ export async function POST(req: NextRequest) {
 
     console.log('[BOOK] Project found:', project.name)
 
+    // Guard: prevent bookings when no active technicians are available
+    try {
+      const activeTechnicians = await prisma.technician.count({
+        where: {
+          projectId,
+          isActive: true,
+          deletedAt: null,
+        },
+      })
+      if (activeTechnicians === 0) {
+        console.log('[BOOK] No active technicians available for this project')
+        const errorMsg = "We're temporarily pausing new appointments until a technician is available. Let me get you to the office so we can take care of you."
+        return NextResponse.json({ result: errorMsg, error: 'No active technicians' }, { status: 200 })
+      }
+    } catch (techCountErr) {
+      console.warn('[BOOK] Failed to count active technicians:', (techCountErr as any)?.message)
+    }
+
     // Minutes cap enforcement (Starter=500, Pro=1200, Premium=2500)
     try {
       const subs = await prisma.subscription.findFirst({
