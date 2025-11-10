@@ -272,7 +272,7 @@ async function handleAvailabilityRequest(req: NextRequest) {
     const dayEnd = new Date(endDate)
     dayEnd.setHours(23, 59, 59, 999)
     
-    const technicians = await prisma.technician.findMany({
+    const allTechnicians = await prisma.technician.findMany({
       where: { projectId, isActive: true, deletedAt: null },
       include: {
         bookings: {
@@ -291,9 +291,34 @@ async function handleAvailabilityRequest(req: NextRequest) {
         },
       },
     })
+    
+    // DAY-SPECIFIC AVAILABILITY: Filter out technicians who are unavailable on the requested dates
+    // Check each day in the range against technician's unavailableDates
+    const dateStringsInRange: string[] = []
+    for (let d = new Date(dayStart); d <= dayEnd; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0] // YYYY-MM-DD
+      dateStringsInRange.push(dateStr)
+    }
+    
+    const technicians = allTechnicians.filter(tech => {
+      if (!tech.unavailableDates) return true // No restrictions
+      
+      const unavailable = tech.unavailableDates as string[]
+      if (!Array.isArray(unavailable)) return true
+      
+      // Check if any date in our range is in the tech's unavailable list
+      const hasConflict = dateStringsInRange.some(dateStr => unavailable.includes(dateStr))
+      
+      if (hasConflict) {
+        console.log(`[Cal.com Availability] Tech ${tech.name} unavailable on ${dateStringsInRange.join(', ')} (marked unavailable)`)
+      }
+      
+      return !hasConflict
+    })
 
-    console.log(`[Cal.com Availability] Checking availability against ${technicians.length} technicians`)
+    console.log(`[Cal.com Availability] Checking availability against ${technicians.length} technicians (${allTechnicians.length - technicians.length} filtered out by unavailable dates)`)
     console.log(`[Cal.com Availability] Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`)
+    console.log(`[Cal.com Availability] Dates in range: ${dateStringsInRange.join(', ')}`)
     
     // Log technician bookings for debugging (with duration + travel buffer)
     let totalBookings = 0

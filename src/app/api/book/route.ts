@@ -388,6 +388,27 @@ export async function POST(req: NextRequest) {
           ],
         })
         
+        // DAY-SPECIFIC AVAILABILITY: Filter out technicians unavailable on the booking date
+        const bookingDateStr = startTime.toISOString().split('T')[0] // YYYY-MM-DD
+        const availableTechsForDay = allTechs.filter(tech => {
+          if (!tech.unavailableDates) return true
+          const unavailable = tech.unavailableDates as string[]
+          if (!Array.isArray(unavailable)) return true
+          
+          const isUnavailable = unavailable.includes(bookingDateStr)
+          if (isUnavailable) {
+            bookingTrace.push(`Tech ${tech.name} unavailable on ${bookingDateStr} (marked unavailable)`)
+          }
+          return !isUnavailable
+        })
+        
+        if (availableTechsForDay.length === 0) {
+          bookingTrace.push(`No technicians available on ${bookingDateStr}`)
+          return { technicianId: null, reason: `All technicians unavailable on ${bookingDateStr}` }
+        }
+        
+        bookingTrace.push(`${availableTechsForDay.length} technicians available on ${bookingDateStr} (${allTechs.length - availableTechsForDay.length} filtered by date)`)
+        
         // Check availability with conflict detection (re-check at booking time!)
         const slotStartTime = startTime.getTime()
         const slotEndTime = endTime.getTime()
@@ -438,10 +459,10 @@ export async function POST(req: NextRequest) {
           bookingCoords = await geocodeAddress(bookingAddress)
         }
         
-        // Score each available tech
+        // Score each available tech (only those available on the booking date)
         const availableTechs: Array<{ tech: typeof allTechs[0]; score: number; reasons: string[] }> = []
         
-        for (const tech of allTechs) {
+        for (const tech of availableTechsForDay) {
           // Check for conflicts
           const hasConflict = tech.bookings.some((b: any) => {
             if (!b.slotStart) return false

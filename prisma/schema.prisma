@@ -192,6 +192,9 @@ model Technician {
   onCallSchedule   Json?     // When they're on-call { days: [], hours: {} }
   emergencyOnly    Boolean   @default(false) // Only call for true emergencies
   priority         Int       @default(0) // 0=lowest, higher=check first
+  
+  // Day-specific availability (for vacations, off-days, etc.)
+  unavailableDates Json?     // Array of date strings: ["2025-11-15", "2025-11-16", ...]
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
