@@ -1414,82 +1414,83 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 )}
-              </>
-            ) : null}
-            {view === 'list' && bookings.length > 0 && (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Appointment</TableHead>
-                    <TableHead>Value</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {bookings.slice(0, 5).map((booking) => (
-                    <TableRow key={booking.id}>
-                      <TableCell className="font-medium">
-                        {booking.customerName || 'N/A'}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {booking.customerPhone
-                          ? formatPhoneNumber(booking.customerPhone)
-                          : '-'}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {booking.slotStart
-                          ? new Date(booking.slotStart).toLocaleString()
-                          : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {booking.priceCents
-                          ? formatCurrency(booking.priceCents)
-                          : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            booking.status === 'booked'
-                              ? 'default'
-                              : booking.status === 'completed'
-                              ? 'secondary'
-                              : 'outline'
-                          }
-                        >
-                          {booking.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {((booking.notes || '').includes('[IMPORTED]')) ? (
-                          <span className="text-xs text-gray-400">Imported</span>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              if (!selectedProject) return
-                              if (!confirm('Delete this booking?')) return
-                              try {
-                                const res = await fetch(`/api/projects/${selectedProject.id}/bookings/${booking.id}`, { method: 'DELETE' })
-                                const data = await res.json().catch(() => ({}))
-                                if (!res.ok) throw new Error(data.error || 'Failed to delete')
-                                await loadProjectData(selectedProject.id)
-                              } catch (e: any) {
-                                alert(e.message)
+
+                {view === 'list' && bookings.length > 0 && (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Appointment</TableHead>
+                        <TableHead>Value</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bookings.slice(0, 5).map((booking) => (
+                        <TableRow key={booking.id}>
+                          <TableCell className="font-medium">
+                            {booking.customerName || 'N/A'}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {booking.customerPhone
+                              ? formatPhoneNumber(booking.customerPhone)
+                              : '-'}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {booking.slotStart
+                              ? new Date(booking.slotStart).toLocaleString()
+                              : '-'}
+                          </TableCell>
+                          <TableCell>
+                            {booking.priceCents
+                              ? formatCurrency(booking.priceCents)
+                              : '-'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                booking.status === 'booked'
+                                  ? 'default'
+                                  : booking.status === 'completed'
+                                  ? 'secondary'
+                                  : 'outline'
                               }
-                            }}
-                          >
-                            Delete
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                            >
+                              {booking.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {((booking.notes || '').includes('[IMPORTED]')) ? (
+                              <span className="text-xs text-gray-400">Imported</span>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={async () => {
+                                  if (!selectedProject) return
+                                  if (!confirm('Delete this booking?')) return
+                                  try {
+                                    const res = await fetch(`/api/projects/${selectedProject.id}/bookings/${booking.id}`, { method: 'DELETE' })
+                                    const data = await res.json().catch(() => ({}))
+                                    if (!res.ok) throw new Error(data.error || 'Failed to delete')
+                                    await loadProjectData(selectedProject.id)
+                                  } catch (e: any) {
+                                    alert(e.message)
+                                  }
+                                }}
+                              >
+                                Delete
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
